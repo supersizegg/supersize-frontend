@@ -564,14 +564,14 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
       <div
         id="status"
         className={`absolute p-2.5  text-white text-[16px] top-2.5 right-2.5 font-bold text-center rounded-[5px] border border-gray-400`}
-        style={{ zIndex: 9999 }}
+        style={{ zIndex: 9999, maxWidth: "240px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
       >
         <span className="font-[25px] text-white">Leaderboard</span>
       </div>
 
       <div className={`flex items-center fixed top-0 left-0 m-2.5 z-[9999]`} style={{ zIndex: 9999 }}>
         <button
-          style={{ border: "1px solid red", background: "#ff000042", color: "#fff" }}
+          style={{ border: "1px solid #fff", background: "rgb(255 255 255 / 25%)", color: "#fff", borderRadius: "8px" }}
           className="flex items-center justify-center text-center relative box-border text-sm cursor-pointer text-black no-underline bg-[#f07171] float-right border border-[#f07171] rounded-full py-1.5 px-2.5 transition-colors duration-300 z-[9999999] hover:bg-black hover:text-[#f07171] active:bg-black active:text-[#f07171]"
           onClick={handleExitClick}
           onMouseEnter={() => {

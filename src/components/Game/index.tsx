@@ -254,6 +254,8 @@ const GameComponent: React.FC<GameComponentProps> = ({
           const interpolatedX = prevPos.x + (currPos.x - prevPos.x) * alpha;
           const interpolatedY = prevPos.y + (currPos.y - prevPos.y) * alpha;
 
+          drawBackground(ctx, { x: interpolatedX, y: interpolatedY }, screenSize);
+
           playersRef.current.forEach((blob) => {
             const adjustedX = blob.x - interpolatedX + screenSize.width / 2;
             const adjustedY = blob.y - interpolatedY + screenSize.height / 2;
@@ -417,29 +419,52 @@ const GameComponent: React.FC<GameComponentProps> = ({
     const offsetX = currentPlayer.x - screenSize.width / 2;
     const offsetY = currentPlayer.y - screenSize.height / 2;
 
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = "rgba(128, 128, 128, 0.5)";
+
     ctx.beginPath();
     ctx.moveTo(0 - offsetX, 0 - offsetY);
     ctx.lineTo(gameSize - offsetX, 0 - offsetY);
-    ctx.strokeStyle = "red";
     ctx.stroke();
 
     ctx.beginPath();
     ctx.moveTo(gameSize - offsetX, 0 - offsetY);
     ctx.lineTo(gameSize - offsetX, gameSize - offsetY);
-    ctx.strokeStyle = "red";
     ctx.stroke();
 
     ctx.beginPath();
     ctx.moveTo(gameSize - offsetX, gameSize - offsetY);
     ctx.lineTo(0 - offsetX, gameSize - offsetY);
-    ctx.strokeStyle = "red";
     ctx.stroke();
 
     ctx.beginPath();
     ctx.moveTo(0 - offsetX, gameSize - offsetY);
     ctx.lineTo(0 - offsetX, 0 - offsetY);
-    ctx.strokeStyle = "red";
     ctx.stroke();
+  };
+
+  const drawBackground = (
+    ctx: CanvasRenderingContext2D,
+    playerPos: { x: number; y: number },
+    screenSize: { width: number; height: number },
+    spacing = 100,
+    dotRadius = 5,
+  ) => {
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, screenSize.width, screenSize.height);
+
+    const offsetX = -(playerPos.x % spacing);
+    const offsetY = -(playerPos.y % spacing);
+
+    ctx.fillStyle = "rgba(128, 128, 128, 0.5)";
+
+    for (let x = offsetX; x < screenSize.width; x += spacing) {
+      for (let y = offsetY; y < screenSize.height; y += spacing) {
+        ctx.beginPath();
+        ctx.arc(x, y, dotRadius, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+    }
   };
 
   return (
@@ -451,8 +476,7 @@ const GameComponent: React.FC<GameComponentProps> = ({
         width: "100%",
         height: "100%",
         display: "block",
-        backgroundImage: "url('/space-bg.jpg')",
-        backgroundSize: "cover",
+        background: "#000",
       }}
     ></canvas>
   );
