@@ -441,23 +441,38 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
   }, []);
 
   useEffect(() => {
-    let status: string = '<span class="title">Leaderboard</span>';
-    for (let i = 0; i < leaderboard.length; i++) {
-      status += "<br />";
-      const currentItem = leaderboard[i];
-      if (currentPlayer && currentItem && currentItem.authority && currentPlayer.authority) {
-        if (currentItem.authority.equals(currentPlayer.authority)) {
-          status += '<span class="me">' + (i + 1) + ". " + currentItem.name + "</span>";
-        } else {
-          status += i + 1 + ". " + currentItem.name;
-        }
-      } else {
-        status += i + 1 + ". " + currentItem.name;
+    const shortenAuthority = (authorityStr: string): string => {
+      return authorityStr.length <= 8 ? authorityStr : `${authorityStr.slice(0, 4)}...${authorityStr.slice(-4)}`;
+    };
+
+    const getDisplayName = (item: { name?: string; authority: PublicKey | null }): string => {
+      if (item.name) {
+        return item.name;
       }
-    }
+      if (!item.authority) {
+        return "unnamed";
+      }
+      return shortenAuthority(item.authority.toString());
+    };
+
+    const lines: string[] = [`<span class="title">Leaderboard</span>`];
+
+    leaderboard.forEach((item, index) => {
+      const displayName = getDisplayName(item);
+
+      const isCurrentPlayer =
+        currentPlayer && item.authority && currentPlayer.authority && item.authority.equals(currentPlayer.authority);
+
+      const entry = isCurrentPlayer
+        ? `<span class="me">${index + 1}. ${displayName}</span>`
+        : `${index + 1}. ${displayName}`;
+
+      lines.push(entry);
+    });
+
     const statusElement = document.getElementById("status");
     if (statusElement) {
-      statusElement.innerHTML = status;
+      statusElement.innerHTML = lines.join("<br />");
     }
   }, [gameInfo, leaderboard]);
 
