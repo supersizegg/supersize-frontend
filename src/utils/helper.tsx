@@ -430,13 +430,14 @@ export const getMyPlayerStatus = async (
     }
   }
 
-  if (newplayerEntityPda == null) return {
-      playerStatus: "error", 
-      need_to_delegate: false, 
-      need_to_undelegate: false, 
+  if (newplayerEntityPda == null)
+    return {
+      playerStatus: "error",
+      need_to_delegate: false,
+      need_to_undelegate: false,
       newplayerEntityPda: new PublicKey(0),
       activeplayers: activeplayers,
-  };
+    };
   return {
     playerStatus: playerStatus,
     need_to_delegate: need_to_delegate,

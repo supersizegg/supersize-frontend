@@ -109,7 +109,14 @@ const Leaderboard: React.FC = () => {
             points: 0,
           });
         }
-        console.log("topParticipants:::::", contestantFound, res, res.data.topParticipants, res.data.totalCandidates);
+
+        if (!res.data.topParticipants) {
+          setUserInfo({
+            position: 0,
+            points: 0,
+          });
+          return;
+        }
 
         const participants = res.data.topParticipants.map(
           (participant: { walletAddress: string; winAmount: number }) => ({
@@ -140,7 +147,7 @@ const Leaderboard: React.FC = () => {
 
           <div className="stat-box winnings-box desktop-only">
             <p className="stat-label">Your Winnings</p>
-            <p className="stat-value">{userInfo.points.toFixed(3)}</p>
+            <p className="stat-value">{userInfo?.points?.toFixed(3)}</p>
           </div>
 
           <div className="dropdown-box">
