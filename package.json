@@ -43,7 +43,8 @@
     "test": "react-app-rewired test",
     "eject": "react-app-rewired eject",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
-    "format": "prettier --write 'src/**/*.{ts,tsx,js,json,md}'"
+    "format": "prettier --write 'src/**/*.{ts,tsx,js,json,md}'",
+    "prepare": "husky install"
   },
   "browserslist": {
     "production": [
@@ -74,6 +75,8 @@
     "eslint-plugin-react-hooks": "^5.1.0",
     "globals": "^15.13.0",
     "https-browserify": "^1.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.4.3",
     "postcss": "^8.4.49",
     "prettier": "^3.4.1",
     "react-app-rewire-alias": "^1.1.7",
@@ -89,5 +92,9 @@
   },
   "resolutions": {
     "@solana/web3.js": "1.95.5"
+  },
+  "lint-staged": {
+    "*.js": "eslint --cache --fix",
+    "*.{ts,tsx,js,json,md,css,scss}": "prettier --write"
   }
 }
