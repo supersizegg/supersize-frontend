@@ -1,0 +1,73 @@
+import React from "react";
+import { PublicKey } from "@solana/web3.js";
+import "./GameLeaderboard.css";
+
+interface LeaderboardItem {
+  name?: string;
+  authority: PublicKey | null;
+  score: number;
+}
+
+interface LeaderboardProps {
+  leaderboard: LeaderboardItem[];
+  currentPlayer: LeaderboardItem | null;
+  gameInfo: { base_buyin: number };
+}
+
+const shortenAuthority = (authorityStr: string): string =>
+  authorityStr.length <= 8 ? authorityStr : `${authorityStr.slice(0, 4)}...${authorityStr.slice(-4)}`;
+
+const getDisplayName = (item: LeaderboardItem): string => {
+  if (item.name && item.name !== "unnamed") {
+    return item.name;
+  }
+  if (!item.authority) {
+    return "unnamed";
+  }
+  return shortenAuthority(item.authority.toString());
+};
+
+const getRoundedAmount = (amount: number, foodUnitValue: number): string => {
+  const decimals = getDecimals(foodUnitValue);
+  if (decimals > 0) {
+    return amount.toFixed(decimals);
+  } else {
+    return amount.toString();
+  }
+};
+
+const getDecimals = (amount: number): number => {
+  if (amount % 1 !== 0) {
+    return amount.toString().split(".")[1]?.length || 0;
+  } else {
+    return 0;
+  }
+};
+
+const GameLeaderboard: React.FC<LeaderboardProps> = ({ leaderboard, currentPlayer, gameInfo }) => {
+  return (
+    <div className="game-leaderboard">
+      <div className="title">Leaderboard</div>
+      <ul>
+        {leaderboard.map((item, index) => {
+          const displayName = getDisplayName(item);
+          const isCurrentPlayer =
+            currentPlayer &&
+            item.authority &&
+            currentPlayer.authority &&
+            item.authority.equals(currentPlayer.authority);
+          return (
+            <li
+              key={item.authority ? item.authority.toString() : `${item.name}-${index}`}
+              className={isCurrentPlayer ? "me" : ""}
+            >
+              <b>{displayName}</b> <span>{getRoundedAmount(item.score, gameInfo.base_buyin / 1000)}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+};
+
+export default GameLeaderboard;

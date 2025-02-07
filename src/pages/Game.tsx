@@ -1,12 +1,16 @@
 import React, { useEffect, useRef, useState } from "react";
-import GameComponent from "@components/Game";
-import { PublicKey } from "@solana/web3.js";
 import { useNavigate } from "react-router-dom";
+import { PublicKey } from "@solana/web3.js";
+import { BN } from "@coral-xyz/anchor";
+import * as anchor from "@coral-xyz/anchor";
+
+import GameComponent from "@components/Game";
+import GameLeaderboard from "@components/GameLeaderboard";
 import { MAP_COMPONENT } from "@utils/constants";
 import { ActiveGame, Blob, Food } from "@utils/types";
 import { createUndelegateInstruction, FindComponentPda, FindEntityPda } from "@magicblock-labs/bolt-sdk";
 import { COMPONENT_PLAYER_ID } from "../states/gamePrograms";
-import { BN } from "@coral-xyz/anchor";
+
 import { gameSystemExit } from "../states/gameSystemExit";
 import { useMagicBlockEngine } from "../engine/MagicBlockEngineProvider";
 import { mapFetchOnEphem, playerFetchOnEphem } from "../states/gameFetch";
@@ -15,7 +19,7 @@ import { gameSystemCashOut } from "../states/gameSystemCashOut";
 import { gameSystemMove } from "../states/gameSystemMove";
 import { gameSystemSpawnFood } from "../states/gameSystemSpawnFood";
 import { decodeFood, stringToUint8Array } from "@utils/helper";
-import * as anchor from "@coral-xyz/anchor";
+
 import "./game.scss";
 
 type gameProps = {
@@ -441,42 +445,6 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
   }, []);
 
   useEffect(() => {
-    const shortenAuthority = (authorityStr: string): string => {
-      return authorityStr.length <= 8 ? authorityStr : `${authorityStr.slice(0, 4)}...${authorityStr.slice(-4)}`;
-    };
-
-    const getDisplayName = (item: { name?: string; authority: PublicKey | null }): string => {
-      if (item.name) {
-        return item.name;
-      }
-      if (!item.authority) {
-        return "unnamed";
-      }
-      return shortenAuthority(item.authority.toString());
-    };
-
-    const lines: string[] = [`<span class="title">Leaderboard</span>`];
-
-    leaderboard.forEach((item, index) => {
-      const displayName = getDisplayName(item);
-
-      const isCurrentPlayer =
-        currentPlayer && item.authority && currentPlayer.authority && item.authority.equals(currentPlayer.authority);
-
-      const entry = isCurrentPlayer
-        ? `<span class="me">${index + 1}. ${displayName}</span>`
-        : `${index + 1}. ${displayName}`;
-
-      lines.push(entry);
-    });
-
-    const statusElement = document.getElementById("status");
-    if (statusElement) {
-      statusElement.innerHTML = lines.join("<br />");
-    }
-  }, [gameInfo, leaderboard]);
-
-  useEffect(() => {
     if (currentPlayer) {
       const playersWithAuthority = allplayersRef.current.filter(
         (player) =>
@@ -576,13 +544,7 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
 
   return (
     <div className="gameWrapper w-screen h-screen overflow-hidden">
-      <div
-        id="status"
-        className={`absolute p-2.5  text-white text-[16px] top-2.5 right-2.5 font-bold text-center rounded-[5px] border border-gray-400`}
-        style={{ zIndex: 9999, maxWidth: "240px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-      >
-        <span className="font-[25px] text-white">Leaderboard</span>
-      </div>
+      <GameLeaderboard gameInfo={gameInfo} leaderboard={leaderboard} currentPlayer={currentPlayer} />
 
       <div className={`flex items-center fixed top-0 left-0 m-2.5 z-[9999]`} style={{ zIndex: 9999 }}>
         <button
