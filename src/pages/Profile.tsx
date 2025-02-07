@@ -23,8 +23,9 @@ import {
   COMPONENT_SECTION_ID,
   SYSTEM_CASH_OUT_ID,
 } from "@states/gamePrograms";
-import { anteroomFetchOnChain, mapFetchOnEphem, playerFetchOnChain, sectionFetchOnChain } from "@states/gameFetch";
+import { anteroomFetchOnChain, mapFetchOnChain, mapFetchOnEphem, mapFetchOnSpecificEphem, playerFetchOnChain, playerFetchOnEphem, sectionFetchOnChain } from "@states/gameFetch";
 import { useMagicBlockEngine } from "@engine/MagicBlockEngineProvider";
+import { MagicBlockEngine } from "@engine/MagicBlockEngine";
 import { fetchTokenMetadata, pingEndpoint, stringToUint8Array } from "@utils/helper";
 import { AccountMeta, Connection, SystemProgram, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
 import { PublicKey } from "@solana/web3.js";
@@ -40,8 +41,8 @@ import { createTransferInstruction } from "@solana/spl-token";
 Chart.register(LineElement, PointElement, LinearScale, Title, Tooltip, Legend);
 
 export default function Profile() {
+  const engine = useMagicBlockEngine();
   const [activeTab, setActiveTab] = useState<"general" | "quests" | "admin">("general");
-
   return (
     <div className="profile-page main-container">
       <MenuBar />
@@ -51,7 +52,7 @@ export default function Profile() {
             General
           </button>
           <button className={activeTab === "quests" ? "active" : ""} onClick={() => setActiveTab("quests")}>
-            Quests
+            Quests 
           </button>
           <button className={activeTab === "admin" ? "active" : ""} onClick={() => setActiveTab("admin")}>
             Admin panel
@@ -61,7 +62,7 @@ export default function Profile() {
         <div className="profile-content">
           {activeTab === "general" && <GeneralTab />}
           {activeTab === "quests" && <QuestsTab />}
-          {activeTab === "admin" && <AdminTab />}
+          {activeTab === "admin" && <AdminTab engine={engine}/>}
         </div>
       </div>
 
@@ -83,7 +84,7 @@ function GeneralTab() {
     localStorage.setItem("user", JSON.stringify(user));
     setUsername(inputUsername);
     setUsernameSaved(true);
-  };
+  }; 
 
   useEffect(() => {
     const retrievedUser = localStorage.getItem("user");
@@ -241,8 +242,7 @@ function QuestsTab() {
   );
 }
 
-function AdminTab() {
-  const engine = useMagicBlockEngine();
+function AdminTab({engine}: {engine: MagicBlockEngine}) {
   const isLoading = useRef(false);
   const [myGames, setMyGames] = useState<ActiveGame[]>([]);
   const [openPanelIndex, setOpenPanelIndex] = useState<number | null>(null);
@@ -273,12 +273,11 @@ function AdminTab() {
       let start = { devnet: 1800, mainnet: 0 };
       for (let i = start[NETWORK]; i < start[NETWORK] + 100; i++) {
         console.log("Fetching game #" + i);
-        const worldId = { worldId: new anchor.BN(i) };
-        const worldPda = await FindWorldPda(worldId);
 
-        for (const endpoint of endpoints[NETWORK]) {
-          engine.setEndpointEphemRpc(endpoint);
           try {
+            const worldId = { worldId: new anchor.BN(i) };
+            const worldPda = await FindWorldPda(worldId);
+
             const mapEntityPda = FindEntityPda({
               worldId: worldId.worldId,
               entityId: new anchor.BN(0),
@@ -290,7 +289,7 @@ function AdminTab() {
               entity: mapEntityPda,
             });
 
-            const mapParsedData = await mapFetchOnEphem(engine, mapComponentPda);
+            const mapParsedData = await mapFetchOnChain(engine, mapComponentPda);
             const readableMapParsedData = `
             Name: ${mapParsedData?.name} |
             Authority: ${mapParsedData?.authority?.toString()} |
@@ -306,6 +305,7 @@ function AdminTab() {
             Next Food: ${mapParsedData?.nextFood} |
             Frozen: ${mapParsedData?.frozen}
            `;
+            console.log("readableMapParsedData", readableMapParsedData);
             setMapParsedData(readableMapParsedData);
 
             if (mapParsedData && mapParsedData.authority) {
@@ -326,7 +326,6 @@ function AdminTab() {
                   ping: 0,
                   isLoaded: false,
                 };
-                newGameInfo.endpoint = endpoint;
                 newGameInfo.name = mapParsedData.name;
                 newGameInfo.max_players = mapParsedData.maxPlayers;
                 newGameInfo.size = mapParsedData.width;
@@ -334,8 +333,8 @@ function AdminTab() {
                 newGameInfo.min_buyin = mapParsedData.minBuyin;
                 newGameInfo.max_buyin = mapParsedData.maxBuyin;
                 newGameInfo.isLoaded = true;
-                const pingTime = await pingEndpoint(endpoint);
-                newGameInfo.ping = pingTime;
+                //const pingTime = await pingEndpoint(endpoint);
+                newGameInfo.ping = 0;
                 newGameInfo.isLoaded = true;
 
                 setMyGames((prevMyGames) => {
@@ -351,13 +350,13 @@ function AdminTab() {
             console.log("error", error);
           }
         }
-      }
+      
       isLoading.current = false;
     };
     fetchGames();
   }, []);
 
-  const handlePanelOpen = async (newGameInfo: ActiveGame) => {
+  const handlePanelOpen = async (engine: MagicBlockEngine, newGameInfo: ActiveGame) => {
     setTokenBalance(0);
     setCurrentFoodToAdd(0);
     setFoodComponentCheck("");
@@ -372,56 +371,7 @@ function AdminTab() {
       buyInCount: 0,
     });
 
-    const anteseed = "ante";
-    const anteEntityPda = FindEntityPda({
-      worldId: newGameInfo.worldId,
-      entityId: new anchor.BN(0),
-      seed: stringToUint8Array(anteseed),
-    });
-    const anteComponentPda = FindComponentPda({
-      componentId: COMPONENT_ANTEROOM_ID,
-      entity: anteEntityPda,
-    });
-
-    const account = anteComponentPda.toString();
-    const { cashOutSum, buyInSum, buyInCount } = await calculateTokenBalances(account);
-    setCashoutStats({
-      cashOutSum: cashOutSum,
-      buyInSum: buyInSum,
-      buyInCount: buyInCount,
-    });
-
-    const anteParsedData = await anteroomFetchOnChain(engine, anteComponentPda);
-    const readableAnteParsedData = `
-        Map: ${anteParsedData?.map?.toString()} |
-        Base Buyin: ${anteParsedData?.baseBuyin} |
-        Min Buyin: ${anteParsedData?.minBuyin} |
-        Max Buyin: ${anteParsedData?.maxBuyin} |
-        Token: ${anteParsedData?.token?.toString()} |
-        Token Decimals: ${anteParsedData?.tokenDecimals} |
-        Vault Token Account: ${anteParsedData?.vaultTokenAccount?.toString()} |
-        Gamemaster Token Account: ${anteParsedData?.gamemasterTokenAccount?.toString()}
-    `;
-    setAnteParsedData(readableAnteParsedData);
-    if (anteParsedData?.tokenDecimals) {
-      setDecimals(anteParsedData.tokenDecimals);
-    }
-    if (anteParsedData?.token) {
-      setTokenAddress(anteParsedData.token.toString());
-    }
-    let mint_of_token_being_sent = new PublicKey(0);
-
-    if (anteParsedData && anteParsedData.token) {
-      mint_of_token_being_sent = anteParsedData.token;
-      if (!anteParsedData.gamemasterTokenAccount) {
-        return;
-      }
-      if (!anteParsedData.tokenDecimals) {
-        return;
-      }
-
-      setGameOwner(anteParsedData.gamemasterTokenAccount.toString());
-
+    for (const endpoint of endpoints[NETWORK]) {
       const mapEntityPda = FindEntityPda({
         worldId: newGameInfo.worldId,
         entityId: new anchor.BN(0),
@@ -432,102 +382,162 @@ function AdminTab() {
         componentId: COMPONENT_MAP_ID,
         entity: mapEntityPda,
       });
-
-      const [tokenAccountOwnerPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("token_account_owner_pda"), mapComponentPda.toBuffer()],
-        new PublicKey("BAP315i1xoAXqbJcTT1LrUS45N3tAQnNnPuNQkCcvbAr"),
-      );
-
-      const tokenVault = await getAssociatedTokenAddress(mint_of_token_being_sent, tokenAccountOwnerPda, true);
-
-      setGameWallet(tokenAccountOwnerPda.toString());
-      setGameTokenAccount(tokenVault.toString());
-
-      try {
-        const tokenAccount = await getAccount(engine.getConnectionChain(), new PublicKey(tokenVault.toString()));
-        console.log("Balance:", tokenAccount.amount.toString());
-        const readableBalance = Number(tokenAccount.amount) / 10 ** anteParsedData.tokenDecimals;
-        setTokenBalance(readableBalance);
-      } catch (error) {
-        console.error("Error fetching token account balance:", error);
+      const mapParsedData = await mapFetchOnSpecificEphem(engine, mapComponentPda, endpoint);
+      if (!mapParsedData) {
+        continue; 
+      }else{
+        engine.setEndpointEphemRpc(endpoint);
       }
 
-      let referral_vault_program_id = new PublicKey("CLC46PuyXnSuZGmUrqkFbAh7WwzQm8aBPjSQ3HMP56kp");
-      let [referralTokenAccountOwnerPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("token_account_owner_pda"), mint_of_token_being_sent.toBuffer()],
-        referral_vault_program_id,
-      );
-      //const referraltokenVault = await getAssociatedTokenAddress(mint_of_token_being_sent, referralTokenAccountOwnerPda, true);
-      setReferralProgramAccount(referralTokenAccountOwnerPda.toString());
-
-      if (mint_of_token_being_sent.toString() === "7dnMwS2yE6NE1PX81B9Xpm7zUhFXmQABqUiHHzWXiEBn") {
-        newGameInfo.image = `${process.env.PUBLIC_URL}/agld.jpg`;
-        newGameInfo.token = "AGLD";
-      } else {
-        try {
-          const { name, image } = await fetchTokenMetadata(mint_of_token_being_sent.toString());
-          newGameInfo.image = image;
-          newGameInfo.token = name;
-        } catch (error) {
-          console.error("Error fetching token data:", error);
-        }
-      }
-      setMyGames((prevMyGames) => {
-        const gameExists = prevMyGames.some((game) => game.worldId === newGameInfo.worldId);
-        if (gameExists) {
-          return prevMyGames;
-        }
-        return [newGameInfo, ...prevMyGames];
-      });
-    }
-
-    let foodcomponents = 32;
-
-    const map_size = newGameInfo.size;
-
-    if (map_size === 4000) {
-      foodcomponents = 16 * 2;
-    } else if (map_size === 6000) {
-      foodcomponents = 36 * 2;
-    } else if (map_size === 8000) {
-      foodcomponents = 64 * 2;
-    }
-
-    let sectionMessage = "";
-    for (let i = 1; i < foodcomponents + 1; i++) {
-      const foodseed = "food" + i.toString();
-      const foodEntityPda = FindEntityPda({
+      console.log(endpoint)
+      const anteseed = "ante";
+      const anteEntityPda = FindEntityPda({
         worldId: newGameInfo.worldId,
         entityId: new anchor.BN(0),
-        seed: stringToUint8Array(foodseed),
+        seed: stringToUint8Array(anteseed),
       });
-      const foodComponentPda = FindComponentPda({
-        componentId: COMPONENT_SECTION_ID,
-        entity: foodEntityPda,
+      const anteComponentPda = FindComponentPda({
+        componentId: COMPONENT_ANTEROOM_ID,
+        entity: anteEntityPda,
       });
-      const foodParsedData = await sectionFetchOnChain(engine, foodComponentPda);
-      const index = i;
-      const { x, y } = getTopLeftCorner(i - 1, newGameInfo.size);
-      //console.log('foodParsedData', foodParsedData, x, y)
-      if (foodParsedData && (foodParsedData.topLeftX !== x || foodParsedData.topLeftY !== y)) {
-        console.error(
-          `Food section ${index} has incorrect top left coordinates: (${foodParsedData.topLeftX}, ${foodParsedData.topLeftY})`,
-        );
-        sectionMessage = "section incorrect";
-      } else if (!foodParsedData) {
-        sectionMessage = "section not found";
-      }
-    }
-    if (sectionMessage === "") {
-      sectionMessage = "success";
-    }
-    console.log("sectionMessage", sectionMessage);
-    setFoodComponentCheck(sectionMessage);
 
-    const checkPlayers = await handleCleanupClick(newGameInfo, false);
-    console.log("checkPlayers", checkPlayers);
-    if (checkPlayers !== undefined) {
-      setPlayerComponentCheck(checkPlayers);
+      const account = anteComponentPda.toString();
+      const { cashOutSum, buyInSum, buyInCount } = await calculateTokenBalances(account);
+      setCashoutStats({
+        cashOutSum: cashOutSum,
+        buyInSum: buyInSum,
+        buyInCount: buyInCount,
+      });
+
+      const anteParsedData = await anteroomFetchOnChain(engine, anteComponentPda);
+      const readableAnteParsedData = `
+          Map: ${anteParsedData?.map?.toString()} |
+          Base Buyin: ${anteParsedData?.baseBuyin} |
+          Min Buyin: ${anteParsedData?.minBuyin} |
+          Max Buyin: ${anteParsedData?.maxBuyin} |
+          Token: ${anteParsedData?.token?.toString()} |
+          Token Decimals: ${anteParsedData?.tokenDecimals} |
+          Vault Token Account: ${anteParsedData?.vaultTokenAccount?.toString()} |
+          Gamemaster Token Account: ${anteParsedData?.gamemasterTokenAccount?.toString()}
+      `;
+      setAnteParsedData(readableAnteParsedData);
+      if (anteParsedData?.tokenDecimals) {
+        setDecimals(anteParsedData.tokenDecimals);
+      }
+      if (anteParsedData?.token) {
+        setTokenAddress(anteParsedData.token.toString());
+      }
+      let mint_of_token_being_sent = new PublicKey(0);
+
+      if (anteParsedData && anteParsedData.token) {
+        mint_of_token_being_sent = anteParsedData.token;
+        if (!anteParsedData.gamemasterTokenAccount) {
+          return;
+        }
+        if (!anteParsedData.tokenDecimals) {
+          return;
+        }
+
+        setGameOwner(anteParsedData.gamemasterTokenAccount.toString());
+
+        const [tokenAccountOwnerPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("token_account_owner_pda"), mapComponentPda.toBuffer()],
+          new PublicKey("BAP315i1xoAXqbJcTT1LrUS45N3tAQnNnPuNQkCcvbAr"),
+        );
+
+        const tokenVault = await getAssociatedTokenAddress(mint_of_token_being_sent, tokenAccountOwnerPda, true);
+
+        setGameWallet(tokenAccountOwnerPda.toString());
+        setGameTokenAccount(tokenVault.toString());
+
+        try {
+          const tokenAccount = await getAccount(engine.getConnectionChain(), new PublicKey(tokenVault.toString()));
+          console.log("Balance:", tokenAccount.amount.toString());
+          const readableBalance = Number(tokenAccount.amount) / 10 ** anteParsedData.tokenDecimals;
+          setTokenBalance(readableBalance);
+        } catch (error) {
+          console.error("Error fetching token account balance:", error);
+        }
+
+        let referral_vault_program_id = new PublicKey("CLC46PuyXnSuZGmUrqkFbAh7WwzQm8aBPjSQ3HMP56kp");
+        let [referralTokenAccountOwnerPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("token_account_owner_pda"), mint_of_token_being_sent.toBuffer()],
+          referral_vault_program_id,
+        );
+        //const referraltokenVault = await getAssociatedTokenAddress(mint_of_token_being_sent, referralTokenAccountOwnerPda, true);
+        setReferralProgramAccount(referralTokenAccountOwnerPda.toString());
+
+        if (mint_of_token_being_sent.toString() === "7dnMwS2yE6NE1PX81B9Xpm7zUhFXmQABqUiHHzWXiEBn") {
+          newGameInfo.image = `${process.env.PUBLIC_URL}/agld.jpg`;
+          newGameInfo.token = "AGLD";
+        } else {
+          try {
+            const { name, image } = await fetchTokenMetadata(mint_of_token_being_sent.toString());
+            newGameInfo.image = image;
+            newGameInfo.token = name;
+          } catch (error) {
+            console.error("Error fetching token data:", error);
+          }
+        }
+        setMyGames((prevMyGames) => {
+          const gameExists = prevMyGames.some((game) => game.worldId === newGameInfo.worldId);
+          if (gameExists) {
+            return prevMyGames;
+          }
+          return [newGameInfo, ...prevMyGames];
+        });
+      }
+
+      let foodcomponents = 32;
+
+      const map_size = newGameInfo.size;
+
+      if (map_size === 4000) {
+        foodcomponents = 16 * 2;
+      } else if (map_size === 6000) {
+        foodcomponents = 36 * 2;
+      } else if (map_size === 8000) {
+        foodcomponents = 64 * 2;
+      }
+
+      let sectionMessage = "";
+      for (let i = 1; i < foodcomponents + 1; i++) {
+        const foodseed = "food" + i.toString();
+        const foodEntityPda = FindEntityPda({
+          worldId: newGameInfo.worldId,
+          entityId: new anchor.BN(0),
+          seed: stringToUint8Array(foodseed),
+        });
+        const foodComponentPda = FindComponentPda({
+          componentId: COMPONENT_SECTION_ID,
+          entity: foodEntityPda,
+        });
+        const foodParsedData = await sectionFetchOnChain(engine, foodComponentPda);
+        const index = i;
+        const { x, y } = getTopLeftCorner(i - 1, newGameInfo.size);
+        //console.log('foodParsedData', foodParsedData, x, y)
+        if (foodParsedData && (foodParsedData.topLeftX !== x || foodParsedData.topLeftY !== y)) {
+          console.error(
+            `Food section ${index} has incorrect top left coordinates: (${foodParsedData.topLeftX}, ${foodParsedData.topLeftY})`,
+          );
+          sectionMessage = "section incorrect";
+        } else if (!foodParsedData) {
+          sectionMessage = "section not found";
+        }
+      }
+      if (sectionMessage === "") {
+        sectionMessage = "success";
+      }
+      console.log("sectionMessage", sectionMessage);
+      setFoodComponentCheck(sectionMessage);
+
+      const checkPlayers = await handleCleanupClick(newGameInfo, false);
+      console.log("checkPlayers", checkPlayers);
+      if (checkPlayers !== undefined) {
+        setPlayerComponentCheck(checkPlayers);
+      }
+
+      break;
     }
   };
 
@@ -805,7 +815,7 @@ function AdminTab() {
             title={row.isLoaded ? row.name + " " + `(${row.worldId.toString()})` : <Spinner />}
             onOpen={() => {
               setOpenPanelIndex(idx);
-              handlePanelOpen(row);
+              handlePanelOpen(engine, row);
             }}
             defaultOpen={openPanelIndex === idx}
           >

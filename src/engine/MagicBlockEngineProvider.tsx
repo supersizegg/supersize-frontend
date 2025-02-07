@@ -1,8 +1,8 @@
 import * as React from "react";
 import { WalletProvider, useWallet } from "@solana/wallet-adapter-react";
-import { Keypair } from "@solana/web3.js";
+import { Keypair, PublicKey } from "@solana/web3.js";
 import { MagicBlockEngine } from "./MagicBlockEngine";
-
+import { deriveKeypairFromPublicKey } from "@utils/helper";
 const SESSION_LOCAL_STORAGE = "magicblock-session-key";
 const SESSION_MIN_LAMPORTS = 0.02 * 1_000_000_000;
 const SESSION_MAX_LAMPORTS = 0.05 * 1_000_000_000;
@@ -25,14 +25,19 @@ function MagicBlockEngineProviderInner({ children }: { children: React.ReactNode
   const walletContext = useWallet();
 
   const engine = React.useMemo(() => {
-    let sessionKey;
 
+    let sessionKey = deriveKeypairFromPublicKey(new PublicKey("11111111111111111111111111111111"));
+    /*
     const sessionKeyString = localStorage.getItem(SESSION_LOCAL_STORAGE);
     if (sessionKeyString) {
       sessionKey = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(sessionKeyString)));
     } else {
       sessionKey = Keypair.generate();
       localStorage.setItem(SESSION_LOCAL_STORAGE, JSON.stringify(Array.from(sessionKey.secretKey)));
+    }
+    */
+    if (walletContext.publicKey) {
+      sessionKey = deriveKeypairFromPublicKey(walletContext.publicKey);
     }
 
     return new MagicBlockEngine(walletContext, sessionKey, {

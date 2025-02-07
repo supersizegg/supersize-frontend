@@ -9,6 +9,7 @@ import {
   getComponentPlayerOnEphem,
   getComponentSectionOnChain,
   getComponentSectionOnEphem,
+  getComponentMapOnSpecificEphem,
 } from "./gamePrograms";
 
 export async function anteroomFetchOnChain(engine: MagicBlockEngine, gamePda: PublicKey) {
@@ -28,6 +29,10 @@ export async function mapFetchOnChain(engine: MagicBlockEngine, gamePda: PublicK
 
 export async function mapFetchOnEphem(engine: MagicBlockEngine, gamePda: PublicKey) {
   const componentMap = getComponentMapOnEphem(engine);
+  return componentMap.account.map.fetchNullable(gamePda);
+}
+export async function mapFetchOnSpecificEphem(engine: MagicBlockEngine, gamePda: PublicKey, endpoint: string) {
+  const componentMap = getComponentMapOnSpecificEphem(engine, endpoint);
   return componentMap.account.map.fetchNullable(gamePda);
 }
 

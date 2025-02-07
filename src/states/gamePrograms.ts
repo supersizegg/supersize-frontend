@@ -89,6 +89,11 @@ export function getComponentMapOnChain(engine: MagicBlockEngine) {
 export function getComponentMapOnEphem(engine: MagicBlockEngine) {
   return engine.getProgramOnEphem<Map>(componentMap);
 }
+
+export function getComponentMapOnSpecificEphem(engine: MagicBlockEngine, endpoint: string) {
+  return engine.getProgramOnSpecificEphem<Map>(componentMap, endpoint);
+}
+
 export function getComponentPlayerOnChain(engine: MagicBlockEngine) {
   return engine.getProgramOnChain<Player>(componentPlayer);
 }

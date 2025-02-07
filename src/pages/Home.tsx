@@ -250,14 +250,6 @@ const Home = ({
   ) {
     return typeof result === "object" && "activeplayers" in result;
   }
-  // function isMyPlayerStatus(
-  //   result: { playerStatus: string; need_to_delegate: boolean; need_to_undelegate: boolean } | "error",
-  // ) {
-  //   return typeof result === "object";
-  // }
-  function isActivePlayersStatus(result: { activeplayers: number; newplayerEntityPda: PublicKey | null } | "error") {
-    return typeof result === "object";
-  }
 
   const handleRefresh = async (engine: MagicBlockEngine, activeGamesLoaded: FetchedGame[], index: number) => {
     setIsLoadingCurrentGames(true);

@@ -82,6 +82,15 @@ export class MagicBlockEngine {
   getProgramOnEphem<T extends Idl>(idl: object): Program<T> {
     return new Program<T>(idl as T, this.providerEphemeralRollup);
   }
+  getProgramOnSpecificEphem<T extends Idl>(idl: object, endpoint: string): Program<T> {
+    const thisConnection = new Connection(endpoint, {
+      wsEndpoint: endpoint.replace("http", "ws"),
+    });
+    const thisProvider = new AnchorProvider(thisConnection, new NodeWallet(this.sessionKey), {
+      preflightCommitment: "processed",
+    });
+    return new Program<T>(idl as T, thisProvider);
+  }
 
   getConnectionChain(): Connection {
     return connectionChain;
