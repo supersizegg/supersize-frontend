@@ -19,7 +19,7 @@ const Footer: React.FC = () => {
       <span className="footerCopyright">© Supersize Inc. 2025</span>
 
       <div className="footerIcons">
-        <div className="footerIcon" onClick={openDocs}>
+        <div className="footerIcon" onClick={openDocs} style={{ display: "none" }}>
           <img src={`${process.env.PUBLIC_URL}/GitBook.png`} alt="GitBook" className="footerIconImg" />
           <img
             src={`${process.env.PUBLIC_URL}/GitBookhighlight.png`}

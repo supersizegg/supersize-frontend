@@ -441,23 +441,38 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
   }, []);
 
   useEffect(() => {
-    let status: string = '<span class="title">Leaderboard</span>';
-    for (let i = 0; i < leaderboard.length; i++) {
-      status += "<br />";
-      const currentItem = leaderboard[i];
-      if (currentPlayer && currentItem && currentItem.authority && currentPlayer.authority) {
-        if (currentItem.authority.equals(currentPlayer.authority)) {
-          status += '<span class="me">' + (i + 1) + ". " + currentItem.name + "</span>";
-        } else {
-          status += i + 1 + ". " + currentItem.name;
-        }
-      } else {
-        status += i + 1 + ". " + currentItem.name;
+    const shortenAuthority = (authorityStr: string): string => {
+      return authorityStr.length <= 8 ? authorityStr : `${authorityStr.slice(0, 4)}...${authorityStr.slice(-4)}`;
+    };
+
+    const getDisplayName = (item: { name?: string; authority: PublicKey | null }): string => {
+      if (item.name) {
+        return item.name;
       }
-    }
+      if (!item.authority) {
+        return "unnamed";
+      }
+      return shortenAuthority(item.authority.toString());
+    };
+
+    const lines: string[] = [`<span class="title">Leaderboard</span>`];
+
+    leaderboard.forEach((item, index) => {
+      const displayName = getDisplayName(item);
+
+      const isCurrentPlayer =
+        currentPlayer && item.authority && currentPlayer.authority && item.authority.equals(currentPlayer.authority);
+
+      const entry = isCurrentPlayer
+        ? `<span class="me">${index + 1}. ${displayName}</span>`
+        : `${index + 1}. ${displayName}`;
+
+      lines.push(entry);
+    });
+
     const statusElement = document.getElementById("status");
     if (statusElement) {
-      statusElement.innerHTML = status;
+      statusElement.innerHTML = lines.join("<br />");
     }
   }, [gameInfo, leaderboard]);
 
@@ -564,14 +579,14 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
       <div
         id="status"
         className={`absolute p-2.5  text-white text-[16px] top-2.5 right-2.5 font-bold text-center rounded-[5px] border border-gray-400`}
-        style={{ zIndex: 9999 }}
+        style={{ zIndex: 9999, maxWidth: "240px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
       >
         <span className="font-[25px] text-white">Leaderboard</span>
       </div>
 
       <div className={`flex items-center fixed top-0 left-0 m-2.5 z-[9999]`} style={{ zIndex: 9999 }}>
         <button
-          style={{ border: "1px solid red", background: "#ff000042", color: "#fff" }}
+          style={{ border: "1px solid #fff", background: "rgb(255 255 255 / 25%)", color: "#fff", borderRadius: "8px" }}
           className="flex items-center justify-center text-center relative box-border text-sm cursor-pointer text-black no-underline bg-[#f07171] float-right border border-[#f07171] rounded-full py-1.5 px-2.5 transition-colors duration-300 z-[9999999] hover:bg-black hover:text-[#f07171] active:bg-black active:text-[#f07171]"
           onClick={handleExitClick}
           onMouseEnter={() => {

@@ -163,10 +163,10 @@ const Home = ({
             let playerStatus = "new_player";
 
             if (isPlayerStatus(result)) {
-              if(result.playerStatus == "error"){
+              if (result.playerStatus == "error") {
                 console.log("Error fetching player status");
                 activeplayers = result.activeplayers;
-                if(activeplayers == mapParsedData.maxPlayers){
+                if (activeplayers == mapParsedData.maxPlayers) {
                   playerStatus = "Game Full";
                 } else {
                   playerStatus = result.playerStatus;
@@ -290,30 +290,30 @@ const Home = ({
       let newplayerEntityPda = new PublicKey(0);
       let playerStatus = "new_player";
 
-        const result = await getMyPlayerStatus(
-            engine,
-            activeGamesLoaded[index].activeGame.worldId,
-            activeGamesLoaded[index].activeGame.max_players,
-          );
-          if (isPlayerStatus(result)) {
-            if(result.playerStatus == "error"){
-                console.log("Error fetching player status");
-                activeplayers = result.activeplayers;
-                if(activeplayers == activeGamesLoaded[index].activeGame.max_players){
-                  playerStatus = "Game Full";
-                } else {
-                  playerStatus = result.playerStatus;
-                }
-              } else {
-                need_to_delegate = result.need_to_delegate;
-                need_to_undelegate = result.need_to_undelegate;
-                playerStatus = result.playerStatus;
-                activeplayers = result.activeplayers;
-                newplayerEntityPda = result.newplayerEntityPda;
-              }
+      const result = await getMyPlayerStatus(
+        engine,
+        activeGamesLoaded[index].activeGame.worldId,
+        activeGamesLoaded[index].activeGame.max_players,
+      );
+      if (isPlayerStatus(result)) {
+        if (result.playerStatus == "error") {
+          console.log("Error fetching player status");
+          activeplayers = result.activeplayers;
+          if (activeplayers == activeGamesLoaded[index].activeGame.max_players) {
+            playerStatus = "Game Full";
           } else {
-            console.log("Error fetching player status");
+            playerStatus = result.playerStatus;
           }
+        } else {
+          need_to_delegate = result.need_to_delegate;
+          need_to_undelegate = result.need_to_undelegate;
+          playerStatus = result.playerStatus;
+          activeplayers = result.activeplayers;
+          newplayerEntityPda = result.newplayerEntityPda;
+        }
+      } else {
+        console.log("Error fetching player status");
+      }
 
       const newgame: FetchedGame = {
         activeGame: {
@@ -430,30 +430,30 @@ const Home = ({
             let newplayerEntityPda: PublicKey | null = new PublicKey(0);
             let playerStatus = "new_player";
 
-              const result = await getMyPlayerStatus(
-                engine,
-                filteredGames[i].activeGame.worldId,
-                mapParsedData.maxPlayers,
-              );
-              if (isPlayerStatus(result)) {
-                if(result.playerStatus == "error"){
-                    console.log("Error fetching player status");
-                    activeplayers = result.activeplayers;
-                    if(activeplayers == mapParsedData.maxPlayers){
-                      playerStatus = "Game Full";
-                    } else {
-                      playerStatus = result.playerStatus;
-                    }
-                  } else {
-                    activeplayers = result.activeplayers;
-                    need_to_delegate = result.need_to_delegate;
-                    need_to_undelegate = result.need_to_undelegate;
-                    newplayerEntityPda = result.newplayerEntityPda;
-                    playerStatus = result.playerStatus;
-                  }
-              } else {
+            const result = await getMyPlayerStatus(
+              engine,
+              filteredGames[i].activeGame.worldId,
+              mapParsedData.maxPlayers,
+            );
+            if (isPlayerStatus(result)) {
+              if (result.playerStatus == "error") {
                 console.log("Error fetching player status");
+                activeplayers = result.activeplayers;
+                if (activeplayers == mapParsedData.maxPlayers) {
+                  playerStatus = "Game Full";
+                } else {
+                  playerStatus = result.playerStatus;
+                }
+              } else {
+                activeplayers = result.activeplayers;
+                need_to_delegate = result.need_to_delegate;
+                need_to_undelegate = result.need_to_undelegate;
+                newplayerEntityPda = result.newplayerEntityPda;
+                playerStatus = result.playerStatus;
               }
+            } else {
+              console.log("Error fetching player status");
+            }
             console.log("activeplayers", activeplayers);
             const newgame: FetchedGame = {
               activeGame: {
@@ -845,13 +845,18 @@ const Home = ({
                     <button
                       className="btn-play"
                       disabled={
-                        !row.activeGame.isLoaded || row.activeGame.ping < 0 || row.activeGame.active_players < 0
-                        || row.playerInfo.playerStatus == "error"
-                        || row.playerInfo.playerStatus == "Game Full"
+                        !row.activeGame.isLoaded ||
+                        row.activeGame.ping < 0 ||
+                        row.activeGame.active_players < 0 ||
+                        row.playerInfo.playerStatus == "error" ||
+                        row.playerInfo.playerStatus == "Game Full" ||
+                        engine.getWalletConnected() == false
                       }
                       onClick={() => {
                         handlePlayButtonClick(row);
                       }}
+                      data-tooltip-id={`connect-wallet-${idx}`}
+                      data-tooltip-content="Connect wallet to play"
                     >
                       {{
                         new_player: "Play",
@@ -860,6 +865,7 @@ const Home = ({
                         in_game: "Resume",
                       }[row.playerInfo.playerStatus] || row.playerInfo.playerStatus}
                     </button>
+                    {engine.getWalletConnected() == false && <Tooltip id={`connect-wallet-${idx}`} />}
                   </td>
                   <td className="desktop-only">
                     <button
