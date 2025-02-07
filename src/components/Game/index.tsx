@@ -300,98 +300,153 @@ const GameComponent: React.FC<GameComponentProps> = ({
     });
   }, []);
 
-  const drawOpponentPlayer = (ctx: CanvasRenderingContext2D, blob: Blob, myblob: Blob) => {
-    let glowSize = 0;
-    let glowIntensity = "rgba(19, 241, 149, 0)";
+  const drawMouth = (ctx: CanvasRenderingContext2D, blob: Blob, isSmiling: boolean = true) => {
+    const mouthWidth = blob.radius * 0.5;
+    const mouthYOffset = blob.radius * 0.3;
+    const mouthHeight = blob.radius * 0.1;
 
+    const startX = blob.x - mouthWidth;
+    const startY = blob.y + mouthYOffset;
+    const endX = blob.x + mouthWidth;
+    const endY = startY;
+
+    const controlY = isSmiling ? startY + mouthHeight : startY - mouthHeight;
+
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.quadraticCurveTo(blob.x, controlY, endX, endY);
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  };
+
+  const drawOpponentPlayer = (ctx: CanvasRenderingContext2D, blob: Blob, myblob: Blob) => {
+    let glowSize = 50;
+    let glowIntensity = "rgba(19, 241, 149, 0.5)";
     if (blob.mass > myblob.mass * 1.05) {
-      glowSize = 50;
       glowIntensity = "rgba(240, 113, 113, 0.5)";
     } else if (myblob.mass > blob.mass * 1.05) {
-      glowSize = 50;
       glowIntensity = "rgba(19, 241, 149, 0.5)";
     } else {
-      glowSize = 50;
       glowIntensity = "rgba(255, 239, 138, 0.5)";
     }
 
-    const diameter = blob.radius * 2;
     const dx = blob.target_x - blob.x;
     const dy = blob.target_y - blob.y;
     const angle = Math.atan2(dy, dx);
 
-    let imageIndex = 0;
-    if (angle >= -Math.PI / 8 && angle < Math.PI / 8) {
-      imageIndex = 6; // Side-right
-    } else if (angle >= Math.PI / 8 && angle < (3 * Math.PI) / 8) {
-      imageIndex = 4; // Down-right
-    } else if (angle >= (3 * Math.PI) / 8 && angle < (5 * Math.PI) / 8) {
-      imageIndex = 1; // Down
-    } else if (angle >= (5 * Math.PI) / 8 && angle < (7 * Math.PI) / 8) {
-      imageIndex = 5; // Down-left
-    } else if (angle >= (7 * Math.PI) / 8 || angle < (-7 * Math.PI) / 8) {
-      imageIndex = 7; // Side-left
-    } else if (angle >= (-7 * Math.PI) / 8 && angle < (-5 * Math.PI) / 8) {
-      imageIndex = 3; // Up-left
-    } else if (angle >= (-5 * Math.PI) / 8 && angle < (-3 * Math.PI) / 8) {
-      imageIndex = 0; // Up
-    } else if (angle >= (-3 * Math.PI) / 8 && angle < -Math.PI / 8) {
-      imageIndex = 2; // Up-right
-    }
+    ctx.save();
+    ctx.shadowBlur = glowSize;
+    ctx.shadowColor = glowIntensity;
 
-    const selectedImage = playerImages[imageIndex];
+    ctx.beginPath();
+    ctx.arc(blob.x, blob.y, blob.radius, 0, 2 * Math.PI);
+    ctx.fillStyle = "#13F195";
+    ctx.fill();
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 2;
+    ctx.stroke();
 
-    if (selectedImage && selectedImage.complete) {
-      ctx.save();
-      ctx.shadowBlur = glowSize;
-      ctx.shadowColor = glowIntensity;
-      ctx.drawImage(selectedImage, blob.x - diameter / 2, blob.y - diameter / 2, diameter, diameter);
-      ctx.restore();
-    } else {
-      ctx.beginPath();
-      ctx.arc(blob.x, blob.y, blob.radius, 0, 2 * Math.PI);
-      ctx.fillStyle = "#13F195";
-      ctx.fill();
-      ctx.stroke();
-    }
+    const eyeballRadius = blob.radius * 0.2;
+    const pupilRadius = blob.radius * 0.08;
+    const eyeSeparation = blob.radius * 0.4;
+    const eyeVerticalOffset = blob.radius * 0.2;
+    const maxPupilOffset = eyeballRadius - pupilRadius;
+    const pupilDx = Math.cos(angle) * maxPupilOffset;
+    const pupilDy = Math.sin(angle) * maxPupilOffset;
+
+    // Left eye
+    const leftEyeX = blob.x - eyeSeparation;
+    const leftEyeY = blob.y - eyeVerticalOffset;
+    ctx.beginPath();
+    ctx.arc(leftEyeX, leftEyeY, eyeballRadius, 0, 2 * Math.PI);
+    ctx.fillStyle = "white";
+    ctx.fill();
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(leftEyeX + pupilDx, leftEyeY + pupilDy, pupilRadius, 0, 2 * Math.PI);
+    ctx.fillStyle = "black";
+    ctx.fill();
+
+    // Right eye
+    const rightEyeX = blob.x + eyeSeparation;
+    const rightEyeY = blob.y - eyeVerticalOffset;
+    ctx.beginPath();
+    ctx.arc(rightEyeX, rightEyeY, eyeballRadius, 0, 2 * Math.PI);
+    ctx.fillStyle = "white";
+    ctx.fill();
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(rightEyeX + pupilDx, rightEyeY + pupilDy, pupilRadius, 0, 2 * Math.PI);
+    ctx.fillStyle = "black";
+    ctx.fill();
+
+    drawMouth(ctx, blob, false);
+
+    ctx.restore();
   };
 
   const drawMyPlayer = (ctx: CanvasRenderingContext2D, blob: Blob, currentblob: Blob) => {
-    const diameter = blob.radius * 2;
-    const dx = newTargetRef.current.x - currentblob.x; //currentblob.target_x - currentblob.x;
-    const dy = newTargetRef.current.y - currentblob.y; //currentblob.target_y - currentblob.y;
+    const dx = newTargetRef.current.x - currentblob.x;
+    const dy = newTargetRef.current.y - currentblob.y;
     const angle = Math.atan2(dy, dx);
 
-    let imageIndex = 0;
-    if (angle >= -Math.PI / 8 && angle < Math.PI / 8) {
-      imageIndex = 6; // Side-right
-    } else if (angle >= Math.PI / 8 && angle < (3 * Math.PI) / 8) {
-      imageIndex = 4; // Down-right
-    } else if (angle >= (3 * Math.PI) / 8 && angle < (5 * Math.PI) / 8) {
-      imageIndex = 1; // Down
-    } else if (angle >= (5 * Math.PI) / 8 && angle < (7 * Math.PI) / 8) {
-      imageIndex = 5; // Down-left
-    } else if (angle >= (7 * Math.PI) / 8 || angle < (-7 * Math.PI) / 8) {
-      imageIndex = 7; // Side-left
-    } else if (angle >= (-7 * Math.PI) / 8 && angle < (-5 * Math.PI) / 8) {
-      imageIndex = 3; // Up-left
-    } else if (angle >= (-5 * Math.PI) / 8 && angle < (-3 * Math.PI) / 8) {
-      imageIndex = 0; // Up
-    } else if (angle >= (-3 * Math.PI) / 8 && angle < -Math.PI / 8) {
-      imageIndex = 2; // Up-right
-    }
+    ctx.beginPath();
+    ctx.arc(blob.x, blob.y, blob.radius, 0, 2 * Math.PI);
+    ctx.fillStyle = "#13F195";
+    ctx.fill();
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 2;
+    ctx.stroke();
 
-    const selectedImage = playerImages[imageIndex];
+    const eyeballRadius = blob.radius * 0.2;
+    const pupilRadius = blob.radius * 0.08;
+    const eyeSeparation = blob.radius * 0.4;
+    const eyeVerticalOffset = blob.radius * 0.2;
+    const maxPupilOffset = eyeballRadius - pupilRadius;
 
-    if (selectedImage && selectedImage.complete) {
-      ctx.drawImage(selectedImage, blob.x - diameter / 2, blob.y - diameter / 2, diameter, diameter);
-    } else {
-      ctx.beginPath();
-      ctx.arc(blob.x, blob.y, blob.radius, 0, 2 * Math.PI);
-      ctx.fillStyle = "#13F195";
-      ctx.fill();
-      ctx.stroke();
-    }
+    const pupilDx = Math.cos(angle) * maxPupilOffset;
+    const pupilDy = Math.sin(angle) * maxPupilOffset;
+
+    const leftEyeX = blob.x - eyeSeparation;
+    const leftEyeY = blob.y - eyeVerticalOffset;
+
+    ctx.beginPath();
+    ctx.arc(leftEyeX, leftEyeY, eyeballRadius, 0, 2 * Math.PI);
+    ctx.fillStyle = "white";
+    ctx.fill();
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(leftEyeX + pupilDx, leftEyeY + pupilDy, pupilRadius, 0, 2 * Math.PI);
+    ctx.fillStyle = "black";
+    ctx.fill();
+
+    const rightEyeX = blob.x + eyeSeparation;
+    const rightEyeY = blob.y - eyeVerticalOffset;
+
+    ctx.beginPath();
+    ctx.arc(rightEyeX, rightEyeY, eyeballRadius, 0, 2 * Math.PI);
+    ctx.fillStyle = "white";
+    ctx.fill();
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(rightEyeX + pupilDx, rightEyeY + pupilDy, pupilRadius, 0, 2 * Math.PI);
+    ctx.fillStyle = "black";
+    ctx.fill();
+
+    drawMouth(ctx, blob, true);
   };
 
   const drawFood = (ctx: CanvasRenderingContext2D, food: Food) => {
