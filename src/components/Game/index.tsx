@@ -52,34 +52,42 @@ const foodImages = [
   foodImage15, // Size 15
 ];
 
-const playerImage = new Image();
-const playerImage2 = new Image();
-const playerImage3 = new Image();
-const playerImage4 = new Image();
-const playerImage5 = new Image();
-const playerImage6 = new Image();
-const playerImage7 = new Image();
-const playerImage8 = new Image();
-
-playerImage.src = `${process.env.PUBLIC_URL}/up.png`;
-playerImage2.src = `${process.env.PUBLIC_URL}/down.png`;
-playerImage3.src = `${process.env.PUBLIC_URL}/up-right.png`;
-playerImage4.src = `${process.env.PUBLIC_URL}/up-left.png`;
-playerImage5.src = `${process.env.PUBLIC_URL}/down-right.png`;
-playerImage6.src = `${process.env.PUBLIC_URL}/down-left.png`;
-playerImage7.src = `${process.env.PUBLIC_URL}/side-right3.png`;
-playerImage8.src = `${process.env.PUBLIC_URL}/side-left3.png`;
-
-const playerImages = [
-  playerImage,
-  playerImage2,
-  playerImage3,
-  playerImage4,
-  playerImage5,
-  playerImage6,
-  playerImage7,
-  playerImage8,
+const OPPONENT_COLORS = [
+  "#1abc9c",
+  "#2ecc71",
+  "#3498db",
+  "#9b59b6",
+  "#34495e",
+  "#16a085",
+  "#27ae60",
+  "#2980b9",
+  "#8e44ad",
+  "#2c3e50",
+  "#f1c40f",
+  "#e67e22",
+  "#e74c3c",
+  "#ecf0f1",
+  "#95a5a6",
+  "#f39c12",
+  "#d35400",
+  "#c0392b",
+  "#bdc3c7",
+  "#7f8c8d",
 ];
+
+function hashCode(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return Math.abs(hash);
+}
+
+function getOpponentColor(blob: Blob): string {
+  const identifier = blob.authority ? blob.authority.toString() : blob.name;
+  const index = hashCode(identifier) % OPPONENT_COLORS.length;
+  return OPPONENT_COLORS[index];
+}
 
 interface Blob {
   name: string;
@@ -341,7 +349,7 @@ const GameComponent: React.FC<GameComponentProps> = ({
 
     ctx.beginPath();
     ctx.arc(blob.x, blob.y, blob.radius, 0, 2 * Math.PI);
-    ctx.fillStyle = "#13F195";
+    ctx.fillStyle = getOpponentColor(blob);
     ctx.fill();
     ctx.strokeStyle = "black";
     ctx.lineWidth = 2;
@@ -399,7 +407,7 @@ const GameComponent: React.FC<GameComponentProps> = ({
 
     ctx.beginPath();
     ctx.arc(blob.x, blob.y, blob.radius, 0, 2 * Math.PI);
-    ctx.fillStyle = "#13F195";
+    ctx.fillStyle = getOpponentColor(blob); // "#13F195";
     ctx.fill();
     ctx.strokeStyle = "black";
     ctx.lineWidth = 2;
