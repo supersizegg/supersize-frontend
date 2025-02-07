@@ -103,6 +103,7 @@ const Home = ({
           endpoint: "",
           ping: 0,
           isLoaded: false,
+          strict: false,
         };
         try {
           const mapEntityPda = FindEntityPda({
@@ -764,7 +765,8 @@ const Home = ({
           <table className="lobby-table">
             <thead>
               <tr>
-                <th>Game ID</th>
+                <th>ID</th>
+                <th>Creator</th>
                 <th>Token</th>
                 <th>Buy In</th>
                 <th>Players</th>
@@ -816,6 +818,13 @@ const Home = ({
               {activeGamesLoaded.map((row, idx) => (
                 <tr key={idx} style={{ display: row.activeGame.ping <= 0 ? "none" : "table-row" }}>
                   <td>{row.activeGame.worldId.toString()}</td>
+                  <td>
+                    {row.activeGame.strict === false ? (
+                      <span className="community-list">Community</span>
+                    ) : (
+                      <span className="strict-list">Supersize</span>
+                    )}
+                  </td>
                   <td>
                     {row.activeGame.isLoaded ? (
                       <>

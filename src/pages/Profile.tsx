@@ -23,7 +23,15 @@ import {
   COMPONENT_SECTION_ID,
   SYSTEM_CASH_OUT_ID,
 } from "@states/gamePrograms";
-import { anteroomFetchOnChain, mapFetchOnChain, mapFetchOnEphem, mapFetchOnSpecificEphem, playerFetchOnChain, playerFetchOnEphem, sectionFetchOnChain } from "@states/gameFetch";
+import {
+  anteroomFetchOnChain,
+  mapFetchOnChain,
+  mapFetchOnEphem,
+  mapFetchOnSpecificEphem,
+  playerFetchOnChain,
+  playerFetchOnEphem,
+  sectionFetchOnChain,
+} from "@states/gameFetch";
 import { useMagicBlockEngine } from "@engine/MagicBlockEngineProvider";
 import { MagicBlockEngine } from "@engine/MagicBlockEngine";
 import { fetchTokenMetadata, pingEndpoint, stringToUint8Array } from "@utils/helper";
@@ -52,7 +60,7 @@ export default function Profile() {
             General
           </button>
           <button className={activeTab === "quests" ? "active" : ""} onClick={() => setActiveTab("quests")}>
-            Quests 
+            Quests
           </button>
           <button className={activeTab === "admin" ? "active" : ""} onClick={() => setActiveTab("admin")}>
             Admin panel
@@ -62,7 +70,7 @@ export default function Profile() {
         <div className="profile-content">
           {activeTab === "general" && <GeneralTab />}
           {activeTab === "quests" && <QuestsTab />}
-          {activeTab === "admin" && <AdminTab engine={engine}/>}
+          {activeTab === "admin" && <AdminTab engine={engine} />}
         </div>
       </div>
 
@@ -84,7 +92,7 @@ function GeneralTab() {
     localStorage.setItem("user", JSON.stringify(user));
     setUsername(inputUsername);
     setUsernameSaved(true);
-  }; 
+  };
 
   useEffect(() => {
     const retrievedUser = localStorage.getItem("user");
@@ -242,7 +250,7 @@ function QuestsTab() {
   );
 }
 
-function AdminTab({engine}: {engine: MagicBlockEngine}) {
+function AdminTab({ engine }: { engine: MagicBlockEngine }) {
   const isLoading = useRef(false);
   const [myGames, setMyGames] = useState<ActiveGame[]>([]);
   const [openPanelIndex, setOpenPanelIndex] = useState<number | null>(null);
@@ -274,23 +282,23 @@ function AdminTab({engine}: {engine: MagicBlockEngine}) {
       for (let i = start[NETWORK]; i < start[NETWORK] + 100; i++) {
         console.log("Fetching game #" + i);
 
-          try {
-            const worldId = { worldId: new anchor.BN(i) };
-            const worldPda = await FindWorldPda(worldId);
+        try {
+          const worldId = { worldId: new anchor.BN(i) };
+          const worldPda = await FindWorldPda(worldId);
 
-            const mapEntityPda = FindEntityPda({
-              worldId: worldId.worldId,
-              entityId: new anchor.BN(0),
-              seed: stringToUint8Array("origin"),
-            });
+          const mapEntityPda = FindEntityPda({
+            worldId: worldId.worldId,
+            entityId: new anchor.BN(0),
+            seed: stringToUint8Array("origin"),
+          });
 
-            const mapComponentPda = FindComponentPda({
-              componentId: COMPONENT_MAP_ID,
-              entity: mapEntityPda,
-            });
+          const mapComponentPda = FindComponentPda({
+            componentId: COMPONENT_MAP_ID,
+            entity: mapEntityPda,
+          });
 
-            const mapParsedData = await mapFetchOnChain(engine, mapComponentPda);
-            const readableMapParsedData = `
+          const mapParsedData = await mapFetchOnChain(engine, mapComponentPda);
+          const readableMapParsedData = `
             Name: ${mapParsedData?.name} |
             Authority: ${mapParsedData?.authority?.toString()} |
             Width: ${mapParsedData?.width} |
@@ -305,52 +313,53 @@ function AdminTab({engine}: {engine: MagicBlockEngine}) {
             Next Food: ${mapParsedData?.nextFood} |
             Frozen: ${mapParsedData?.frozen}
            `;
-            console.log("readableMapParsedData", readableMapParsedData);
-            setMapParsedData(readableMapParsedData);
+          console.log("readableMapParsedData", readableMapParsedData);
+          setMapParsedData(readableMapParsedData);
 
-            if (mapParsedData && mapParsedData.authority) {
-              if (mapParsedData.authority.toString() === engine.getSessionPayer().toString()) {
-                const newGameInfo: ActiveGame = {
-                  worldId: worldId.worldId,
-                  worldPda: worldPda,
-                  name: "loading",
-                  active_players: 0,
-                  max_players: 0,
-                  size: 0,
-                  image: "",
-                  token: "",
-                  base_buyin: 0,
-                  min_buyin: 0,
-                  max_buyin: 0,
-                  endpoint: "",
-                  ping: 0,
-                  isLoaded: false,
-                };
-                newGameInfo.name = mapParsedData.name;
-                newGameInfo.max_players = mapParsedData.maxPlayers;
-                newGameInfo.size = mapParsedData.width;
-                newGameInfo.base_buyin = mapParsedData.baseBuyin;
-                newGameInfo.min_buyin = mapParsedData.minBuyin;
-                newGameInfo.max_buyin = mapParsedData.maxBuyin;
-                newGameInfo.isLoaded = true;
-                //const pingTime = await pingEndpoint(endpoint);
-                newGameInfo.ping = 0;
-                newGameInfo.isLoaded = true;
+          if (mapParsedData && mapParsedData.authority) {
+            if (mapParsedData.authority.toString() === engine.getSessionPayer().toString()) {
+              const newGameInfo: ActiveGame = {
+                worldId: worldId.worldId,
+                worldPda: worldPda,
+                name: "loading",
+                active_players: 0,
+                max_players: 0,
+                size: 0,
+                image: "",
+                token: "",
+                base_buyin: 0,
+                min_buyin: 0,
+                max_buyin: 0,
+                endpoint: "",
+                ping: 0,
+                isLoaded: false,
+                strict: false,
+              };
+              newGameInfo.name = mapParsedData.name;
+              newGameInfo.max_players = mapParsedData.maxPlayers;
+              newGameInfo.size = mapParsedData.width;
+              newGameInfo.base_buyin = mapParsedData.baseBuyin;
+              newGameInfo.min_buyin = mapParsedData.minBuyin;
+              newGameInfo.max_buyin = mapParsedData.maxBuyin;
+              newGameInfo.isLoaded = true;
+              //const pingTime = await pingEndpoint(endpoint);
+              newGameInfo.ping = 0;
+              newGameInfo.isLoaded = true;
 
-                setMyGames((prevMyGames) => {
-                  const gameExists = prevMyGames.some((game) => game.worldId === newGameInfo.worldId);
-                  if (gameExists) {
-                    return prevMyGames;
-                  }
-                  return [newGameInfo, ...prevMyGames];
-                });
-              }
+              setMyGames((prevMyGames) => {
+                const gameExists = prevMyGames.some((game) => game.worldId === newGameInfo.worldId);
+                if (gameExists) {
+                  return prevMyGames;
+                }
+                return [newGameInfo, ...prevMyGames];
+              });
             }
-          } catch (error) {
-            console.log("error", error);
           }
+        } catch (error) {
+          console.log("error", error);
         }
-      
+      }
+
       isLoading.current = false;
     };
     fetchGames();
@@ -384,12 +393,12 @@ function AdminTab({engine}: {engine: MagicBlockEngine}) {
       });
       const mapParsedData = await mapFetchOnSpecificEphem(engine, mapComponentPda, endpoint);
       if (!mapParsedData) {
-        continue; 
-      }else{
+        continue;
+      } else {
         engine.setEndpointEphemRpc(endpoint);
       }
 
-      console.log(endpoint)
+      console.log(endpoint);
       const anteseed = "ante";
       const anteEntityPda = FindEntityPda({
         worldId: newGameInfo.worldId,

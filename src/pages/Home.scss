@@ -126,13 +126,50 @@
         vertical-align: middle;
         text-align: center;
       }
-      // second column with Token logo/name must be left aligned
-      td:nth-child(2) {
+      // 3rd column with Token logo/name must be left aligned
+      td:nth-child(3) {
         text-align: left;
       }
     }
   }
 }
+
+.community-list {
+  padding: 5px 10px;
+  border-radius: 20px;
+  color: #000;
+  font-size: 12px;
+
+  background-image: linear-gradient(
+    95deg,
+    #dcdcdc -20.77%,
+    #c0c0c0 3.29%,
+    #b0b0b0 20.39%,
+    #d3d3d3 37.13%,
+    #a9a9a9 85.19%,
+    #e0e0e0 108.34%,
+    #f5f5f5 134.49%
+  );
+}
+
+.strict-list {
+  padding: 5px 10px;
+  border-radius: 20px;
+  color: #000;
+  font-size: 12px;
+
+  background-image: linear-gradient(
+    95deg,
+    #ffffb7 -20.77%,
+    #ffe297 3.29%,
+    #f8d57b 20.39%,
+    #ffeeb4 37.13%,
+    #f0c34e 85.19%,
+    #feeab7 108.34%,
+    #fefff1 134.49%
+  );
+}
+
 .region-buttons {
   background-color: #3333335c;
   border-radius: 8px;
@@ -174,24 +211,6 @@
   }
 }
 
-.tooltip-container:hover .tooltip-text {
-  visibility: visible;
-}
-.tooltip-text {
-  position: absolute;
-  top: 50%;
-  left: 100%;
-  transform: translateY(-50%);
-  color: red;
-  font-size: small;
-  margin-left: 5px;
-  visibility: hidden;
-  background-color: white;
-  opacity: 0.7;
-  border-radius: 5px;
-  padding: 5px;
-  margin-left: 5px;
-}
 .refresh-icon {
   animation: spin 1s linear infinite;
 }
@@ -232,7 +251,7 @@ img.token-image {
   .home-container {
     margin-top: 0;
   }
-  
+
   .table-container {
     width: 100%;
   }
@@ -277,18 +296,24 @@ img.token-image {
     width: 35%;
   }
   .lobby-table tbody tr td:nth-of-type(2)::before {
-    content: "Token: ";
+    content: "Creator: ";
     font-weight: bold;
     display: inline-block;
     width: 35%;
   }
   .lobby-table tbody tr td:nth-of-type(3)::before {
-    content: "Buy In: ";
+    content: "Token: ";
     font-weight: bold;
     display: inline-block;
     width: 35%;
   }
   .lobby-table tbody tr td:nth-of-type(4)::before {
+    content: "Buy In: ";
+    font-weight: bold;
+    display: inline-block;
+    width: 35%;
+  }
+  .lobby-table tbody tr td:nth-of-type(5)::before {
     content: "Players: ";
     font-weight: bold;
     display: inline-block;

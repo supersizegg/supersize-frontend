@@ -21,7 +21,7 @@ export const CASH_OUT = new PublicKey("BAP315i1xoAXqbJcTT1LrUS45N3tAQnNnPuNQkCcv
 
 export const SOL_USDC_POOL_ID = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2";
 
-export const NETWORK = "mainnet";//process.env.NODE_ENV === "production" ? "mainnet" : "devnet";
+export const NETWORK = process.env.NODE_ENV === "production" ? "mainnet" : "devnet";
 
 export const RPC_CONNECTION = {
   mainnet: "https://floral-convincing-dawn.solana-mainnet.quiknode.pro/73d5d52678fd227b48dd0aec6a8e94ac9dd61f59",
@@ -66,7 +66,9 @@ export const endpointToWorldMap: Record<string, { worldId: anchor.BN; worldPda: 
     },
 }; */
 
-export const activeGamesList: { [key: string]: { worldId: anchor.BN; worldPda: PublicKey; endpoint: string }[] } = {
+export const activeGamesList: {
+  [key: string]: { worldId: anchor.BN; worldPda: PublicKey; endpoint: string; is_custom?: boolean }[];
+} = {
   devnet: [
     {
       worldId: new anchor.BN(1844),
@@ -77,6 +79,12 @@ export const activeGamesList: { [key: string]: { worldId: anchor.BN; worldPda: P
       worldId: new anchor.BN(1874),
       worldPda: new PublicKey("9kRPYRgUQ9SY8RUGgTc9QGi2tLG5tLs2nKrBx3pMyv33"),
       endpoint: "https://supersize.magicblock.app",
+    },
+    {
+      worldId: new anchor.BN(1877),
+      worldPda: new PublicKey("5Vr9VPwsdkeMbqjBB6uXdVfhsMmGug1iVvHxAX5Y5V3w"),
+      endpoint: "https://supersize.magicblock.app",
+      is_custom: true,
     },
     {
       worldId: new anchor.BN(1818),

@@ -17,7 +17,7 @@ const AppRoutes = () => {
   const [selectedGame, setSelectedGame] = useState<ActiveGame | null>(null);
   const [activeGamesLoaded, setActiveGamesLoaded] = useState<FetchedGame[]>(
     activeGamesList[NETWORK].map(
-      (world: { worldId: anchor.BN; worldPda: PublicKey; endpoint: string }) =>
+      (world: { worldId: anchor.BN; worldPda: PublicKey; endpoint: string; is_custom?: boolean }) =>
         ({
           activeGame: {
             isLoaded: false,
@@ -34,6 +34,7 @@ const AppRoutes = () => {
             max_buyin: 0,
             endpoint: world.endpoint,
             ping: 0,
+            strict: !world.is_custom,
           },
           playerInfo: {
             playerStatus: "new_player",
