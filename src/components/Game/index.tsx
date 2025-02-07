@@ -329,6 +329,7 @@ const GameComponent: React.FC<GameComponentProps> = ({
   };
 
   const drawOpponentPlayer = (ctx: CanvasRenderingContext2D, blob: Blob, myblob: Blob) => {
+    /*
     let glowSize = 50;
     let glowIntensity = "rgba(19, 241, 149, 0.5)";
     if (blob.mass > myblob.mass * 1.05) {
@@ -338,22 +339,29 @@ const GameComponent: React.FC<GameComponentProps> = ({
     } else {
       glowIntensity = "rgba(255, 239, 138, 0.5)";
     }
+    */
 
     const dx = blob.target_x - blob.x;
     const dy = blob.target_y - blob.y;
     const angle = Math.atan2(dy, dx);
 
+    const color = getOpponentColor(blob);
+
+    const time = performance.now() / 1000;
+    const pulse = 10 + 10 * Math.abs(Math.sin(time * 2));
+
     ctx.save();
-    ctx.shadowBlur = glowSize;
-    ctx.shadowColor = glowIntensity;
+
+    ctx.shadowBlur = pulse;
+    ctx.shadowColor = color;
 
     ctx.beginPath();
     ctx.arc(blob.x, blob.y, blob.radius, 0, 2 * Math.PI);
-    ctx.fillStyle = getOpponentColor(blob);
+    ctx.fillStyle = color;
     ctx.fill();
-    ctx.strokeStyle = "black";
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    // ctx.strokeStyle = "black";
+    // ctx.lineWidth = 2;
+    // ctx.stroke();
 
     const eyeballRadius = blob.radius * 0.2;
     const pupilRadius = blob.radius * 0.08;
@@ -405,13 +413,23 @@ const GameComponent: React.FC<GameComponentProps> = ({
     const dy = newTargetRef.current.y - currentblob.y;
     const angle = Math.atan2(dy, dx);
 
+    const color = getOpponentColor(blob);
+
+    const time = performance.now() / 1000;
+    const pulse = 10 + 10 * Math.abs(Math.sin(time * 2));
+
+    ctx.save();
+
+    ctx.shadowBlur = pulse;
+    ctx.shadowColor = color;
+
     ctx.beginPath();
     ctx.arc(blob.x, blob.y, blob.radius, 0, 2 * Math.PI);
-    ctx.fillStyle = getOpponentColor(blob); // "#13F195";
+    ctx.fillStyle = color;
     ctx.fill();
-    ctx.strokeStyle = "black";
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    // ctx.strokeStyle = "black";
+    // ctx.lineWidth = 2;
+    // ctx.stroke();
 
     const eyeballRadius = blob.radius * 0.2;
     const pupilRadius = blob.radius * 0.08;
@@ -481,6 +499,9 @@ const GameComponent: React.FC<GameComponentProps> = ({
   ) => {
     const offsetX = currentPlayer.x - screenSize.width / 2;
     const offsetY = currentPlayer.y - screenSize.height / 2;
+
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = "transparent";
 
     ctx.lineWidth = 5;
     ctx.strokeStyle = "rgba(128, 128, 128, 0.5)";
