@@ -863,6 +863,8 @@ const Home = ({
                       onClick={() => {
                         handlePlayButtonClick(row);
                       }}
+                      data-tooltip-id={`connect-wallet-${idx}`}
+                      data-tooltip-content="Connect wallet to play"
                     >
                       {{
                         new_player: "Play",
@@ -871,6 +873,7 @@ const Home = ({
                         in_game: "Resume",
                       }[row.playerInfo.playerStatus] || row.playerInfo.playerStatus}
                     </button>
+                    {engine.getWalletConnected() == false && <Tooltip id={`connect-wallet-${idx}`} />}
                   </td>
                   <td className="desktop-only">
                     <button
