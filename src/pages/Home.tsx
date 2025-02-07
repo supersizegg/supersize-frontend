@@ -857,7 +857,8 @@ const Home = ({
                         row.activeGame.ping < 0 ||
                         row.activeGame.active_players < 0 ||
                         row.playerInfo.playerStatus == "error" ||
-                        row.playerInfo.playerStatus == "Game Full"
+                        row.playerInfo.playerStatus == "Game Full" ||
+                        engine.getWalletConnected() == false
                       }
                       onClick={() => {
                         handlePlayButtonClick(row);
