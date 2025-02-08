@@ -198,7 +198,7 @@ export async function fetchTokenMetadata(tokenAddress: string) {
 
     // Fallback to metadata from content if json_uri is empty
     const name = content.metadata?.symbol || "Unknown";
-    const image = content.links?.image || content.files?.[0]?.uri || "";
+    const image = content.links?.image || content.files?.[0]?.uri || "https://supersize.gg/coin.png";
 
     if (!image) {
       throw new Error("Image URI not found");

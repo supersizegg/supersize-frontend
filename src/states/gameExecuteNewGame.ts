@@ -70,6 +70,7 @@ async function retryTransaction(
       if (error instanceof Error) {
         message = error.message;
       }
+      console.log(message);
       //retry = window.confirm(`Transaction ${transactionId} failed: ${message}. Would you like to retry?`);
       retry = await showPrompt(`Transaction ${transactionId} failed: ${message}`);
     }
@@ -221,6 +222,15 @@ export async function gameExecuteNewGame(
         const batch = foodEntityPdas.slice(i, i + CONFIG.defaultBatchSize);
         const tx = new Transaction();
         const addEntityPromises = batch.map(async (foodPda, index) => {
+          const chainConnection = engine.getConnectionChain();
+          const accountInfo = await chainConnection.getAccountInfo(foodPda);
+          if (accountInfo && accountInfo.lamports > 0) {
+            console.log(`Account ${foodPda.toString()} already exists. Skipping creation.`);
+            return;
+          } else {
+            console.log(`Creating account ${foodPda.toString()}`);
+          }
+
           const addEntityIx = await createAddEntityInstruction(
             {
               payer: engine.getSessionPayer(),
@@ -637,6 +647,7 @@ export async function gameExecuteNewGame(
       let overallIndex = 0;
       const initFoodBatchSize = 1;
       for (let i = 0; i < foodEntityPdas.length; i += initFoodBatchSize) {
+        const startTime = Date.now();
         // const initfoodtransaction = new anchor.web3.Transaction();
         const foodBatch = foodEntityPdas.slice(i, i + initFoodBatchSize);
 
@@ -659,8 +670,12 @@ export async function gameExecuteNewGame(
         // Wait for all promises to resolve and catch any errors
         await Promise.all(initFoodPromises).catch((error) => {
           console.error("Error processing food batch:", error);
+          const endTime = Date.now();
+          console.log(`Time to process food batch: ${endTime - startTime}ms`);
           throw new Error("Batch processing failed");
         });
+        const endTime = Date.now();
+        console.log(`Time to process food batch: ${endTime - startTime}ms`);
       }
     },
     setTransactions,

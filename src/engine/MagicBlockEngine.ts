@@ -162,22 +162,38 @@ export class MagicBlockEngine {
     signature: string,
     connection: Connection,
     commitment: Commitment,
+    timeoutMs = 60000,
   ): Promise<void> {
     log(name, "sent", signature);
+
     return new Promise((resolve, reject) => {
-      connection.onSignature(
+      let timeoutHandle: ReturnType<typeof setTimeout>;
+      let done = false;
+
+      const subscriptionId = connection.onSignature(
         signature,
         (result) => {
+          if (done) return;
+          done = true;
+          clearTimeout(timeoutHandle);
+          connection.removeSignatureListener(subscriptionId);
           log(name, commitment, signature, result.err);
           if (result.err) {
             this.debugError(name, signature, connection);
-            reject(result.err);
+            reject(new Error(`Transaction ${signature} failed: ${result.err}`));
           } else {
             resolve();
           }
         },
         commitment,
       );
+
+      timeoutHandle = setTimeout(() => {
+        if (done) return;
+        done = true;
+        connection.removeSignatureListener(subscriptionId);
+        reject(new Error(`Timeout waiting for transaction ${signature} confirmation`));
+      }, timeoutMs);
     });
   }
 

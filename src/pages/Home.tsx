@@ -103,7 +103,7 @@ const Home = ({
           endpoint: "",
           ping: 0,
           isLoaded: false,
-          strict: false,
+          permissionless: false,
         };
         try {
           const mapEntityPda = FindEntityPda({
@@ -819,7 +819,7 @@ const Home = ({
                 <tr key={idx} style={{ display: row.activeGame.ping <= 0 ? "none" : "table-row" }}>
                   <td>{row.activeGame.worldId.toString()}</td>
                   <td>
-                    {row.activeGame.strict === false ? (
+                    {row.activeGame.permissionless === false ? (
                       <span className="community-list">Community</span>
                     ) : (
                       <span className="strict-list">Supersize</span>
