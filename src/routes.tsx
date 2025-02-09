@@ -34,7 +34,7 @@ const AppRoutes = () => {
             max_buyin: 0,
             endpoint: world.endpoint,
             ping: 0,
-            permissionless: !world.permissionless,
+            permissionless: world.permissionless || false,
           },
           playerInfo: {
             playerStatus: "new_player",
