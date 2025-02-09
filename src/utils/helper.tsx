@@ -1,3 +1,4 @@
+import React from "react";
 import { API_BASE_URL, cachedTokenMetadata, endpoints, NETWORK } from "@utils/constants";
 import { Blob } from "@utils/types";
 
@@ -13,6 +14,56 @@ import { FindComponentPda } from "@magicblock-labs/bolt-sdk";
 import { BN } from "@coral-xyz/anchor";
 import { HELIUS_API_KEY } from "@utils/constants";
 
+// UI helpers
+export async function addTransaction(
+  setTransactions: React.Dispatch<React.SetStateAction<{ id: string; status: string }[]>>,
+  id: string,
+  status: string,
+) {
+  setTransactions((prev) => [...prev, { id, status }]);
+}
+
+export async function updateTransaction(
+  setTransactions: React.Dispatch<React.SetStateAction<{ id: string; status: string }[]>>,
+  id: string,
+  status: string,
+) {
+  setTransactions((prev) => prev.map((txn) => (txn.id === id ? { ...txn, status } : txn)));
+}
+
+export async function retryTransaction(
+  transactionId: string,
+  transactionFn: () => Promise<void>,
+  setTransactions: React.Dispatch<React.SetStateAction<{ id: string; status: string }[]>>,
+  showPrompt: (errorMessage: string) => Promise<boolean>,
+) {
+  let retry = true;
+  while (retry) {
+    try {
+      await transactionFn();
+      await updateTransaction(setTransactions, transactionId, "confirmed");
+      retry = false;
+    } catch (error) {
+      await updateTransaction(setTransactions, transactionId, "failed");
+      let message = "Unknown Error";
+      if (error instanceof Error) {
+        message = error.message;
+      }
+      retry = await showPrompt(`Transaction ${transactionId} failed: ${JSON.stringify(message)}`);
+    }
+  }
+}
+
+export async function executeStep(
+  stepId: string,
+  stepFn: () => Promise<void>,
+  setTransactions: React.Dispatch<React.SetStateAction<{ id: string; status: string }[]>>,
+  showPrompt: (errorMessage: string) => Promise<boolean>,
+) {
+  await addTransaction(setTransactions, stepId, "pending");
+  await retryTransaction(stepId, stepFn, setTransactions, showPrompt);
+}
+
 export const stringToUint8Array = (str: string): Uint8Array => {
   return new TextEncoder().encode(str);
 };
@@ -26,6 +77,26 @@ export const formatBuyIn = (amount: number): string => {
     return amount / 1000000 + "M";
   } else {
     return amount / 1000000000 + "B";
+  }
+};
+
+export const getDecimals = (amount: number): number => {
+  if (amount % 1 !== 0) {
+    //return amount.toString().split(".")[1]?.length || 0;
+    const amountStr = amount.toExponential();
+    const decimalPart = amountStr.split("e-")[1];
+    return decimalPart ? parseInt(decimalPart) : 0;
+  } else {
+    return 0;
+  }
+};
+
+export const getRoundedAmount = (amount: number, foodUnitValue: number): string => {
+  const decimals = getDecimals(foodUnitValue);
+  if (decimals > 0) {
+    return amount.toFixed(decimals);
+  } else {
+    return Math.round(amount).toString();
   }
 };
 

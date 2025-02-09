@@ -1,7 +1,7 @@
 import React from "react";
 import { PublicKey } from "@solana/web3.js";
 import "./GameLeaderboard.css";
-
+import { getRoundedAmount } from "@utils/helper";
 interface LeaderboardItem {
   name?: string;
   authority: PublicKey | null;
@@ -25,23 +25,6 @@ const getDisplayName = (item: LeaderboardItem): string => {
     return "unnamed";
   }
   return shortenAuthority(item.authority.toString());
-};
-
-const getRoundedAmount = (amount: number, foodUnitValue: number): string => {
-  const decimals = getDecimals(foodUnitValue);
-  if (decimals > 0) {
-    return amount.toFixed(decimals);
-  } else {
-    return amount.toString();
-  }
-};
-
-const getDecimals = (amount: number): number => {
-  if (amount % 1 !== 0) {
-    return amount.toString().split(".")[1]?.length || 0;
-  } else {
-    return 0;
-  }
 };
 
 const GameLeaderboard: React.FC<LeaderboardProps> = ({ leaderboard, currentPlayer, gameInfo }) => {

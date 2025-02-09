@@ -25,7 +25,6 @@ function MagicBlockEngineProviderInner({ children }: { children: React.ReactNode
   const walletContext = useWallet();
 
   const engine = React.useMemo(() => {
-
     let sessionKey = deriveKeypairFromPublicKey(new PublicKey("11111111111111111111111111111111"));
     /*
     const sessionKeyString = localStorage.getItem(SESSION_LOCAL_STORAGE);

@@ -820,7 +820,7 @@ const Home = ({
                 <tr key={idx} style={{ display: row.activeGame.ping <= 0 ? "none" : "table-row" }}>
                   <td>{row.activeGame.worldId.toString()}</td>
                   <td>
-                    {row.activeGame.permissionless === false ? (
+                    {row.activeGame.permissionless === true ? (
                       <span className="community-list">Community</span>
                     ) : (
                       <span className="strict-list">Supersize</span>
