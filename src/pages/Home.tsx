@@ -27,6 +27,7 @@ import { stringToUint8Array, getRegion } from "@utils/helper";
 import { gameSystemJoin } from "@states/gameSystemJoin";
 import { gameSystemCashOut } from "@states/gameSystemCashOut";
 import { MagicBlockEngine } from "@engine/MagicBlockEngine";
+import Alert from "@components/Alert";
 
 function getPingColor(ping: number) {
   if (ping < 0) return "red";
@@ -68,6 +69,7 @@ const Home = ({
   const selectedServer = useRef<string>("");
   const [isLoadingCurrentGames, setIsLoadingCurrentGames] = useState(true);
   const [loadingGameNum, setLoadingGameNum] = useState(-1);
+  const [cashoutTx, setCashoutTx] = useState<string>("");
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(event.target.value);
@@ -541,14 +543,13 @@ const Home = ({
           entityId: new anchor.BN(0),
           seed: stringToUint8Array("ante"),
         });
-        await gameSystemCashOut(engine, game.activeGame, anteEntityPda, game.playerInfo.newplayerEntityPda);
-        /*
-            // never loads correctly  
-            if(cashoutTx){
-                await fetchAndLogMapData(engine, activeGamesRef.current, selectedServer.current);
-            }  
-         */
+        const cashoutFeedback = await gameSystemCashOut(engine, game.activeGame, anteEntityPda, game.playerInfo.newplayerEntityPda);
+        if(cashoutFeedback){
+          setCashoutTx("cashout success")
+        }  
+         
       } catch (cashoutError) {
+        setCashoutTx("cashout failed")
         console.log("error", cashoutError);
       }
     }
@@ -909,6 +910,7 @@ const Home = ({
           </table>
         </div>
       </div>
+      {cashoutTx != "" && <Alert type={cashoutTx.includes("failed") ? "error" : "success"} message={cashoutTx} onClose={() => {setCashoutTx("")}} />}
       <FooterLink />
     </div>
   );
