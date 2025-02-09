@@ -588,8 +588,17 @@ export async function stepDelegateFood(
         instructions.forEach((instruction) => tx.add(instruction));
         tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 }));
         tx.add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1 }));
-        const delSig = await context.engine.processSessionChainTransaction(delegateFoodTxnId, tx);
-        console.log(`Delegated food batch: ${delSig}`);
+        try {
+          const delSig = await context.engine.processSessionChainTransaction(delegateFoodTxnId, tx);
+          console.log(`Delegated food batch: ${delSig}`);
+        } catch (e) {
+          // @ts-ignore
+          if (e.message.includes("ExternalAccountLamportSpend")) {
+            console.log(e);
+          } else {
+            throw e;
+          }
+        }
       }
     },
     setTransactions,
