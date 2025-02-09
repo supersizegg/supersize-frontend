@@ -18,7 +18,7 @@ import { subscribeToGame, updateLeaderboard, updateMyPlayer } from "../states/ga
 import { gameSystemCashOut } from "../states/gameSystemCashOut";
 import { gameSystemMove } from "../states/gameSystemMove";
 import { gameSystemSpawnFood } from "../states/gameSystemSpawnFood";
-import { decodeFood, stringToUint8Array } from "@utils/helper";
+import { decodeFood, stringToUint8Array, getRoundedAmount } from "@utils/helper";
 
 import "./game.scss";
 
@@ -80,23 +80,6 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
     }
     currentPlayerRef.current = currentPlayer;
   }, [currentPlayer]);
-
-  const getRoundedAmount = (amount: number, foodUnitValue: number): string => {
-    const decimals = getDecimals(foodUnitValue);
-    if (decimals > 0) {
-      return amount.toFixed(decimals);
-    } else {
-      return amount.toString();
-    }
-  };
-
-  const getDecimals = (amount: number): number => {
-    if (amount % 1 !== 0) {
-      return amount.toString().split(".")[1]?.length || 0;
-    } else {
-      return 0;
-    }
-  };
 
   const handleExitClick = () => {
     if (!currentPlayerEntity.current) {

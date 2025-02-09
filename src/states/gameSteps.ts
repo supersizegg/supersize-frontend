@@ -557,7 +557,7 @@ export async function stepDelegateFood(
   await executeStep(
     delegateFoodTxnId,
     async () => {
-      const delbatchSize = 3;
+      const delbatchSize = 1; //3
       for (let i = 0; i < context.foodEntityPdas.length; i += delbatchSize) {
         const tx = new Transaction();
         const batch = context.foodEntityPdas.slice(i, i + delbatchSize);
@@ -572,7 +572,9 @@ export async function stepDelegateFood(
         const instructions = await Promise.all(delegatePromises);
         instructions.forEach((instruction) => tx.add(instruction));
         tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 }));
-        const delSig = await context.engine.processSessionChainTransaction(delegateFoodTxnId, tx);
+        const delSig = await context.engine.processSessionChainTransaction(delegateFoodTxnId, tx).catch((e) => {
+          console.log(e)
+        });
         console.log(`Delegated food batch: ${delSig}`);
       }
     },

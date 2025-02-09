@@ -44,12 +44,30 @@ export async function gameExecuteNewGame(
   setNewGameId: React.Dispatch<React.SetStateAction<string>>,
   setGameCreated: React.Dispatch<React.SetStateAction<boolean>>,
 ) {
+  /*
   const base_buyin = Math.sqrt(max_buyin * min_buyin);
   const max_multiple = max_buyin / base_buyin;
   const min_multiple = base_buyin / min_buyin;
   if (max_multiple > 10 || min_multiple > 10) {
     throw new Error("Min-Max buy-in spread too large (max 10x).");
+  }*/
+  const spread = max_buyin / min_buyin;
+  let base_buyin;
+  
+  if (spread <= 10) {
+    base_buyin = min_buyin;
+  } else {
+    base_buyin = max_buyin / 10;
   }
+  
+  const max_multiple = max_buyin / base_buyin;
+  const min_multiple = base_buyin / min_buyin;
+  
+  if (max_multiple > 10 || min_multiple > 10) {
+    throw new Error("Min-Max buy-in spread too large (max 10x).");
+  }
+
+    
   const gameParams = {
     4000: { maxplayer: 20, foodcomponents: 32, cost: 0.4 },
     6000: { maxplayer: 45, foodcomponents: 72, cost: 1.0 },

@@ -80,6 +80,23 @@ export const formatBuyIn = (amount: number): string => {
   }
 };
 
+export const getDecimals = (amount: number): number => {
+  if (amount % 1 !== 0) {
+    return amount.toString().split(".")[1]?.length || 0;
+  } else {
+    return 0;
+  }
+};
+
+export const getRoundedAmount = (amount: number, foodUnitValue: number): string => {
+  const decimals = getDecimals(foodUnitValue);
+  if (decimals > 0) {
+    return amount.toFixed(decimals);
+  } else {
+    return amount.toString();
+  }
+};
+
 export const deriveSeedFromPublicKey = (userPublicKey: PublicKey): Uint8Array => {
   const salt = "supersizeSalt";
   const hash = crypto.SHA256(userPublicKey.toBuffer().toString() + salt);
