@@ -82,7 +82,10 @@ export const formatBuyIn = (amount: number): string => {
 
 export const getDecimals = (amount: number): number => {
   if (amount % 1 !== 0) {
-    return amount.toString().split(".")[1]?.length || 0;
+    //return amount.toString().split(".")[1]?.length || 0;
+    const amountStr = amount.toExponential();
+    const decimalPart = amountStr.split("e-")[1];
+    return decimalPart ? parseInt(decimalPart) : 0;
   } else {
     return 0;
   }
@@ -93,7 +96,7 @@ export const getRoundedAmount = (amount: number, foodUnitValue: number): string 
   if (decimals > 0) {
     return amount.toFixed(decimals);
   } else {
-    return amount.toString();
+    return Math.round(amount).toString();
   }
 };
 
