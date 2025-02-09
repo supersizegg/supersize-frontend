@@ -90,8 +90,13 @@ export async function stepInitWorld(
       });
       context.world = initNewWorld;
       setNewGameId(initNewWorld.worldId.toNumber().toString());
+
       const computeIx = ComputeBudgetProgram.setComputeUnitLimit({ units: CONFIG.computeUnitLimit });
       initNewWorld.transaction.add(computeIx);
+
+      const computePriceIx = ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1 });
+      initNewWorld.transaction.add(computePriceIx);
+
       await context.engine.processSessionChainTransaction(worldTxnId, initNewWorld.transaction);
     },
     setTransactions,
@@ -126,7 +131,8 @@ export async function stepCreateMap(
       );
       const mapTx = new Transaction()
         .add(mapAddIx)
-        .add(ComputeBudgetProgram.setComputeUnitLimit({ units: CONFIG.computeUnitLimit }));
+        .add(ComputeBudgetProgram.setComputeUnitLimit({ units: CONFIG.computeUnitLimit }))
+        .add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1 }));
       await context.engine.processSessionChainTransaction(mapTxnId, mapTx);
     },
     setTransactions,
@@ -179,6 +185,7 @@ export async function stepCreateFoodEntities(
         }
         await Promise.all(addEntityPromises);
         tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: CONFIG.computeUnitLimit }));
+        tx.add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1 }));
         await context.engine.processSessionChainTransaction(foodTxnId, tx);
         context.foodEntityPdas.push(...batch);
         console.log(`Food entities batch ${i / CONFIG.defaultBatchSize + 1} completed.`);
@@ -229,6 +236,7 @@ export async function stepCreatePlayerEntities(
         }
         await Promise.all(addEntityPromises);
         tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: CONFIG.computeUnitLimit }));
+        tx.add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1 }));
         await context.engine.processSessionChainTransaction(playerTxnId, tx);
         context.playerEntityPdas.push(...batch);
         console.log(`Player entities batch ${i / CONFIG.defaultBatchSize + 1} completed.`);
@@ -266,7 +274,8 @@ export async function stepCreateAnteroom(
       );
       const anteroomTx = new Transaction()
         .add(anteroomAddIx)
-        .add(ComputeBudgetProgram.setComputeUnitLimit({ units: CONFIG.computeUnitLimit }));
+        .add(ComputeBudgetProgram.setComputeUnitLimit({ units: CONFIG.computeUnitLimit }))
+        .add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1 }));
       await context.engine.processSessionChainTransaction(anteroomTxnId, anteroomTx);
     },
     setTransactions,
@@ -291,7 +300,8 @@ export async function stepInitMapComponent(
       });
       const initMapTx = new Transaction()
         .add(initMapIx.transaction)
-        .add(ComputeBudgetProgram.setComputeUnitLimit({ units: 50_000 }));
+        .add(ComputeBudgetProgram.setComputeUnitLimit({ units: 50_000 }))
+        .add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1 }));
       await context.engine.processSessionChainTransaction(initMapComponentTxnId, initMapTx);
       console.log(`Initialized map component.`);
     },
@@ -325,6 +335,7 @@ export async function stepInitFoodComponents(
         });
         await Promise.all(initComponentPromises);
         tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 }));
+        tx.add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1 }));
         await context.engine.processSessionChainTransaction(initFoodComponentTxnId, tx);
         console.log(`Initialized food components batch.`);
       }
@@ -357,6 +368,7 @@ export async function stepInitPlayerComponents(
         });
         await Promise.all(initComponentPromises);
         tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 }));
+        tx.add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1 }));
         await context.engine.processSessionChainTransaction(initPlayerComponentTxnId, tx);
         console.log(`Initialized player components batch.`);
       }
@@ -383,7 +395,8 @@ export async function stepInitAnteroomComponent(
       });
       const initAnteTx = new Transaction()
         .add(initAnteIx.transaction)
-        .add(ComputeBudgetProgram.setComputeUnitLimit({ units: 50_000 }));
+        .add(ComputeBudgetProgram.setComputeUnitLimit({ units: 50_000 }))
+        .add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1 }));
       await context.engine.processSessionChainTransaction(initAnteroomComponentTxnId, initAnteTx);
       console.log(`Initialized anteroom component.`);
     },
@@ -421,7 +434,8 @@ export async function stepSetupVault(
       );
       const vaultTx = new Transaction()
         .add(vaultCreateIx)
-        .add(ComputeBudgetProgram.setComputeUnitLimit({ units: CONFIG.computeUnitLimit }));
+        .add(ComputeBudgetProgram.setComputeUnitLimit({ units: CONFIG.computeUnitLimit }))
+        .add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1 }));
       await context.engine.processSessionChainTransaction(vaultTxnId, vaultTx);
       console.log("Vault setup complete.");
     },
@@ -538,7 +552,8 @@ export async function stepDelegateMap(
       });
       const maptx = new Transaction()
         .add(mapdelegateIx)
-        .add(ComputeBudgetProgram.setComputeUnitLimit({ units: 80_000 }));
+        .add(ComputeBudgetProgram.setComputeUnitLimit({ units: 80_000 }))
+        .add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1 }));
       const delSig = await context.engine.processSessionChainTransaction(delegateMapTxnId, maptx);
       console.log(`Delegated map component: ${delSig}`);
     },
@@ -572,6 +587,7 @@ export async function stepDelegateFood(
         const instructions = await Promise.all(delegatePromises);
         instructions.forEach((instruction) => tx.add(instruction));
         tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 }));
+        tx.add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1 }));
         const delSig = await context.engine.processSessionChainTransaction(delegateFoodTxnId, tx);
         console.log(`Delegated food batch: ${delSig}`);
       }

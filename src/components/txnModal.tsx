@@ -139,7 +139,7 @@ const TxnModal: React.FC<TxnModalProps> = ({
               {!gameCreated ? (
                 <>
                   <p className="info-text" style={{ marginTop: 0, marginBottom: "10px" }}>
-                    Deployment process can take 2-3 minutes. Please wait...
+                    Deployment process can take 5-30 minutes. Please wait...
                   </p>
                   <button
                     className="txn-modal-restart-button"
