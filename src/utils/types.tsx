@@ -27,7 +27,7 @@ export interface Blob {
 
 export type ActiveGame = {
   isLoaded: boolean;
-  strict: boolean;
+  permissionless: boolean;
   worldPda: PublicKey;
   worldId: BN;
   name: string;

@@ -333,7 +333,7 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                 endpoint: "",
                 ping: 0,
                 isLoaded: false,
-                strict: false,
+                permissionless: false,
               };
               newGameInfo.name = mapParsedData.name;
               newGameInfo.max_players = mapParsedData.maxPlayers;
