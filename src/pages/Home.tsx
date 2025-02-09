@@ -20,7 +20,7 @@ import { Spinner } from "@components/util/Spinner";
 
 import { COMPONENT_MAP_ID, COMPONENT_ANTEROOM_ID, COMPONENT_PLAYER_ID } from "../states/gamePrograms";
 import { FetchedGame, PlayerInfo } from "@utils/types";
-import { anteroomFetchOnChain, mapFetchOnChain, mapFetchOnEphem } from "../states/gameFetch";
+import { anteroomFetchOnChain, mapFetchOnChain, mapFetchOnSpecificEphem } from "../states/gameFetch";
 import { useMagicBlockEngine } from "../engine/MagicBlockEngineProvider";
 import { endpoints } from "@utils/constants";
 import { stringToUint8Array, getRegion } from "@utils/helper";
@@ -80,16 +80,13 @@ const Home = ({
       isSearchingGame.current = true;
       try {
         const worldId = { worldId: new anchor.BN(inputValue.trim()) };
-
         const alreadyExists = activeGamesLoaded.some((item) => item.activeGame.worldId.eq(worldId.worldId));
         if (alreadyExists) {
           console.log("Game with this worldId already exists, skipping.");
           isSearchingGame.current = false;
           return;
         }
-
         const worldPda = await FindWorldPda(worldId);
-        // console.log(`Game ID: ${inputValue}. World PDA:`, worldPda.toString());
         const newGameInfo: ActiveGame = {
           worldId: worldId.worldId,
           worldPda: worldPda,
@@ -117,7 +114,11 @@ const Home = ({
             componentId: COMPONENT_MAP_ID,
             entity: mapEntityPda,
           });
-          const mapParsedData = await mapFetchOnEphem(engine, mapComponentPda);
+          const mapParsedData = await mapFetchOnSpecificEphem(
+            engine,
+            mapComponentPda,
+            endpoints[NETWORK][options.indexOf(selectedServer.current)],
+          );
           if (mapParsedData) {
             newGameInfo.endpoint = endpoints[NETWORK][options.indexOf(selectedServer.current)];
             newGameInfo.name = mapParsedData.name;
@@ -130,7 +131,6 @@ const Home = ({
 
             const pingTime = await pingEndpoint(endpoints[NETWORK][options.indexOf(selectedServer.current)]);
             newGameInfo.ping = pingTime;
-
             const anteseed = "ante";
             const anteEntityPda = FindEntityPda({
               worldId: worldId.worldId,
@@ -219,6 +219,8 @@ const Home = ({
       } finally {
         isSearchingGame.current = false;
       }
+    } else {
+      console.log("Input is empty");
     }
   };
   const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -543,13 +545,17 @@ const Home = ({
           entityId: new anchor.BN(0),
           seed: stringToUint8Array("ante"),
         });
-        const cashoutFeedback = await gameSystemCashOut(engine, game.activeGame, anteEntityPda, game.playerInfo.newplayerEntityPda);
-        if(cashoutFeedback){
-          setCashoutTx("cashout success")
-        }  
-         
+        const cashoutFeedback = await gameSystemCashOut(
+          engine,
+          game.activeGame,
+          anteEntityPda,
+          game.playerInfo.newplayerEntityPda,
+        );
+        if (cashoutFeedback) {
+          setCashoutTx("cashout success");
+        }
       } catch (cashoutError) {
-        setCashoutTx("cashout failed")
+        setCashoutTx("cashout failed");
         console.log("error", cashoutError);
       }
     }
@@ -910,7 +916,15 @@ const Home = ({
           </table>
         </div>
       </div>
-      {cashoutTx != "" && <Alert type={cashoutTx.includes("failed") ? "error" : "success"} message={cashoutTx} onClose={() => {setCashoutTx("")}} />}
+      {cashoutTx != "" && (
+        <Alert
+          type={cashoutTx.includes("failed") ? "error" : "success"}
+          message={cashoutTx}
+          onClose={() => {
+            setCashoutTx("");
+          }}
+        />
+      )}
       <FooterLink />
     </div>
   );
