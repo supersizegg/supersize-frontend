@@ -8,10 +8,8 @@ type AlertProps = {
 
 const Alert: React.FC<AlertProps> = ({ type, message, onClose }) => {
   const [opacity, setOpacity] = useState(0); // Start with 0 opacity for fade-in effect
-
   useEffect(() => {
     setOpacity(100);
-
     const fadeOutTimer = setTimeout(() => {
       setOpacity(0);
     }, 3000);
@@ -32,11 +30,12 @@ const Alert: React.FC<AlertProps> = ({ type, message, onClose }) => {
             p-5 mb-2.5 rounded-lg text-center text-sm 
             transition-opacity duration-1000 ease-in-out 
             flex justify-center items-center max-w-[90%] 
-            break-words min-h-[50px] box-border z-[1000]
-            opacity-${opacity} ${type == "success" ? "bg-lightgreen text-green" : "bg-pink text-red"}
-            `}
-    >
-      {message}
+            break-words min-h-[50px] box-border z-[1000]`}
+     style={{backgroundColor: type == "success" ? "lightgreen" : "pink",
+      color: type == "success" ? "green" : "red",
+      opacity: opacity,
+     }}>
+        {message}
     </div>
   );
 };
