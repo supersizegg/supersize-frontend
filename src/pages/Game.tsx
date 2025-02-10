@@ -154,6 +154,17 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
     }, 100);
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !playerExiting) {
+        handleExitClick();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleExitClick]);
+
   const processNewFoodTransaction = async () => {
     if (!entityMatch.current) return;
     try {
@@ -575,7 +586,7 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
             exitHovered.current = false;
           }}
         >
-          Exit &amp; Cash Out
+          Cash Out [ESC]
         </button>
         {playerExiting && countdown.current > 0 && (
           <div className="text-[#f07171] font-[Terminus] text-xl text-right ml-2.5">
