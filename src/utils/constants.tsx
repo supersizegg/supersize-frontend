@@ -24,8 +24,8 @@ export const SOL_USDC_POOL_ID = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2";
 export const NETWORK = process.env.NODE_ENV === "production" ? "mainnet" : "devnet";
 
 export const RPC_CONNECTION = {
-  mainnet: "https://floral-convincing-dawn.solana-mainnet.quiknode.pro/73d5d52678fd227b48dd0aec6a8e94ac9dd61f59",
-  devnet: "https://proud-late-lambo.solana-devnet.quiknode.pro/ec12ab7b183190f9cfd274049f6ab83396c22e7d",
+  mainnet: "https://staked.helius-rpc.com?api-key=cba33294-aa96-414c-9a26-03d5563aa676",
+  devnet: "https://devnet.helius-rpc.com/?api-key=cba33294-aa96-414c-9a26-03d5563aa676",
 };
 export const HELIUS_API_KEY = "07a045b7-c535-4d6f-852b-e7290408c937";
 
@@ -99,6 +99,22 @@ export const activeGamesList: {
   ],
   mainnet: [
     {
+      worldId: new anchor.BN(16),
+      worldPda: new PublicKey("36rykuLPYULiSDuy32oqAZwVr3m3TipDWbRYCbHHjEhc"),
+      endpoint: "https://supersize-mainnet-bos.magicblock.app",
+    },
+    {
+      worldId: new anchor.BN(17),
+      worldPda: new PublicKey("Cwuyz3xKifLBZA5C8pwg7VcSecRLBwLuTcjdYT3MFpGF"),
+      endpoint: "https://supersize-mainnet.magicblock.app",
+    },
+    {
+      worldId: new anchor.BN(18),
+      worldPda: new PublicKey("4vhp2CfuzdvUUpvujnvSW2YYxwk3SXrsF9wSHXCRzJ6s"),
+      endpoint: "https://supersize-mainnet-sin.magicblock.app",
+    },
+    /*
+    {
       worldId: new anchor.BN(1),
       worldPda: new PublicKey("9LKNh9Ma4WjGUHvohbAAdGpZFNUWmgEQRRgvYwRL25ma"),
       endpoint: "https://supersize-mainnet-sin.magicblock.app",
@@ -148,7 +164,7 @@ export const activeGamesList: {
       worldId: new anchor.BN(11),
       worldPda: new PublicKey("AiS8sVquRX8t17m1ZCi82TqfKVMVvSvUvUibFT9jv33k"),
       endpoint: "https://supersize-mainnet.magicblock.app",
-    },
+    }, */
   ],
 };
 
