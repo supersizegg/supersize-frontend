@@ -102,7 +102,7 @@ const Home = ({
           endpoint: "",
           ping: 0,
           isLoaded: false,
-          permissionless: false,
+          permissionless: true,
         };
         try {
           const mapEntityPda = FindEntityPda({
