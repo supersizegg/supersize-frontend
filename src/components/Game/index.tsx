@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
+import { useSoundManager } from "../../hooks/useSoundManager";
 
 const OPPONENT_COLORS = [
   "#1abc9c",
@@ -100,6 +101,7 @@ const GameComponent: React.FC<GameComponentProps> = ({
   const playersRef = useRef(players);
   const foodRef = useRef(visibleFood);
   const newTargetRef = useRef(newTarget);
+  const { playCoinSound } = useSoundManager();
 
   const timeStep = 60.0; // any value >50 works, testing ~90
 
