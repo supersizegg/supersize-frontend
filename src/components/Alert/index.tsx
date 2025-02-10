@@ -31,11 +31,13 @@ const Alert: React.FC<AlertProps> = ({ type, message, onClose }) => {
             transition-opacity duration-1000 ease-in-out 
             flex justify-center items-center max-w-[90%] 
             break-words min-h-[50px] box-border z-[1000]`}
-     style={{backgroundColor: type == "success" ? "lightgreen" : "pink",
-      color: type == "success" ? "green" : "red",
-      opacity: opacity,
-     }}>
-        {message}
+      style={{
+        backgroundColor: type == "success" ? "lightgreen" : "pink",
+        color: type == "success" ? "green" : "red",
+        opacity: opacity,
+      }}
+    >
+      {message}
     </div>
   );
 };

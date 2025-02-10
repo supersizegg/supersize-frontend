@@ -93,11 +93,10 @@ export const getDecimals = (amount: number): number => {
 
 export const getRoundedAmount = (amount: number, foodUnitValue: number): string => {
   const decimals = getDecimals(foodUnitValue);
-  if (decimals > 0) {
-    return amount.toFixed(decimals);
-  } else {
-    return Math.round(amount).toString();
-  }
+  return amount.toLocaleString("en-US", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
 };
 
 export const deriveSeedFromPublicKey = (userPublicKey: PublicKey): Uint8Array => {
