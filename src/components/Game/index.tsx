@@ -2,56 +2,6 @@ import React, { useEffect, useRef } from "react";
 import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 
-const foodImage = new Image();
-const foodImage2 = new Image();
-const foodImage3 = new Image();
-const foodImage4 = new Image();
-const foodImage5 = new Image();
-const foodImage6 = new Image();
-const foodImage7 = new Image();
-const foodImage8 = new Image();
-const foodImage9 = new Image();
-const foodImage10 = new Image();
-const foodImage11 = new Image();
-const foodImage12 = new Image();
-const foodImage13 = new Image();
-const foodImage14 = new Image();
-const foodImage15 = new Image();
-
-foodImage.src = `${process.env.PUBLIC_URL}/coin.png`;
-foodImage2.src = `${process.env.PUBLIC_URL}/coin2o.png`;
-foodImage3.src = `${process.env.PUBLIC_URL}/coin3o.png`;
-foodImage4.src = `${process.env.PUBLIC_URL}/coin4o.png`;
-foodImage5.src = `${process.env.PUBLIC_URL}/coin5o.png`;
-foodImage6.src = `${process.env.PUBLIC_URL}/coin6o.png`;
-foodImage7.src = `${process.env.PUBLIC_URL}/coin7o.png`;
-foodImage8.src = `${process.env.PUBLIC_URL}/coin8o.png`;
-foodImage9.src = `${process.env.PUBLIC_URL}/coin9o.png`;
-foodImage10.src = `${process.env.PUBLIC_URL}/coin10o.png`;
-foodImage11.src = `${process.env.PUBLIC_URL}/coin11o.png`;
-foodImage12.src = `${process.env.PUBLIC_URL}/coin12o.png`;
-foodImage13.src = `${process.env.PUBLIC_URL}/coin13o.png`;
-foodImage14.src = `${process.env.PUBLIC_URL}/coin14o.png`;
-foodImage15.src = `${process.env.PUBLIC_URL}/coin15o.png`;
-
-const foodImages = [
-  foodImage, // Size 1
-  foodImage2, // Size 2
-  foodImage3, // Size 3
-  foodImage4, // Size 4
-  foodImage5, // Size 5
-  foodImage6, // Size 6
-  foodImage7, // Size 7
-  foodImage8, // Size 8
-  foodImage9, // Size 9
-  foodImage10, // Size 10
-  foodImage11, // Size 11
-  foodImage12, // Size 12
-  foodImage13, // Size 13
-  foodImage14, // Size 14
-  foodImage15, // Size 15
-];
-
 const OPPONENT_COLORS = [
   "#1abc9c",
   "#2ecc71",
@@ -73,6 +23,24 @@ const OPPONENT_COLORS = [
   "#c0392b",
   "#bdc3c7",
   "#7f8c8d",
+];
+
+const FOOD_COLORS = [
+  "#FFD700", // Gold
+  "#FFCE33",
+  "#FFBD66",
+  "#FFAC99",
+  "#FF9BBD",
+  "#FF8AC0",
+  "#FF79C3",
+  "#FF68C6",
+  "#FF57C9",
+  "#FF46CC",
+  "#FF35CF",
+  "#F924D2",
+  "#E013D5",
+  "#C902D8",
+  "#9C27B0", // Purple
 ];
 
 function hashCode(str: string): number {
@@ -477,18 +445,16 @@ const GameComponent: React.FC<GameComponentProps> = ({
 
   const drawFood = (ctx: CanvasRenderingContext2D, food: Food) => {
     const diameter = 20;
-    const sizeIndex = food.size - 1;
-    const selectedImage = foodImages[sizeIndex];
+    const index = Math.max(0, Math.min(FOOD_COLORS.length - 1, food.size - 1));
+    const color = FOOD_COLORS[index];
 
-    if (selectedImage && selectedImage.complete) {
-      ctx.drawImage(selectedImage, food.x - diameter / 2, food.y - diameter / 2, diameter, diameter);
-    } else {
-      ctx.beginPath();
-      ctx.arc(food.x, food.y, diameter / 2, 0, 2 * Math.PI);
-      ctx.fillStyle = "white";
-      ctx.fill();
-      ctx.stroke();
-    }
+    ctx.beginPath();
+    ctx.arc(food.x, food.y, diameter / 2, 0, 2 * Math.PI);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 1;
+    ctx.stroke();
   };
 
   const drawBorder = (
