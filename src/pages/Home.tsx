@@ -232,7 +232,7 @@ const Home = ({
   const pingEndpoint = async (url: string): Promise<number> => {
     const startTime = performance.now();
     try {
-      await fetch(url, { method: "HEAD" });
+      await fetch(url, { method: "OPTIONS" });
     } catch (error) {
       console.error(`Failed to ping ${url}:`, error);
       // -1 indicates an error/timeout
@@ -612,6 +612,7 @@ const Home = ({
   const checkActiveGamesLoaded = async (thisServer: string, pingResults: any) => {
     if (checkActiveGamesLoadedCallCount.current >= 5) {
       console.error("checkActiveGamesLoaded called too many times.");
+      setIsLoadingCurrentGames(false);
       return;
     }
 
