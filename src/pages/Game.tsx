@@ -19,6 +19,7 @@ import { gameSystemCashOut } from "../states/gameSystemCashOut";
 import { gameSystemMove } from "../states/gameSystemMove";
 import { gameSystemSpawnFood } from "../states/gameSystemSpawnFood";
 import { decodeFood, stringToUint8Array, getRoundedAmount } from "@utils/helper";
+import { useSoundManager } from "../hooks/useSoundManager";
 
 import "./game.scss";
 
@@ -69,6 +70,8 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
   const currentIsMouseDownRef = useRef<boolean>(false);
   const allplayersRef = useRef<Blob[]>([]);
   const playersRef = useRef<Blob[]>([]);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const { playBoostSound } = useSoundManager(soundEnabled);
 
   useEffect(() => {
     allplayersRef.current = allplayers;
@@ -150,6 +153,17 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
       }
     }, 100);
   };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !playerExiting) {
+        handleExitClick();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleExitClick]);
 
   const processNewFoodTransaction = async () => {
     if (!entityMatch.current) return;
@@ -374,6 +388,9 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
     const handleMouseDown = () => {
       if (!exitHovered.current) {
         currentIsMouseDownRef.current = true;
+        if (!gameEnded && soundEnabled) {
+          playBoostSound();
+        }
       }
     };
 
@@ -529,10 +546,38 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
     <div className="gameWrapper w-screen h-screen overflow-hidden">
       <GameLeaderboard gameInfo={gameInfo} leaderboard={leaderboard} currentPlayer={currentPlayer} />
 
-      <div className={`flex items-center fixed top-0 left-0 m-2.5 z-[9999]`} style={{ zIndex: 9999 }}>
+      <div className="flex items-center fixed top-0 left-0 m-2.5 z-[9999]">
         <button
+          onClick={() => setSoundEnabled((prev) => !prev)}
+          onMouseEnter={() => {
+            exitHovered.current = true;
+          }}
+          onMouseLeave={() => {
+            exitHovered.current = false;
+          }}
+          className="soundToggleButton flex items-center justify-center mr-2"
+          style={{
+            border: "1px solid #fff",
+            background: "rgba(255, 255, 255, 0.25)",
+            color: "#fff",
+            borderRadius: "8px",
+            padding: "6px 10px",
+          }}
+        >
+          {soundEnabled ? (
+            <span role="img" aria-label="Sound On">
+              🔊
+            </span>
+          ) : (
+            <span role="img" aria-label="Sound Off">
+              🔇
+            </span>
+          )}
+        </button>
+
+        <button
+          className="exitButton"
           style={{ border: "1px solid #fff", background: "rgb(255 255 255 / 25%)", color: "#fff", borderRadius: "8px" }}
-          className="flex items-center justify-center text-center relative box-border text-sm cursor-pointer text-black no-underline bg-[#f07171] float-right border border-[#f07171] rounded-full py-1.5 px-2.5 transition-colors duration-300 z-[9999999] hover:bg-black hover:text-[#f07171] active:bg-black active:text-[#f07171]"
           onClick={handleExitClick}
           onMouseEnter={() => {
             exitHovered.current = true;
@@ -541,7 +586,7 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
             exitHovered.current = false;
           }}
         >
-          Exit & Cash Out
+          Cash Out [ESC]
         </button>
         {playerExiting && countdown.current > 0 && (
           <div className="text-[#f07171] font-[Terminus] text-xl text-right ml-2.5">
