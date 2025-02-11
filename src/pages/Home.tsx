@@ -67,9 +67,12 @@ const Home = ({
   );
   const isSearchingGame = useRef(false);
   const selectedServer = useRef<string>("");
+  const [selectedEndpoint, setSelectedEndpoint] = useState<string>("");
   const [isLoadingCurrentGames, setIsLoadingCurrentGames] = useState(true);
   const [loadingGameNum, setLoadingGameNum] = useState(-1);
   const [cashoutTx, setCashoutTx] = useState<string>("");
+  const checkActiveGamesLoadedCallCount = useRef(0);
+  const checkActiveGamesLoadedWait = useRef(500);
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(event.target.value);
@@ -114,13 +117,10 @@ const Home = ({
             componentId: COMPONENT_MAP_ID,
             entity: mapEntityPda,
           });
-          const mapParsedData = await mapFetchOnSpecificEphem(
-            engine,
-            mapComponentPda,
-            endpoints[NETWORK][options.indexOf(selectedServer.current)],
-          );
+          const thisEndpoint = endpoints[NETWORK][options.indexOf(selectedServer.current)];
+          const mapParsedData = await mapFetchOnSpecificEphem(engine, mapComponentPda, thisEndpoint);
           if (mapParsedData) {
-            newGameInfo.endpoint = endpoints[NETWORK][options.indexOf(selectedServer.current)];
+            newGameInfo.endpoint = thisEndpoint;
             newGameInfo.name = mapParsedData.name;
             newGameInfo.max_players = mapParsedData.maxPlayers;
             newGameInfo.size = mapParsedData.width;
@@ -129,7 +129,7 @@ const Home = ({
             newGameInfo.max_buyin = mapParsedData.maxBuyin;
             newGameInfo.isLoaded = true;
 
-            const pingTime = await pingEndpoint(endpoints[NETWORK][options.indexOf(selectedServer.current)]);
+            const pingTime = await pingEndpoint(thisEndpoint);
             newGameInfo.ping = pingTime;
             const anteseed = "ante";
             const anteEntityPda = FindEntityPda({
@@ -158,7 +158,7 @@ const Home = ({
             newGameInfo.isLoaded = true;
             setSelectedGame(newGameInfo);
 
-            const result = await getMyPlayerStatus(engine, newGameInfo.worldId, mapParsedData.maxPlayers);
+            const result = await getMyPlayerStatus(engine, newGameInfo.worldId, mapParsedData.maxPlayers, thisEndpoint);
             let activeplayers = 0;
             let need_to_delegate = false;
             let need_to_undelegate = false;
@@ -299,6 +299,7 @@ const Home = ({
         engine,
         activeGamesLoaded[index].activeGame.worldId,
         activeGamesLoaded[index].activeGame.max_players,
+        activeGamesLoaded[index].activeGame.endpoint,
       );
       if (isPlayerStatus(result)) {
         if (result.playerStatus == "error") {
@@ -358,14 +359,16 @@ const Home = ({
       pingResults = pingResults.pingResults;
     }
     const gameCopy = [...activeGamesLoaded];
-    let filteredGames = gameCopy.filter((game) => {
+    /*let filteredGames = gameCopy.filter((game) => {
       return endpoints[NETWORK][options.indexOf(server)] === game.activeGame.endpoint;
+    });*/
+
+    let filteredGames = gameCopy.filter((game) => {
+      return server === game.activeGame.endpoint;
     });
 
     for (let i = 0; i < filteredGames.length; i++) {
       try {
-        const startTime = performance.now();
-
         const preNewGame: FetchedGame = {
           activeGame: {
             ...filteredGames[i].activeGame,
@@ -439,6 +442,7 @@ const Home = ({
               engine,
               filteredGames[i].activeGame.worldId,
               mapParsedData.maxPlayers,
+              server,
             );
             if (isPlayerStatus(result)) {
               if (result.playerStatus == "error") {
@@ -604,60 +608,61 @@ const Home = ({
     //const index = endpoints.indexOf(lowestPingEndpoint.endpoint);
     return { pingResults: pingResults, lowestPingEndpoint: lowestPingEndpoint };
   };
-  useEffect(() => {
-    const handleEngineStable = debounce(async () => {
-      if (selectedServer.current === "") {
-        setIsLoadingCurrentGames(true);
 
-        try {
-          const pingResults = await pingEndpoints();
-          pingResultsRef.current = pingResults.pingResults;
-          const thisServer = pingResults.lowestPingEndpoint.region;
-          selectedServer.current = thisServer;
-          engine.setEndpointEphemRpc(pingResults.lowestPingEndpoint.endpoint);
-          await fetchAndLogMapData(engine, activeGamesRef.current, thisServer, pingResults.pingResults, true);
-
-          const checkActiveGamesLoaded = setInterval(async () => {
-            if (activeGamesRef.current.filter((row) => row.activeGame.ping > 0).length === 0) {
-              await fetchAndLogMapData(engine, activeGamesRef.current, thisServer, pingResults.pingResults, true);
-            } else {
-              clearInterval(checkActiveGamesLoaded);
-              setIsLoadingCurrentGames(false);
-            }
-          }, pingResults.lowestPingEndpoint.pingTime * 5);
-        } catch (error) {
-          console.error("Error fetching data:", error);
-          //selectedServer.current = "";
-        } finally {
-          if (activeGamesRef.current.filter((row) => row.activeGame.ping > 0).length > 0) {
-            //selectedServer.current = getRegion(activeGamesRef.current[0].activeGame.endpoint);
-            setIsLoadingCurrentGames(false);
-          }
-        }
-      } else {
-        setIsLoadingCurrentGames(false);
-      }
-    }, 500);
-
-    handleEngineStable();
-
-    return () => {
-      handleEngineStable.cancel();
-    };
-  }, [engine]);
-
-  function debounce<T extends (...args: any[]) => void>(func: T, wait: number) {
-    let timeout: ReturnType<typeof setTimeout>;
-    const debounced = (...args: any[]) => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => func(...args), wait);
-    };
-    debounced.cancel = () => {
-      clearTimeout(timeout);
+  const checkActiveGamesLoaded = async (thisServer: string, pingResults: any) => {
+    if (checkActiveGamesLoadedCallCount.current >= 5) {
+      console.error("checkActiveGamesLoaded called too many times.");
+      return;
+    }
+  
+    if (activeGamesRef.current.filter((row) => row.activeGame.ping > 0).length === 0) {
+      await fetchAndLogMapData(engine, activeGamesRef.current, thisServer, pingResults, true);
+  
+      checkActiveGamesLoadedCallCount.current++;
+      checkActiveGamesLoadedWait.current *= 2; 
+  
+      setTimeout(checkActiveGamesLoaded, checkActiveGamesLoadedWait.current);
+    } else {
       setIsLoadingCurrentGames(false);
+      checkActiveGamesLoadedCallCount.current = 0;
+      checkActiveGamesLoadedWait.current = 500;
+    }
+  };
+
+  useEffect(() => {
+    const fetchPingData = async () => {
+      setIsLoadingCurrentGames(true);
+      try {
+        const pingResults = await pingEndpoints();
+        pingResultsRef.current = pingResults.pingResults;
+        selectedServer.current = pingResults.lowestPingEndpoint.region;
+        setSelectedEndpoint(pingResults.lowestPingEndpoint.endpoint);
+        setIsLoadingCurrentGames(false);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
     };
-    return debounced;
-  }
+
+    fetchPingData();
+  }, []);
+
+  useEffect(() => {
+    const fetchGameData = async () => {
+      try {
+        await fetchAndLogMapData(engine, activeGamesRef.current, selectedEndpoint, pingResultsRef.current, true);
+        setTimeout(checkActiveGamesLoaded, checkActiveGamesLoadedWait.current, selectedEndpoint, pingResultsRef.current);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        if (activeGamesRef.current.filter((row) => row.activeGame.ping > 0).length > 0) {
+          setIsLoadingCurrentGames(false);
+          checkActiveGamesLoadedWait.current = 500;
+          checkActiveGamesLoadedCallCount.current = 0;
+        }
+      }
+    }
+    fetchGameData();
+  }, [selectedEndpoint]);
 
   const renderRegionButtons = () => {
     return (
@@ -672,7 +677,6 @@ const Home = ({
             }`}
             onClick={async () => {
               setIsLoadingCurrentGames(true);
-
               const clearPingGames = [...activeGamesRef.current];
               for (let i = 0; i < clearPingGames.length; i++) {
                 const prewnewgame: FetchedGame = {
@@ -690,30 +694,15 @@ const Home = ({
               activeGamesRef.current = clearPingGames;
               setActiveGamesLoaded(clearPingGames);
               const thisServer = item.region;
+              const thisEndpoint = item.endpoint;
               selectedServer.current = thisServer;
-              let pingResults = await pingEndpoints();
-              pingResultsRef.current = pingResults.pingResults;
-              engine.setEndpointEphemRpc(item.endpoint);
-              try {
-                await fetchAndLogMapData(engine, clearPingGames, thisServer, pingResults.pingResults, true);
-                const checkActiveGamesLoaded = setInterval(async () => {
-                  if (activeGamesRef.current.filter((row) => row.activeGame.ping > 0).length == 0) {
-                    await fetchAndLogMapData(engine, activeGamesRef.current, thisServer, pingResults.pingResults, true);
-                  } else {
-                    clearInterval(checkActiveGamesLoaded);
-                    setIsLoadingCurrentGames(false);
-                  }
-                }, pingResults.lowestPingEndpoint.pingTime * 5);
-              } catch (error) {
-                console.log("Error fetching map data:", error);
-              } finally {
-                if (
-                  activeGamesRef.current.filter((row) => row.activeGame.ping > 0).length ==
-                  activeGamesRef.current.length
-                ) {
-                  setIsLoadingCurrentGames(false);
+              setSelectedEndpoint((prevEndpoint) => {
+                if (prevEndpoint === thisEndpoint) {
+                  return ""; // Trigger an update by setting to an empty string first
                 }
-              }
+                return thisEndpoint;
+              });
+              setTimeout(() => setSelectedEndpoint(thisEndpoint), 0); // Ensure the update is triggered
             }}
             disabled={isLoadingCurrentGames}
           >
@@ -790,7 +779,8 @@ const Home = ({
                       await fetchAndLogMapData(
                         engine,
                         activeGamesRef.current,
-                        selectedServer.current,
+                        selectedEndpoint,
+                        //selectedServer.current,
                         pingResults.pingResults,
                       );
                       setIsLoadingCurrentGames(false);

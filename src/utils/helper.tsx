@@ -6,7 +6,7 @@ import { PublicKey, Keypair } from "@solana/web3.js";
 import * as crypto from "crypto-js";
 import * as anchor from "@coral-xyz/anchor";
 import { MagicBlockEngine } from "@engine/MagicBlockEngine";
-import { playerFetchOnChain } from "@states/gameFetch";
+import { playerFetchOnChain, playerFetchOnSpecificEphem } from "@states/gameFetch";
 import { playerFetchOnEphem } from "@states/gameFetch";
 import { FindEntityPda } from "@magicblock-labs/bolt-sdk";
 import { COMPONENT_PLAYER_ID } from "@states/gamePrograms";
@@ -367,6 +367,7 @@ export const getMyPlayerStatus = async (
   engine: MagicBlockEngine,
   worldId: BN,
   maxplayer: number,
+  endpoint: string,
 ): Promise<
   | {
       playerStatus: string;
@@ -403,7 +404,7 @@ export const getMyPlayerStatus = async (
       Promise.all([
         engine.getChainAccountInfo(playersComponentPda),
         playerFetchOnChain(engine, playersComponentPda),
-        playerFetchOnEphem(engine, playersComponentPda),
+        playerFetchOnSpecificEphem(engine, playersComponentPda, endpoint),
       ]).then(([playersacc, playersParsedData, playersParsedDataER]) => ({
         playersComponentPda,
         playersacc,

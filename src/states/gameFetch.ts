@@ -10,6 +10,7 @@ import {
   getComponentSectionOnChain,
   getComponentSectionOnEphem,
   getComponentMapOnSpecificEphem,
+  getComponentPlayerOnSpecificEphem,
 } from "./gamePrograms";
 
 export async function anteroomFetchOnChain(engine: MagicBlockEngine, gamePda: PublicKey) {
@@ -43,6 +44,10 @@ export async function playerFetchOnChain(engine: MagicBlockEngine, gamePda: Publ
 
 export async function playerFetchOnEphem(engine: MagicBlockEngine, gamePda: PublicKey) {
   const componentPlayer = getComponentPlayerOnEphem(engine);
+  return componentPlayer.account.player.fetchNullable(gamePda);
+}
+export async function playerFetchOnSpecificEphem(engine: MagicBlockEngine, gamePda: PublicKey, endpoint: string) {
+  const componentPlayer = getComponentPlayerOnSpecificEphem(engine, endpoint);
   return componentPlayer.account.player.fetchNullable(gamePda);
 }
 

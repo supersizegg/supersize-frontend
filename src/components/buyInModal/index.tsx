@@ -158,7 +158,7 @@ const BuyInModal: React.FC<BuyInModalProps> = ({
       const thisPlayerStatus = await playerFetchOnChain(engine, playerComponentPda);
       let retryModalViewNum = 0;
       if (thisPlayerStatus?.authority !== null || errorMessageRef.current !== "") {
-        const result = await getMyPlayerStatus(engine, activeGame.worldId, activeGame.max_players);
+        const result = await getMyPlayerStatus(engine, activeGame.worldId, activeGame.max_players, activeGame.endpoint);
         if (isPlayerStatus(result)) {
           if (result.need_to_delegate) {
             try {
@@ -315,7 +315,7 @@ const BuyInModal: React.FC<BuyInModalProps> = ({
     }
 
     if (!retrySuccess) {
-      const result = await getMyPlayerStatus(engine, activeGame.worldId, activeGame.max_players);
+      const result = await getMyPlayerStatus(engine, activeGame.worldId, activeGame.max_players, activeGame.endpoint);
       if (isPlayerStatus(result)) {
         if (result.need_to_delegate) {
           try {

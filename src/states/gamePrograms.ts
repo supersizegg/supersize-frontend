@@ -98,6 +98,10 @@ export function getComponentPlayerOnChain(engine: MagicBlockEngine) {
   return engine.getProgramOnChain<Player>(componentPlayer);
 }
 
+export function getComponentPlayerOnSpecificEphem(engine: MagicBlockEngine, endpoint: string) {
+  return engine.getProgramOnSpecificEphem<Player>(componentPlayer, endpoint);
+}
+
 export function getComponentPlayerOnEphem(engine: MagicBlockEngine) {
   return engine.getProgramOnEphem<Player>(componentPlayer);
 }
