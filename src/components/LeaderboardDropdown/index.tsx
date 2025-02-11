@@ -28,12 +28,21 @@ const LeaderboardDropdown = ({ season, setSeason }: LeaderboardDropdownProps) =>
         const tokensFromAPI = response.data;
 
         const metadataPromises = tokensFromAPI.map(async (t: Tokens) => {
-          const metadata = await fetchTokenMetadata(t.token_mint);
-          return {
-            icon: metadata.image || `${process.env.PUBLIC_URL}/default-token.png`,
-            name: metadata.name || t.token_mint,
-            token: t.token_mint,
-          };
+          try {
+            const metadata = await fetchTokenMetadata(t.token_mint);
+            return {
+              icon: metadata.image || `${process.env.PUBLIC_URL}/default-token.png`,
+              name: metadata.name || t.token_mint,
+              token: t.token_mint,
+            };
+          } catch (error) {
+            console.error("Error fetching token metadata:", error);
+            return {
+              icon: `${process.env.PUBLIC_URL}/default-token.png`,
+              name: t.token_mint,
+              token: t.token_mint,
+            };
+          }
         });
 
         const tokensData = await Promise.all(metadataPromises);
