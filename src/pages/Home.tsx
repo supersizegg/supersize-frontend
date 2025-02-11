@@ -614,13 +614,13 @@ const Home = ({
       console.error("checkActiveGamesLoaded called too many times.");
       return;
     }
-  
+
     if (activeGamesRef.current.filter((row) => row.activeGame.ping > 0).length === 0) {
       await fetchAndLogMapData(engine, activeGamesRef.current, thisServer, pingResults, true);
-  
+
       checkActiveGamesLoadedCallCount.current++;
-      checkActiveGamesLoadedWait.current *= 2; 
-  
+      checkActiveGamesLoadedWait.current *= 2;
+
       setTimeout(checkActiveGamesLoaded, checkActiveGamesLoadedWait.current);
     } else {
       setIsLoadingCurrentGames(false);
@@ -650,7 +650,12 @@ const Home = ({
     const fetchGameData = async () => {
       try {
         await fetchAndLogMapData(engine, activeGamesRef.current, selectedEndpoint, pingResultsRef.current, true);
-        setTimeout(checkActiveGamesLoaded, checkActiveGamesLoadedWait.current, selectedEndpoint, pingResultsRef.current);
+        setTimeout(
+          checkActiveGamesLoaded,
+          checkActiveGamesLoadedWait.current,
+          selectedEndpoint,
+          pingResultsRef.current,
+        );
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -660,7 +665,7 @@ const Home = ({
           checkActiveGamesLoadedCallCount.current = 0;
         }
       }
-    }
+    };
     fetchGameData();
   }, [selectedEndpoint]);
 

@@ -1,136 +1,88 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { MenuBar } from "@components/menu/MenuBar";
 import LeaderboardDropdown from "@components/LeaderboardDropdown";
 import Footer from "@components/Footer";
-import { fetchTokenMetadata } from "@utils/helper";
-import { NETWORK } from "@utils/constants";
+import { API_URL } from "@utils/constants";
 import "./Leaderboard.scss";
 
 interface Player {
   name: string;
   total: number;
 }
+
 interface UserInfo {
+  address: string;
   position: number;
   points: number;
 }
 
+interface LeaderboardResponse {
+  player: string;
+  score: number;
+  token_mint: string;
+  last_play: string;
+}
+
 const Leaderboard: React.FC = () => {
-  const [season, setSeason] = useState({
+  const [season, setSeason] = useState<{ icon: string; name: string; token: string }>({
     icon: `${process.env.PUBLIC_URL}/token.png`,
     name: "LOADING",
+    token: "",
   });
-  const users = useRef<Player[]>([]);
-  const usersLen = useRef(0);
-
-  const [rank, setRank] = useState<number | null>(null);
+  const [leaderboardData, setLeaderboardData] = useState<Player[]>([]);
+  const [totalCandidates, setTotalCandidates] = useState(0);
+  const [userInfo, setUserInfo] = useState<UserInfo>({ position: 0, points: 0, address: "" });
   const { publicKey } = useWallet();
 
-  const tokens = [
-    { network: "devnet", token: "AsoX43Q5Y87RPRGFkkYUvu8CSksD9JXNEqWVGVsr8UEp" },
-    { network: "mainnet", token: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" },
-    { network: "mainnet", token: "7dnMwS2yE6NE1PX81B9Xpm7zUhFXmQABqUiHHzWXiEBn" },
-  ];
-  //const options = [{ icon: "/usdc.png", name: "Magical Gem" }, { icon: "/usdc.png", name: "USDC" }, { icon: "/Solana_logo.png", name: "SOL" }];
-  const options = useRef([{ icon: `${process.env.PUBLIC_URL}/token.png`, name: "LOADING" }]);
-
-  const [userInfo, setUserInfo] = useState<UserInfo>({
-    position: 0,
-    points: 0,
-  });
-
   useEffect(() => {
-    const loadTokenMetadata = async () => {
+    if (season.token === "") return;
+
+    const fetchStats = async () => {
       try {
-        const matchedTokens = tokens.filter((token) => token.network === NETWORK);
-
-        const promises = matchedTokens.map(async (token) => {
-          if (token.token.toString() === "7dnMwS2yE6NE1PX81B9Xpm7zUhFXmQABqUiHHzWXiEBn") {
-            return {
-              icon: `${process.env.PUBLIC_URL}/agld.jpg`,
-              name: "AGLD",
-            };
-          } else {
-            const metadata = await fetchTokenMetadata(token.token);
-            console.log(metadata);
-            return {
-              icon: metadata.image,
-              name: metadata.name,
-            };
-          }
-        });
-
-        const optionsData = await Promise.all(promises);
-
-        options.current = optionsData;
-        setSeason(options.current[0]);
-        console.log("Updated options:", options.current);
+        const leaderboardRes = await axios.get(`${API_URL}/api/v1/leaderboard/${season.token}`);
+        const participants = leaderboardRes.data.map((entry: LeaderboardResponse) => ({
+          name: entry.player,
+          total: entry.score,
+        }));
+        setLeaderboardData(participants);
       } catch (error) {
-        console.error("Error loading token metadata:", error);
+        console.error("Error fetching leaderboard data:", error);
       }
     };
 
-    loadTokenMetadata();
-  }, [NETWORK]);
+    fetchStats();
+  }, [publicKey, season]);
 
   useEffect(() => {
-    // if (!publicKey) {
-    //     return;
-    // }
-    if (options.current[0].name === "LOADING") {
-      return;
-    }
-    (async () => {
+    if (season.token === "") return;
+
+    const fetchPlayerRank = async () => {
       try {
-        console.log(season.name);
-        let res = await axios.get(
-          `https://supersize.lewisarnsten.workers.dev/get-user-position?walletAddress=${publicKey ? publicKey.toString() : "11111111111111111111111111111111"}&contestName=${season.name}`,
-        );
-        let contestantFound = true;
+        const walletAddress = publicKey ? publicKey.toString() : "11111111111111111111111111111111";
+        const playerRankRes = await axios.get(`${API_URL}/api/v1/player-rank`, {
+          params: {
+            address: walletAddress,
+            token: season.token,
+          },
+        });
 
-        if (res.data?.error === "User not found in contest") {
-          console.log("User not found, retrying with fallback walletAddress...");
-          res = await axios.get(
-            `https://supersize.lewisarnsten.workers.dev/get-user-position?walletAddress=DdGB1EpmshJvCq48W1LvB1csrDnC4uataLnQbUVhp6XB&contestName=${season.name}`,
-          );
-          contestantFound = false;
-        }
-
-        if (contestantFound) {
-          setUserInfo({
-            position: res.data.position,
-            points: res.data.points,
-          });
-        } else {
-          setUserInfo({
-            position: 0,
-            points: 0,
-          });
-        }
-
-        if (!res.data.topParticipants) {
-          setUserInfo({
-            position: 0,
-            points: 0,
-          });
-          return;
-        }
-
-        const participants = res.data.topParticipants.map(
-          (participant: { walletAddress: string; winAmount: number }) => ({
-            name: participant.walletAddress,
-            total: participant.winAmount,
-          }),
-        );
-        users.current = participants;
-        usersLen.current = res.data.totalCandidates;
+        setUserInfo({
+          position: playerRankRes.data.rank,
+          points: playerRankRes.data.score,
+          address: playerRankRes.data.player,
+        });
+        setTotalCandidates(playerRankRes.data.total);
       } catch (error) {
-        console.error("An error occurred during the request:", error);
+        console.error("Error fetching player rank data:", error);
+        setUserInfo({ position: 0, points: 0, address: "" });
+        setTotalCandidates(0);
       }
-    })();
-  }, [publicKey, season]);
+    };
+
+    fetchPlayerRank();
+  }, [season, publicKey]);
 
   return (
     <div className="main-container">
@@ -141,13 +93,13 @@ const Leaderboard: React.FC = () => {
           <div className="stat-box rank-box desktop-only">
             <p className="stat-label">Your Rank</p>
             <p className="stat-value">
-              {userInfo.position} / {usersLen.current}
+              {userInfo.position} / {totalCandidates}
             </p>
           </div>
 
           <div className="stat-box winnings-box desktop-only">
             <p className="stat-label">Your Winnings</p>
-            <p className="stat-value">{userInfo?.points?.toFixed(3)}</p>
+            <p className="stat-value">{userInfo.points.toFixed(3)}</p>
           </div>
 
           <div className="dropdown-box">
@@ -170,16 +122,13 @@ const Leaderboard: React.FC = () => {
           <div className="table-scroll">
             <table>
               <tbody>
-                {users.current.map((player, i) => {
-                  const highlight = rank === i ? { background: "#3a3a3a" } : {};
-                  return (
-                    <tr key={i} style={highlight} onMouseEnter={() => setRank(i)} onMouseLeave={() => setRank(null)}>
-                      <td>{i + 1}</td>
-                      <td>{player.name}</td>
-                      <td className="text-right">{player.total.toLocaleString()}</td>
-                    </tr>
-                  );
-                })}
+                {leaderboardData.map((player, i) => (
+                  <tr key={i} className={player.name === userInfo.address ? "player-row-highlight" : ""}>
+                    <td>{i + 1}</td>
+                    <td>{player.name}</td>
+                    <td className="text-right">{player.total.toLocaleString()}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

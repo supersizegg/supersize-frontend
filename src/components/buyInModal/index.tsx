@@ -155,6 +155,7 @@ const BuyInModal: React.FC<BuyInModalProps> = ({
         componentId: COMPONENT_PLAYER_ID,
         entity: playerEntityPda,
       });
+      console.log("playerComponentPda", playerComponentPda.toString());
       const thisPlayerStatus = await playerFetchOnChain(engine, playerComponentPda);
       let retryModalViewNum = 0;
       if (thisPlayerStatus?.authority !== null || errorMessageRef.current !== "") {
