@@ -23,6 +23,7 @@ import { FetchedGame, PlayerInfo } from "@utils/types";
 import { anteroomFetchOnChain, mapFetchOnChain, mapFetchOnSpecificEphem } from "../states/gameFetch";
 import { useMagicBlockEngine } from "../engine/MagicBlockEngineProvider";
 import { endpoints } from "@utils/constants";
+import { createUnloadedGame } from "@utils/game";
 import { stringToUint8Array, getRegion } from "@utils/helper";
 import { gameSystemJoin } from "@states/gameSystemJoin";
 import { gameSystemCashOut } from "@states/gameSystemCashOut";
@@ -73,6 +74,7 @@ const Home = ({
   const [cashoutTx, setCashoutTx] = useState<string>("");
   const checkActiveGamesLoadedCallCount = useRef(0);
   const checkActiveGamesLoadedWait = useRef(500);
+  const [numberOfGamesInEndpoint, setNumberOfGamesInEndpoint] = useState<null | number>(null);
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(event.target.value);
@@ -90,23 +92,7 @@ const Home = ({
           return;
         }
         const worldPda = await FindWorldPda(worldId);
-        const newGameInfo: ActiveGame = {
-          worldId: worldId.worldId,
-          worldPda: worldPda,
-          name: "loading",
-          active_players: 0,
-          max_players: 0,
-          size: 0,
-          image: "",
-          token: "",
-          base_buyin: 0,
-          min_buyin: 0,
-          max_buyin: 0,
-          endpoint: "",
-          ping: 0,
-          isLoaded: false,
-          permissionless: true,
-        };
+        const newGameInfo = createUnloadedGame(worldId.worldId, worldPda, "", true);
         try {
           const mapEntityPda = FindEntityPda({
             worldId: worldId.worldId,
@@ -120,17 +106,17 @@ const Home = ({
           const thisEndpoint = endpoints[NETWORK][options.indexOf(selectedServer.current)];
           const mapParsedData = await mapFetchOnSpecificEphem(engine, mapComponentPda, thisEndpoint);
           if (mapParsedData) {
-            newGameInfo.endpoint = thisEndpoint;
-            newGameInfo.name = mapParsedData.name;
-            newGameInfo.max_players = mapParsedData.maxPlayers;
-            newGameInfo.size = mapParsedData.width;
-            newGameInfo.base_buyin = mapParsedData.baseBuyin;
-            newGameInfo.min_buyin = mapParsedData.minBuyin;
-            newGameInfo.max_buyin = mapParsedData.maxBuyin;
-            newGameInfo.isLoaded = true;
+            newGameInfo.activeGame.endpoint = thisEndpoint;
+            newGameInfo.activeGame.name = mapParsedData.name;
+            newGameInfo.activeGame.max_players = mapParsedData.maxPlayers;
+            newGameInfo.activeGame.size = mapParsedData.width;
+            newGameInfo.activeGame.base_buyin = mapParsedData.baseBuyin;
+            newGameInfo.activeGame.min_buyin = mapParsedData.minBuyin;
+            newGameInfo.activeGame.max_buyin = mapParsedData.maxBuyin;
+            newGameInfo.activeGame.isLoaded = true;
 
             const pingTime = await pingEndpoint(thisEndpoint);
-            newGameInfo.ping = pingTime;
+            newGameInfo.activeGame.ping = pingTime;
             const anteseed = "ante";
             const anteEntityPda = FindEntityPda({
               worldId: worldId.worldId,
@@ -147,18 +133,23 @@ const Home = ({
               mint_of_token_being_sent = anteParsedData.token;
               try {
                 const { name, image } = await fetchTokenMetadata(mint_of_token_being_sent.toString());
-                newGameInfo.image = image;
-                newGameInfo.token = name;
-                newGameInfo.tokenMint = mint_of_token_being_sent;
+                newGameInfo.activeGame.image = image;
+                newGameInfo.activeGame.token = name;
+                newGameInfo.activeGame.tokenMint = mint_of_token_being_sent;
               } catch (error) {
                 console.error("Error fetching token data:", error);
               }
             }
-            console.log("new game info", newGameInfo.worldId, newGameInfo.worldPda.toString());
-            newGameInfo.isLoaded = true;
-            setSelectedGame(newGameInfo);
+            console.log("new game info", newGameInfo.activeGame.worldId, newGameInfo.activeGame.worldPda.toString());
+            newGameInfo.activeGame.isLoaded = true;
+            setSelectedGame(newGameInfo.activeGame);
 
-            const result = await getMyPlayerStatus(engine, newGameInfo.worldId, mapParsedData.maxPlayers, thisEndpoint);
+            const result = await getMyPlayerStatus(
+              engine,
+              newGameInfo.activeGame.worldId,
+              mapParsedData.maxPlayers,
+              thisEndpoint,
+            );
             let activeplayers = 0;
             let need_to_delegate = false;
             let need_to_undelegate = false;
@@ -185,11 +176,11 @@ const Home = ({
               console.error("Error fetching player status");
             }
 
-            newGameInfo.active_players = activeplayers;
+            newGameInfo.activeGame.active_players = activeplayers;
             setActiveGamesLoaded([
               ...activeGamesLoaded,
               {
-                activeGame: newGameInfo,
+                activeGame: newGameInfo.activeGame,
                 playerInfo: {
                   playerStatus: playerStatus,
                   need_to_delegate: need_to_delegate,
@@ -201,7 +192,7 @@ const Home = ({
             activeGamesRef.current = [
               ...activeGamesRef.current,
               {
-                activeGame: newGameInfo,
+                activeGame: newGameInfo.activeGame,
                 playerInfo: {
                   playerStatus: playerStatus,
                   need_to_delegate: need_to_delegate,
@@ -630,6 +621,21 @@ const Home = ({
     }
   };
 
+  const refreshAllGames = async () => {
+    console.log(`Refreshing games in ${selectedEndpoint}`);
+    setIsLoadingCurrentGames(true);
+    let pingResults = await pingEndpoints();
+    pingResultsRef.current = pingResults.pingResults;
+    await fetchAndLogMapData(
+      engine,
+      activeGamesRef.current,
+      selectedEndpoint,
+      //selectedServer.current,
+      pingResults.pingResults,
+    );
+    setIsLoadingCurrentGames(false);
+  };
+
   useEffect(() => {
     const fetchPingData = async () => {
       setIsLoadingCurrentGames(true);
@@ -649,7 +655,20 @@ const Home = ({
 
   useEffect(() => {
     const fetchGameData = async () => {
+      if (selectedEndpoint === "") {
+        return;
+      }
+      console.log(`Fetching games in ${selectedEndpoint}`);
+      const gamesCountInEndpoint = activeGamesRef.current.filter(
+        (row) => row.activeGame.endpoint === selectedEndpoint,
+      ).length;
+      console.log("Number of games in endpoint", gamesCountInEndpoint);
+      setNumberOfGamesInEndpoint(gamesCountInEndpoint);
+      if (isLoadingCurrentGames === true || gamesCountInEndpoint === 0) {
+        return;
+      }
       try {
+        setIsLoadingCurrentGames(true);
         await fetchAndLogMapData(engine, activeGamesRef.current, selectedEndpoint, pingResultsRef.current, true);
         setTimeout(
           checkActiveGamesLoaded,
@@ -682,7 +701,12 @@ const Home = ({
               selectedServer.current === item.region ? "bg-[#666] hover:bg-[#555]" : "bg-[#444] hover:bg-[#555]"
             }`}
             onClick={async () => {
-              setIsLoadingCurrentGames(true);
+              if (selectedServer.current === item.region) {
+                refreshAllGames();
+                return;
+              }
+              selectedServer.current = item.region;
+
               const clearPingGames = [...activeGamesRef.current];
               for (let i = 0; i < clearPingGames.length; i++) {
                 const prewnewgame: FetchedGame = {
@@ -699,9 +723,11 @@ const Home = ({
               }
               activeGamesRef.current = clearPingGames;
               setActiveGamesLoaded(clearPingGames);
-              const thisServer = item.region;
+              // const thisServer = item.region;
               const thisEndpoint = item.endpoint;
-              selectedServer.current = thisServer;
+              // selectedServer.current = thisServer;
+              setSelectedEndpoint(thisEndpoint);
+              /*
               setSelectedEndpoint((prevEndpoint) => {
                 if (prevEndpoint === thisEndpoint) {
                   return ""; // Trigger an update by setting to an empty string first
@@ -709,6 +735,7 @@ const Home = ({
                 return thisEndpoint;
               });
               setTimeout(() => setSelectedEndpoint(thisEndpoint), 0); // Ensure the update is triggered
+              */
             }}
             disabled={isLoadingCurrentGames}
           >
@@ -778,19 +805,7 @@ const Home = ({
                     data-tooltip-id="refresh-all-games"
                     data-tooltip-content="Refresh all games"
                     className="desktop-only"
-                    onClick={async () => {
-                      setIsLoadingCurrentGames(true);
-                      let pingResults = await pingEndpoints();
-                      pingResultsRef.current = pingResults.pingResults;
-                      await fetchAndLogMapData(
-                        engine,
-                        activeGamesRef.current,
-                        selectedEndpoint,
-                        //selectedServer.current,
-                        pingResults.pingResults,
-                      );
-                      setIsLoadingCurrentGames(false);
-                    }}
+                    onClick={async () => refreshAllGames()}
                   >
                     <img
                       src="/icons/arrows-rotate.svg"
@@ -806,108 +821,118 @@ const Home = ({
               {activeGamesLoaded.filter((row) => row.activeGame.ping > 0).length == 0 && (
                 <tr>
                   <td colSpan={10} style={{ textAlign: "center", verticalAlign: "middle", lineHeight: "20px" }}>
-                    {selectedServer.current !== "" ? (
+                    {selectedServer.current !== "" && isLoadingCurrentGames === true && (
                       <>
                         <Spinner /> Loading {selectedServer.current} games, please wait...
                       </>
-                    ) : (
+                    )}
+                    {selectedServer.current === "" && (
                       <>
                         <Spinner /> Finding nearest server...
+                      </>
+                    )}
+                    {numberOfGamesInEndpoint === 0 && isLoadingCurrentGames === false && (
+                      <>
+                        No whitelisted games in {selectedServer.current} right now.
+                        <br />
+                        Try selecting a different region or search game by ID.
                       </>
                     )}
                   </td>
                 </tr>
               )}
-              {activeGamesLoaded.map((row, idx) => (
-                <tr key={idx} style={{ display: row.activeGame.ping <= 0 ? "none" : "table-row" }}>
-                  <td>{row.activeGame.worldId.toString()}</td>
-                  <td>
-                    {row.activeGame.permissionless === true ? (
-                      <span className="community-list">Community</span>
-                    ) : (
-                      <span className="strict-list">Supersize</span>
-                    )}
-                  </td>
-                  <td>
-                    {row.activeGame.isLoaded ? (
-                      <>
-                        <img src={row.activeGame.image} alt={row.activeGame.name} className="token-image" />
-                        <span>{row.activeGame.token}</span>
-                      </>
-                    ) : (
-                      <Spinner />
-                    )}
-                  </td>
-                  <td style={{ color: "#898989" }}>
-                    {row.activeGame.isLoaded ? (
-                      formatBuyIn(row.activeGame.min_buyin) + " - " + formatBuyIn(row.activeGame.max_buyin)
-                    ) : (
-                      <Spinner />
-                    )}
-                  </td>
-                  <td>
-                    {row.activeGame.isLoaded && row.activeGame.active_players >= 0 ? (
-                      row.activeGame.active_players + "/" + row.activeGame.max_players
-                    ) : (
-                      <Spinner />
-                    )}
-                  </td>
+              {activeGamesLoaded
+                .filter((row) => row.activeGame.endpoint === selectedEndpoint)
+                .map((row, idx) => (
+                  <tr key={idx} style={{ display: row.activeGame.ping <= 0 ? "none" : "table-row" }}>
+                    <td>{row.activeGame.worldId.toString()}</td>
+                    <td>
+                      {row.activeGame.permissionless === true ? (
+                        <span className="community-list">Community</span>
+                      ) : (
+                        <span className="strict-list">Supersize</span>
+                      )}
+                    </td>
+                    <td>
+                      {row.activeGame.isLoaded ? (
+                        <>
+                          <img src={row.activeGame.image} alt={row.activeGame.name} className="token-image" />
+                          <span>{row.activeGame.token}</span>
+                        </>
+                      ) : (
+                        <Spinner />
+                      )}
+                    </td>
+                    <td style={{ color: "#898989" }}>
+                      {row.activeGame.isLoaded ? (
+                        formatBuyIn(row.activeGame.min_buyin) + " - " + formatBuyIn(row.activeGame.max_buyin)
+                      ) : (
+                        <Spinner />
+                      )}
+                    </td>
+                    <td>
+                      {row.activeGame.isLoaded && row.activeGame.active_players >= 0 ? (
+                        row.activeGame.active_players + "/" + row.activeGame.max_players
+                      ) : (
+                        <Spinner />
+                      )}
+                    </td>
 
-                  <td className="desktop-only">
-                    <button
-                      className="btn-play"
-                      disabled={
-                        !row.activeGame.isLoaded ||
-                        row.activeGame.ping < 0 ||
-                        row.activeGame.active_players < 0 ||
-                        row.playerInfo.playerStatus == "error" ||
-                        row.playerInfo.playerStatus == "Game Full" ||
-                        engine.getWalletConnected() == false
-                      }
-                      onClick={() => {
-                        handlePlayButtonClick(row);
-                      }}
-                      data-tooltip-id={`connect-wallet-${idx}`}
-                      data-tooltip-content="Connect wallet to play"
-                    >
-                      {{
-                        new_player: "Play",
-                        cashing_out: "Cash Out",
-                        bought_in: "Resume",
-                        in_game: "Resume",
-                      }[row.playerInfo.playerStatus] || row.playerInfo.playerStatus}
-                    </button>
-                    {engine.getWalletConnected() == false && <Tooltip id={`connect-wallet-${idx}`} />}
-                  </td>
-                  <td className="desktop-only">
-                    <button
-                      data-tooltip-id={`refresh-game-${idx}`}
-                      data-tooltip-content="Refresh game"
-                      onClick={async () => {
-                        try {
-                          setLoadingGameNum(idx);
-                          await handleRefresh(
-                            engine,
-                            activeGamesRef.current.filter((row) => row.activeGame.ping > 0),
-                            idx,
-                          );
-                          setLoadingGameNum(-1);
-                        } catch (error) {
-                          console.log("Error refreshing game:", error);
-                          setLoadingGameNum(-1);
+                    <td className="desktop-only">
+                      <button
+                        className="btn-play"
+                        disabled={
+                          !row.activeGame.isLoaded ||
+                          row.activeGame.ping < 0 ||
+                          row.activeGame.active_players < 0 ||
+                          row.playerInfo.playerStatus == "error" ||
+                          row.playerInfo.playerStatus == "Game Full" ||
+                          engine.getWalletConnected() == false
                         }
-                      }}
-                    >
-                      <img
-                        src="/icons/arrows-rotate.svg"
-                        width={18}
-                        className={`${loadingGameNum === idx ? "refresh-icon" : ""}`}
-                      />
-                    </button>
-                    <Tooltip id={`refresh-game-${idx}`} />
-                  </td>
-                </tr>
-              ))}
+                        onClick={() => {
+                          handlePlayButtonClick(row);
+                        }}
+                        data-tooltip-id={`connect-wallet-${idx}`}
+                        data-tooltip-content="Connect wallet to play"
+                      >
+                        {{
+                          new_player: "Play",
+                          cashing_out: "Cash Out",
+                          bought_in: "Resume",
+                          in_game: "Resume",
+                        }[row.playerInfo.playerStatus] || row.playerInfo.playerStatus}
+                      </button>
+                      {engine.getWalletConnected() == false && <Tooltip id={`connect-wallet-${idx}`} />}
+                    </td>
+                    <td className="desktop-only">
+                      <button
+                        data-tooltip-id={`refresh-game-${idx}`}
+                        data-tooltip-content="Refresh game"
+                        onClick={async () => {
+                          try {
+                            setLoadingGameNum(idx);
+                            await handleRefresh(
+                              engine,
+                              activeGamesRef.current.filter((row) => row.activeGame.ping > 0),
+                              idx,
+                            );
+                            setLoadingGameNum(-1);
+                          } catch (error) {
+                            console.log("Error refreshing game:", error);
+                            setLoadingGameNum(-1);
+                          }
+                        }}
+                      >
+                        <img
+                          src="/icons/arrows-rotate.svg"
+                          width={18}
+                          className={`${loadingGameNum === idx ? "refresh-icon" : ""}`}
+                        />
+                      </button>
+                      <Tooltip id={`refresh-game-${idx}`} />
+                    </td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>

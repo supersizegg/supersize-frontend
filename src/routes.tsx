@@ -11,38 +11,13 @@ import { ActiveGame, FetchedGame } from "@utils/types";
 import { useState } from "react";
 import { PublicKey } from "@solana/web3.js";
 import { activeGamesList, NETWORK } from "@utils/constants";
-import * as anchor from "@coral-xyz/anchor";
+import { createUnloadedGame } from "@utils/game";
 
 const AppRoutes = () => {
   const [selectedGame, setSelectedGame] = useState<ActiveGame | null>(null);
   const [activeGamesLoaded, setActiveGamesLoaded] = useState<FetchedGame[]>(
-    activeGamesList[NETWORK].map(
-      (world: { worldId: anchor.BN; worldPda: PublicKey; endpoint: string; permissionless?: boolean }) =>
-        ({
-          activeGame: {
-            isLoaded: false,
-            worldId: world.worldId,
-            worldPda: world.worldPda,
-            name: "loading",
-            active_players: 0,
-            max_players: 0,
-            size: 0,
-            image: `${process.env.PUBLIC_URL}/token.png`,
-            token: "LOADING",
-            base_buyin: 0,
-            min_buyin: 0,
-            max_buyin: 0,
-            endpoint: world.endpoint,
-            ping: 0,
-            permissionless: world.permissionless || false,
-          },
-          playerInfo: {
-            playerStatus: "new_player",
-            need_to_delegate: false,
-            need_to_undelegate: false,
-            newplayerEntityPda: new PublicKey(0),
-          },
-        }) as FetchedGame,
+    activeGamesList[NETWORK].map((world) =>
+      createUnloadedGame(world.worldId, world.worldPda, world.endpoint, world.permissionless),
     ),
   );
   const [myPlayerEntityPda, setMyPlayerEntityPda] = useState<PublicKey | null>(null);
