@@ -385,18 +385,8 @@ export const getMyPlayerStatus = async (
   let need_to_delegate = false;
   let activeplayers = 0;
   // Prepare promises for fetching data
-
-  // TEMP FIX FOR WORLD ID 17
-  const intWorldId = worldId.toNumber();
-  console.log("worldId", intWorldId);
-  let i = 1;
-  if (intWorldId === 17) {
-    i = 3;
-  }
-  // END TEMP FIX
-
   const fetchPromises = [];
-  for (i; i < maxplayer + 1; i++) {
+  for (let i = 1; i < maxplayer + 1; i++) {
     const playerentityseed = "player" + i.toString();
     const playerEntityPda = FindEntityPda({
       worldId: worldId,
