@@ -335,10 +335,13 @@ export const checkPlayerDistances = (
   // screenSize: { width: number; height: number },
 ) => {
   if (currentPlayer?.radius && currentPlayer?.authority) {
+    const left = currentPlayer.x - currentPlayer.radius * 2;
+    const right = currentPlayer.x + currentPlayer.radius * 2;
+    const top = currentPlayer.y - currentPlayer.radius * 2;
+    const bottom = currentPlayer.y + currentPlayer.radius * 2;
+
     for (const player of visiblePlayers) {
-      const distance = Math.sqrt((player.x - currentPlayer.x) ** 2 + (player.y - currentPlayer.y) ** 2);
-      const sizeAdjust = 1000 / player.mass;
-      if (distance < currentPlayer.radius * sizeAdjust) {
+      if (player.x >= left && player.x <= right && player.y >= top && player.y <= bottom) {
         return player.authority;
       }
     }
@@ -399,7 +402,7 @@ export const getMyPlayerStatus = async (
       componentId: COMPONENT_PLAYER_ID,
       entity: playerEntityPda,
     });
-
+    
     fetchPromises.push(
       Promise.all([
         engine.getChainAccountInfo(playersComponentPda),

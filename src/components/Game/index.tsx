@@ -86,7 +86,7 @@ interface GameComponentProps {
   newTarget: { x: number; y: number; boost: boolean };
 }
 
-const SMOOTHING_FACTOR = 0.03;
+const SMOOTHING_FACTOR = 0.1;
 
 const GameComponent: React.FC<GameComponentProps> = ({
   players,
@@ -97,19 +97,21 @@ const GameComponent: React.FC<GameComponentProps> = ({
   newTarget,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const playersRef = useRef(players);
   const foodRef = useRef(visibleFood);
   const newTargetRef = useRef(newTarget);
 
-  const timeStep = 60.0; // any value >50 works, testing ~90
+  const timeStep = 40.0; // any value >50 works, testing ~90
 
   const previousTime = useRef(0.0);
   const accumulator = useRef(0.0);
 
   const currentPlayerRef = useRef<Blob | null>(null);
   const previousPlayerPos = useRef(currentPlayerRef.current);
-
   const currentPlayerOnchainRef = useRef<Blob | null>(null);
+
+  const playersRef = useRef<Blob[]>([]);
+  const previousPlayersRef = useRef<Blob[]>(playersRef.current);
+  const playersOnchainRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     foodRef.current = visibleFood;
@@ -121,8 +123,29 @@ const GameComponent: React.FC<GameComponentProps> = ({
 
   useEffect(() => {
     if (players.length > 0) {
-      playersRef.current = players;
+      playersOnchainRef.current = players;
     }
+
+    players.forEach(player => {
+      const playerExists = playersRef.current.some(existingPlayer => existingPlayer.authority?.toString() === player.authority?.toString());
+      if (!playerExists) {
+        playersRef.current.push(player);
+      }
+    });
+
+    playersRef.current = playersRef.current.filter(existingPlayer =>
+      players.some(player => player.authority?.toString() === existingPlayer.authority?.toString())
+    );
+    
+    playersRef.current.forEach(existingPlayer => {
+      const updatedPlayer = players.find(player => player.authority?.toString() === existingPlayer.authority?.toString());
+      if (updatedPlayer) {
+        existingPlayer.radius = updatedPlayer.radius;
+        existingPlayer.target_x = updatedPlayer.target_x;
+        existingPlayer.target_y = updatedPlayer.target_y;
+        existingPlayer.speed = updatedPlayer.speed;
+      }
+    }); 
   }, [players]);
 
   useEffect(() => {
@@ -132,8 +155,8 @@ const GameComponent: React.FC<GameComponentProps> = ({
     }
     if (currentPlayerRef.current && currentPlayer) {
       currentPlayerRef.current.radius = currentPlayer.radius;
+      currentPlayerRef.current.speed = currentPlayer.speed;
     }
-    playersRef.current = players;
     foodRef.current = visibleFood;
   }, [currentPlayer]);
 
@@ -198,18 +221,40 @@ const GameComponent: React.FC<GameComponentProps> = ({
           newTargetRef.current.boost,
         );
       }
-      accumulator.current -= timeStep;
-    }
-
-    const alpha = accumulator.current / timeStep;
-
-    if (previousPlayerPos.current && currentPlayerRef.current) {
+      if (playersRef.current) {
+        previousPlayersRef.current = playersRef.current.map(player => ({ ...player }));
+        playersRef.current = playersRef.current.map(existingPlayer => 
+            updatePlayerPosition(
+              existingPlayer,
+              existingPlayer.target_x,
+              existingPlayer.target_y,
+              existingPlayer.speed > 6.25,
+            )
+        );
+      }
       if (currentPlayerRef.current && currentPlayerOnchainRef.current) {
         currentPlayerRef.current.x +=
           SMOOTHING_FACTOR * (currentPlayerOnchainRef.current.x - currentPlayerRef.current.x);
         currentPlayerRef.current.y +=
           SMOOTHING_FACTOR * (currentPlayerOnchainRef.current.y - currentPlayerRef.current.y);
       }
+
+      if(playersRef.current) {
+        playersRef.current.forEach(existingPlayer => {
+          const updatedPlayer = playersOnchainRef.current.find(player => player.authority?.toString() === existingPlayer.authority?.toString());
+          if (updatedPlayer) {
+            existingPlayer.x += SMOOTHING_FACTOR * (updatedPlayer.x - existingPlayer.x);
+            existingPlayer.y += SMOOTHING_FACTOR * (updatedPlayer.y - existingPlayer.y);
+          }
+      }); 
+      } 
+      
+      accumulator.current -= timeStep;
+    }
+
+    const alpha = accumulator.current / timeStep;
+
+    if (previousPlayerPos.current && currentPlayerRef.current) {
       renderWithInterpolation(previousPlayerPos.current, currentPlayerRef.current, alpha);
     }
 
@@ -232,14 +277,21 @@ const GameComponent: React.FC<GameComponentProps> = ({
 
           drawBackground(ctx, { x: interpolatedX, y: interpolatedY }, screenSize);
 
-          playersRef.current.forEach((blob) => {
-            const adjustedX = blob.x - interpolatedX + screenSize.width / 2;
-            const adjustedY = blob.y - interpolatedY + screenSize.height / 2;
+          playersRef.current.forEach((blob, index) => {
+
+            const prevBlob = previousPlayersRef.current[index] || blob;
+            const interpolatedBlobX = prevBlob.x + (blob.x - prevBlob.x) * alpha;
+            const interpolatedBlobY = prevBlob.y + (blob.y - prevBlob.y) * alpha;
+
+            const adjustedX =
+              interpolatedBlobX - interpolatedX + screenSize.width / 2;
+            const adjustedY =
+              interpolatedBlobY - interpolatedY + screenSize.height / 2;
+
             if (currentPlayerRef.current) {
               drawOpponentPlayer(
                 ctx,
                 { ...blob, x: adjustedX, y: adjustedY },
-                { ...currentPlayerRef.current, x: interpolatedX, y: interpolatedY },
               );
             }
           });
@@ -296,18 +348,7 @@ const GameComponent: React.FC<GameComponentProps> = ({
     ctx.stroke();
   };
 
-  const drawOpponentPlayer = (ctx: CanvasRenderingContext2D, blob: Blob, myblob: Blob) => {
-    /*
-    let glowSize = 50;
-    let glowIntensity = "rgba(19, 241, 149, 0.5)";
-    if (blob.mass > myblob.mass * 1.05) {
-      glowIntensity = "rgba(240, 113, 113, 0.5)";
-    } else if (myblob.mass > blob.mass * 1.05) {
-      glowIntensity = "rgba(19, 241, 149, 0.5)";
-    } else {
-      glowIntensity = "rgba(255, 239, 138, 0.5)";
-    }
-    */
+  const drawOpponentPlayer = (ctx: CanvasRenderingContext2D, blob: Blob) => {
 
     const dx = blob.target_x - blob.x;
     const dy = blob.target_y - blob.y;
@@ -327,9 +368,6 @@ const GameComponent: React.FC<GameComponentProps> = ({
     ctx.arc(blob.x, blob.y, blob.radius, 0, 2 * Math.PI);
     ctx.fillStyle = color;
     ctx.fill();
-    // ctx.strokeStyle = "black";
-    // ctx.lineWidth = 2;
-    // ctx.stroke();
 
     const eyeballRadius = blob.radius * 0.2;
     const pupilRadius = blob.radius * 0.08;
@@ -339,7 +377,6 @@ const GameComponent: React.FC<GameComponentProps> = ({
     const pupilDx = Math.cos(angle) * maxPupilOffset;
     const pupilDy = Math.sin(angle) * maxPupilOffset;
 
-    // Left eye
     const leftEyeX = blob.x - eyeSeparation;
     const leftEyeY = blob.y - eyeVerticalOffset;
     ctx.beginPath();
@@ -355,7 +392,6 @@ const GameComponent: React.FC<GameComponentProps> = ({
     ctx.fillStyle = "black";
     ctx.fill();
 
-    // Right eye
     const rightEyeX = blob.x + eyeSeparation;
     const rightEyeY = blob.y - eyeVerticalOffset;
     ctx.beginPath();
@@ -395,9 +431,6 @@ const GameComponent: React.FC<GameComponentProps> = ({
     ctx.arc(blob.x, blob.y, blob.radius, 0, 2 * Math.PI);
     ctx.fillStyle = color;
     ctx.fill();
-    // ctx.strokeStyle = "black";
-    // ctx.lineWidth = 2;
-    // ctx.stroke();
 
     const eyeballRadius = blob.radius * 0.2;
     const pupilRadius = blob.radius * 0.08;
