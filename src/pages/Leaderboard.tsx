@@ -99,7 +99,12 @@ const Leaderboard: React.FC = () => {
 
           <div className="stat-box winnings-box desktop-only">
             <p className="stat-label">Your Winnings</p>
-            <p className="stat-value">{userInfo.points.toFixed(3)}</p>
+            <p className="stat-value">
+              {userInfo.points.toLocaleString("en-US", {
+                minimumFractionDigits: 3,
+                maximumFractionDigits: 3,
+              })}
+            </p>
           </div>
 
           <div className="dropdown-box">
