@@ -41,7 +41,7 @@ const Leaderboard: React.FC = () => {
 
     const fetchStats = async () => {
       try {
-        const leaderboardRes = await axios.get(`${API_URL}/api/v1/leaderboard/${season.token}`);
+        const leaderboardRes = await axios.get(`${API_URL}/api/v1/leaderboard/${season.token}?limit=50`);
         const participants = leaderboardRes.data.map((entry: LeaderboardResponse) => ({
           name: entry.player,
           total: entry.score,
