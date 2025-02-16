@@ -76,21 +76,21 @@ export const activeGamesList: {
     },
   ],
   mainnet: [
-    // {
-    //   worldId: new anchor.BN(16),
-    //   worldPda: new PublicKey("36rykuLPYULiSDuy32oqAZwVr3m3TipDWbRYCbHHjEhc"),
-    //   endpoint: "https://supersize-mainnet-bos.magicblock.app",
-    // },
-    // {
-    //   worldId: new anchor.BN(17),
-    //   worldPda: new PublicKey("Cwuyz3xKifLBZA5C8pwg7VcSecRLBwLuTcjdYT3MFpGF"),
-    //   endpoint: "https://supersize-mainnet.magicblock.app",
-    // },
-    // {
-    //   worldId: new anchor.BN(18),
-    //   worldPda: new PublicKey("4vhp2CfuzdvUUpvujnvSW2YYxwk3SXrsF9wSHXCRzJ6s"),
-    //   endpoint: "https://supersize-mainnet-sin.magicblock.app",
-    // },
+    {
+      worldId: new anchor.BN(16),
+      worldPda: new PublicKey("36rykuLPYULiSDuy32oqAZwVr3m3TipDWbRYCbHHjEhc"),
+      endpoint: "https://supersize-mainnet-bos.magicblock.app",
+    },
+    {
+      worldId: new anchor.BN(17),
+      worldPda: new PublicKey("Cwuyz3xKifLBZA5C8pwg7VcSecRLBwLuTcjdYT3MFpGF"),
+      endpoint: "https://supersize-mainnet.magicblock.app",
+    },
+    {
+      worldId: new anchor.BN(18),
+      worldPda: new PublicKey("4vhp2CfuzdvUUpvujnvSW2YYxwk3SXrsF9wSHXCRzJ6s"),
+      endpoint: "https://supersize-mainnet-sin.magicblock.app",
+    },
     /*
     {
       worldId: new anchor.BN(1),
