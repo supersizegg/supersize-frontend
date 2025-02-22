@@ -90,7 +90,7 @@ const Graph: React.FC<GraphProps> = ({ maxPlayers, foodInWallet, setCurrentFoodT
 
   return (
     <div style={{ width: "600px", margin: "0 auto" }}>
-      <h2 style={{ color: "black" }}>Food to Add vs. Food in Wallet</h2>
+      {/* <h2 style={{ color: "black" }}>Food to Add vs. Food in Wallet</h2> */}
       <Line data={data} options={options} />
     </div>
   );

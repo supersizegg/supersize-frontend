@@ -576,6 +576,16 @@ const Home = ({
         navigate(`/game`);
       } catch (joinError: any) {
         console.log("error", joinError);
+        const errorDetails = joinError?.message ? JSON.parse(joinError.message) : null;
+        if (
+          errorDetails?.err?.InstructionError &&
+          Array.isArray(errorDetails.err.InstructionError) &&
+          errorDetails.err.InstructionError[1]?.Custom === 6000
+        ) {
+          console.log("Custom error 6000 detected");
+          setMyPlayerEntityPda(game.playerInfo.newplayerEntityPda);
+          navigate("/game");
+        }
         if (
           joinError.InstructionError &&
           Array.isArray(joinError.InstructionError) &&
