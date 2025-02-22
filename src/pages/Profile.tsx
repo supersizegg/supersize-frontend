@@ -10,9 +10,12 @@ import CopyLink from "../components/buddyReferral";
 import {
   anchor,
   ApplySystem,
+  createAddEntityInstruction,
+  createDelegateInstruction,
   createUndelegateInstruction,
   FindComponentPda,
   FindWorldPda,
+  InitializeComponent,
 } from "@magicblock-labs/bolt-sdk";
 import { ActiveGame } from "@utils/types";
 import { FindEntityPda } from "@magicblock-labs/bolt-sdk";
@@ -31,11 +34,12 @@ import {
   playerFetchOnChain,
   playerFetchOnEphem,
   sectionFetchOnChain,
+  sectionFetchOnEphem,
 } from "@states/gameFetch";
 import { useMagicBlockEngine } from "@engine/MagicBlockEngineProvider";
 import { MagicBlockEngine } from "@engine/MagicBlockEngine";
-import { fetchTokenMetadata, pingEndpoint, stringToUint8Array } from "@utils/helper";
-import { AccountMeta, Connection, SystemProgram, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
+import { fetchTokenMetadata, getRoundedAmount, pingEndpoint, stringToUint8Array } from "@utils/helper";
+import { AccountMeta, ComputeBudgetProgram, Connection, SystemProgram, SYSVAR_RENT_PUBKEY, Transaction } from "@solana/web3.js";
 import { PublicKey } from "@solana/web3.js";
 import { getAccount, getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { endpoints, NETWORK, RPC_CONNECTION } from "@utils/constants";
@@ -44,6 +48,7 @@ import Graph from "../components/Graph";
 import { Chart, LineElement, PointElement, LinearScale, Title, Tooltip, Legend } from "chart.js";
 import { getTopLeftCorner, getRegion } from "@utils/helper";
 import { createTransferInstruction } from "@solana/spl-token";
+import { gameSystemInitSection } from "@states/gameSystemInitSection";
 
 // Register the components
 Chart.register(LineElement, PointElement, LinearScale, Title, Tooltip, Legend);
@@ -265,105 +270,386 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
   const [playerComponentCheck, setPlayerComponentCheck] = useState<string>("");
   const [tokenAddress, setTokenAddress] = useState<string>("");
   const [referralProgramAccount, setReferralProgramAccount] = useState<string>("");
-  const [depositValue, setDepositValue] = useState<number>(0);
+  const [depositValue, setDepositValue] = useState<string>("");
   const [decimals, setDecimals] = useState<number>(0);
-  const [cashoutStats, setCashoutStats] = useState({
-    cashOutSum: 0,
-    buyInSum: 0,
-    buyInCount: 0,
+  const [gameEndpoint, setGameEndpoint] = useState<string>("");
+  const [cashoutStats, setCashoutStats] = useState<{
+    cashOutSum: number | null,
+    buyInSum: number | null,
+    buyInCount: number | null,
+  }>({
+    cashOutSum: null,
+    buyInSum: null,
+    buyInCount: null,
   });
+  const [incorrectFoodEntities, setIncorrectFoodEntities] = useState<{ x: number; y: number; foodEntityPda: PublicKey; foodComponentPda: PublicKey; seed: string }[]>([]);
+  const [players, setPlayers] = useState<
+    {
+      seed: string;
+      playerEntityPda: PublicKey;
+      playersComponentPda: PublicKey;
+      parsedData: any;
+      playersParsedDataEphem: any;
+      delegated: boolean;
+      playerWallet: string;
+      playerWalletEphem: string;
+    }[]
+  >([]);
+
+
+  // New helper function to fetch players for a given game
+  const fetchPlayers = async (gameInfo: ActiveGame) => {
+    const playersArr: {
+      seed: string;
+      playerEntityPda: PublicKey;
+      playersComponentPda: PublicKey;
+      parsedData: any;
+      playersParsedDataEphem: any;
+      delegated: boolean;
+      playerWallet: string;
+      playerWalletEphem: string;
+    }[] = [];
+
+    // Use gameInfo.max_players if available; otherwise, compute based on map size.
+    const maxPlayers = gameInfo.max_players || 20;
+    const playerPromises = Array.from({ length: maxPlayers }, async (_, i) => {
+      const playerSeed = "player" + (i + 1).toString();
+      const playerEntityPda = FindEntityPda({
+        worldId: gameInfo.worldId,
+        entityId: new anchor.BN(0),
+        seed: stringToUint8Array(playerSeed),
+      });
+      const playersComponentPda = FindComponentPda({
+        componentId: COMPONENT_PLAYER_ID,
+        entity: playerEntityPda,
+      });
+      const accountInfo = await engine.getChainAccountInfo(playersComponentPda);
+      if (accountInfo) {
+        let delegated = false;
+        if (accountInfo.owner.toString() === "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh") {
+          delegated = true;
+        } 
+        const playersParsedDataEphem = await playerFetchOnEphem(engine, playersComponentPda);
+        const parsedData = await playerFetchOnChain(engine, playersComponentPda);
+        let playerWallet = "";
+        if(parsedData && parsedData.payoutTokenAccount) {
+          const tokenAccount = await getAccount(engine.getConnectionChain(), new PublicKey(parsedData.payoutTokenAccount.toString()));
+          playerWallet = tokenAccount.owner.toString();
+        }
+        let playerWalletEphem = "";
+        if(playersParsedDataEphem && playersParsedDataEphem.payoutTokenAccount) {
+          const tokenAccount = await getAccount(engine.getConnectionChain(), new PublicKey(playersParsedDataEphem.payoutTokenAccount.toString()));
+          playerWalletEphem = tokenAccount.owner.toString();
+        }
+
+        return {
+          seed: playerSeed,
+          playerEntityPda,
+          playersComponentPda,
+          parsedData,
+          playersParsedDataEphem,
+          delegated,
+          playerWallet,
+          playerWalletEphem
+        };
+      }
+      return null;
+    });
+
+    const resolvedPlayers = await Promise.all(playerPromises);
+    playersArr.push(...resolvedPlayers.filter(player => player !== null));
+    setPlayers(playersArr);
+  };
+
+  const handleUnclogPlayer = async (playerData: {
+    seed: string;
+    playersComponentPda: PublicKey;
+    parsedData: any;
+    playersParsedDataEphem: any;
+  }, selectGameId: ActiveGame) => {
+    try {
+      const gameInfo = selectGameId;
+      let maxplayer = 20;
+  
+      const mapEntityPda = FindEntityPda({
+        worldId: gameInfo.worldId,
+        entityId: new anchor.BN(0),
+        seed: stringToUint8Array("origin"),
+      });
+      
+      const playerEntityPda = FindEntityPda({
+        worldId: gameInfo.worldId,
+        entityId: new anchor.BN(0),
+        seed: stringToUint8Array(playerData.seed),
+      });
+
+      const mapComponentPda = FindComponentPda({
+        componentId: COMPONENT_MAP_ID,
+        entity: mapEntityPda,
+      });
+      let map_size = 4000;
+      const mapParsedData = await mapFetchOnEphem(engine, mapComponentPda);
+      if (mapParsedData) {
+        console.log("map size", mapParsedData.width);
+        map_size = mapParsedData.width;
+      }
+  
+      if (map_size == 4000) {
+        maxplayer = 20;
+      } else if (map_size == 6000) {
+        maxplayer = 40;
+      } else if (map_size == 10000) {
+        maxplayer = 100;
+      }
+
+      console.log("cashout player");
+      const undelegateIx = createUndelegateInstruction({
+        payer: engine.getSessionPayer(),
+        delegatedAccount: playerData.playersComponentPda,
+        componentPda: COMPONENT_PLAYER_ID,
+      });
+      const tx = new anchor.web3.Transaction().add(undelegateIx);
+      tx.recentBlockhash = (await engine.getConnectionEphem().getLatestBlockhash()).blockhash;
+      tx.feePayer = engine.getSessionPayer();
+      try {
+        const playerundelsignature = await engine.processSessionEphemTransaction(
+          "undelPlayer:" + playerData.playersComponentPda.toString(),
+          tx,
+        );
+        console.log("undelegate", playerundelsignature);
+      } catch (error) {
+        console.log("Error undelegating:", error);
+      }
+
+      const anteseed = "ante";
+      const anteEntityPda = FindEntityPda({
+        worldId: gameInfo.worldId,
+        entityId: new anchor.BN(0),
+        seed: stringToUint8Array(anteseed),
+      });
+      const anteComponentPda = FindComponentPda({
+        componentId: COMPONENT_ANTEROOM_ID,
+        entity: anteEntityPda,
+      });
+      const anteParsedData = await anteroomFetchOnChain(engine, anteComponentPda);
+
+      let supersize_token_account = new PublicKey(0);
+      let vault_program_id = new PublicKey("BAP315i1xoAXqbJcTT1LrUS45N3tAQnNnPuNQkCcvbAr");
+
+      if (anteParsedData) {
+        let vault_token_account = anteParsedData.vaultTokenAccount;
+        let mint_of_token_being_sent = anteParsedData.token;
+        let owner_token_account = anteParsedData.gamemasterTokenAccount;
+        if (!mint_of_token_being_sent) {
+          return;
+        }
+        //supersize_token_account = anteParsedData.gamemasterTokenAccount;
+        supersize_token_account = await getAssociatedTokenAddress(
+          mint_of_token_being_sent,
+          new PublicKey("DdGB1EpmshJvCq48W1LvB1csrDnC4uataLnQbUVhp6XB"),
+        );
+        let sender_token_account = playerData.parsedData.payoutTokenAccount;
+        let [tokenAccountOwnerPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("token_account_owner_pda"), mapComponentPda.toBuffer()],
+          vault_program_id,
+        );
+
+        const extraAccounts = [
+          {
+            pubkey: vault_token_account,
+            isWritable: true,
+            isSigner: false,
+          },
+          {
+            pubkey: sender_token_account,
+            isWritable: true,
+            isSigner: false,
+          },
+          {
+            pubkey: owner_token_account,
+            isWritable: true,
+            isSigner: false,
+          },
+          {
+            pubkey: supersize_token_account,
+            isWritable: true,
+            isSigner: false,
+          },
+          {
+            pubkey: tokenAccountOwnerPda,
+            isWritable: true,
+            isSigner: false,
+          },
+          {
+            pubkey: engine.getWalletPayer(),
+            isWritable: true,
+            isSigner: false,
+          },
+          {
+            pubkey: SystemProgram.programId,
+            isWritable: false,
+            isSigner: false,
+          },
+          {
+            pubkey: TOKEN_PROGRAM_ID,
+            isWritable: false,
+            isSigner: false,
+          },
+          {
+            pubkey: SYSVAR_RENT_PUBKEY,
+            isWritable: false,
+            isSigner: false,
+          },
+        ];
+
+        const applyCashOutSystem = await ApplySystem({
+          authority: engine.getWalletPayer(),
+          world: gameInfo.worldPda,
+          entities: [
+            {
+              entity: playerEntityPda,
+              components: [{ componentId: COMPONENT_PLAYER_ID }],
+            },
+            {
+              entity: anteEntityPda,
+              components: [{ componentId: COMPONENT_ANTEROOM_ID }],
+            },
+          ],
+          systemId: SYSTEM_CASH_OUT_ID,
+          args: {
+            referred: false,
+          },
+          extraAccounts: extraAccounts as AccountMeta[],
+        });
+        const cashouttx = new anchor.web3.Transaction().add(applyCashOutSystem.transaction);
+        await engine.processWalletTransaction("playercashout", cashouttx);
+    } 
+    }catch (error) {
+      console.error(`Error unclogging player ${playerData.seed}:`, error);
+    }
+  };
 
   useEffect(() => {
     const fetchGames = async () => {
       if (isLoading.current) return;
       isLoading.current = true;
       console.log("fetching games");
-      let start = { devnet: 1800, mainnet: 0 };
-      for (let i = start[NETWORK]; i < start[NETWORK] + 100; i++) {
-        console.log("Fetching game #" + i);
-
-        try {
-          const worldId = { worldId: new anchor.BN(i) };
-          const worldPda = await FindWorldPda(worldId);
-
-          const mapEntityPda = FindEntityPda({
-            worldId: worldId.worldId,
-            entityId: new anchor.BN(0),
-            seed: stringToUint8Array("origin"),
-          });
-
-          const mapComponentPda = FindComponentPda({
-            componentId: COMPONENT_MAP_ID,
-            entity: mapEntityPda,
-          });
-
-          const mapParsedData = await mapFetchOnChain(engine, mapComponentPda);
-          const readableMapParsedData = `
-            Name: ${mapParsedData?.name} |
-            Authority: ${mapParsedData?.authority?.toString()} |
-            Width: ${mapParsedData?.width} |
-            Height: ${mapParsedData?.height} |
-            Base Buyin: ${mapParsedData?.baseBuyin} |
-            Min Buyin: ${mapParsedData?.minBuyin} |
-            Max Buyin: ${mapParsedData?.maxBuyin} |
-            Max Players: ${mapParsedData?.maxPlayers} |
-            Total Active Buyins: ${mapParsedData?.totalActiveBuyins} |
-            Total Food on Map: ${mapParsedData?.totalFoodOnMap} |
-            Food Queue: ${mapParsedData?.foodQueue} |
-            Next Food: ${mapParsedData?.nextFood} |
-            Frozen: ${mapParsedData?.frozen}
-           `;
-          console.log("readableMapParsedData", readableMapParsedData);
-          setMapParsedData(readableMapParsedData);
-
-          if (mapParsedData && mapParsedData.authority) {
-            if (mapParsedData.authority.toString() === engine.getSessionPayer().toString()) {
+  
+      const startIndices = { devnet: 1800, mainnet: 0 };
+      const startIndex = startIndices[NETWORK];
+  
+      // Create an array of promises for fetching each game
+      const gamePromises = Array.from({ length: 100 }, (_, idx) => {
+        const i = startIndex + idx;
+        return (async () => {
+          console.log(`Fetching game #${i}`);
+          try {
+            const worldId = { worldId: new anchor.BN(i) };
+            const worldPda = await FindWorldPda(worldId);
+            
+            const mapEntityPda = FindEntityPda({
+              worldId: worldId.worldId,
+              entityId: new anchor.BN(0),
+              seed: stringToUint8Array("origin"),
+            });
+            
+            const mapComponentPda = FindComponentPda({
+              componentId: COMPONENT_MAP_ID,
+              entity: mapEntityPda,
+            });
+            
+            const mapParsedData = await mapFetchOnChain(engine, mapComponentPda);
+            if (mapParsedData?.authority && 
+                mapParsedData.authority.toString() === engine.getSessionPayer().toString()) {
               const newGameInfo: ActiveGame = {
                 worldId: worldId.worldId,
-                worldPda: worldPda,
-                name: "loading",
+                worldPda,
+                name: mapParsedData.name,
                 active_players: 0,
-                max_players: 0,
-                size: 0,
+                max_players: mapParsedData.maxPlayers,
+                size: mapParsedData.width,
                 image: "",
                 token: "",
-                base_buyin: 0,
-                min_buyin: 0,
-                max_buyin: 0,
+                base_buyin: mapParsedData.baseBuyin,
+                min_buyin: mapParsedData.minBuyin,
+                max_buyin: mapParsedData.maxBuyin,
                 endpoint: "",
                 ping: 0,
-                isLoaded: false,
+                isLoaded: true,
                 permissionless: false,
               };
-              newGameInfo.name = mapParsedData.name;
-              newGameInfo.max_players = mapParsedData.maxPlayers;
-              newGameInfo.size = mapParsedData.width;
-              newGameInfo.base_buyin = mapParsedData.baseBuyin;
-              newGameInfo.min_buyin = mapParsedData.minBuyin;
-              newGameInfo.max_buyin = mapParsedData.maxBuyin;
-              newGameInfo.isLoaded = true;
-              //const pingTime = await pingEndpoint(endpoint);
-              newGameInfo.ping = 0;
-              newGameInfo.isLoaded = true;
-
-              setMyGames((prevMyGames) => {
-                const gameExists = prevMyGames.some((game) => game.worldId === newGameInfo.worldId);
-                if (gameExists) {
-                  return prevMyGames;
-                }
-                return [newGameInfo, ...prevMyGames];
+  
+              setMyGames((prevGames) => {
+                const updatedGames = prevGames.some((game) => game.worldId === newGameInfo.worldId)
+                  ? prevGames
+                  : [newGameInfo, ...prevGames];
+                return updatedGames.sort((a, b) => b.worldId.cmp(a.worldId));
               });
             }
+          } catch (error) {
+            console.log("error", error);
           }
-        } catch (error) {
-          console.log("error", error);
-        }
-      }
-
+        })();
+      });
+  
+      await Promise.allSettled(gamePromises);
       isLoading.current = false;
     };
+  
     fetchGames();
   }, []);
+
+  const handleUndelegatePlayer = async (playerData: {
+    seed: string;
+    playersComponentPda: PublicKey;
+    parsedData: any;
+    playersParsedDataEphem: any;
+  }) => {
+    console.log("cashout player");
+    const undelegateIx = createUndelegateInstruction({
+      payer: engine.getSessionPayer(),
+      delegatedAccount: playerData.playersComponentPda,
+      componentPda: COMPONENT_PLAYER_ID,
+    });
+    const tx = new anchor.web3.Transaction().add(undelegateIx);
+    tx.recentBlockhash = (await engine.getConnectionEphem().getLatestBlockhash()).blockhash;
+    tx.feePayer = engine.getSessionPayer();
+    try {
+      const playerundelsignature = await engine.processSessionEphemTransaction(
+        "undelPlayer:" + playerData.playersComponentPda.toString(),
+        tx,
+      );
+      console.log("undelegate", playerundelsignature);
+    } catch (error) {
+      console.log("Error undelegating:", error);
+    }
+  };
+
+  const handleDelegatePlayer = async (playerData: {
+    seed: string;
+    playersComponentPda: PublicKey;
+    parsedData: any;
+    playersParsedDataEphem: any;
+  }, selectGameId: ActiveGame) => {
+    try {
+      const playersEntityPda = FindEntityPda({
+        worldId: selectGameId.worldId,
+        entityId: new anchor.BN(0),
+        seed: stringToUint8Array(playerData.seed),
+      });
+      const playerdelegateIx = createDelegateInstruction({
+        entity: playersEntityPda,
+        account: playerData.playersComponentPda,
+        ownerProgram: COMPONENT_PLAYER_ID,
+        payer: engine.getWalletPayer(),
+      });
+      const deltx = new anchor.web3.Transaction().add(playerdelegateIx);
+      const playerdelsignature = await engine.processWalletTransaction("playerdelegate", deltx);
+      console.log(`delegation signature: ${playerdelsignature}`);
+    } catch (error) {
+      console.log("Error delegating:", error);
+    }
+  };
 
   const handlePanelOpen = async (engine: MagicBlockEngine, newGameInfo: ActiveGame) => {
     setTokenBalance(0);
@@ -374,31 +660,61 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
     setGameWallet("");
     setGameTokenAccount("");
     setReferralProgramAccount("");
-    setCashoutStats({
-      cashOutSum: 0,
-      buyInSum: 0,
-      buyInCount: 0,
-    });
-
-    for (const endpoint of endpoints[NETWORK]) {
+    setGameEndpoint("");
+    setCashoutStats({ cashOutSum: null, buyInSum: null, buyInCount: null });
+  
+    try {
+      const endpointPromises = endpoints[NETWORK].map(async (endpoint) => {
+        const mapEntityPda = FindEntityPda({
+          worldId: newGameInfo.worldId,
+          entityId: new anchor.BN(0),
+          seed: stringToUint8Array("origin"),
+        });
+        const mapComponentPda = FindComponentPda({
+          componentId: COMPONENT_MAP_ID,
+          entity: mapEntityPda,
+        });
+        const mapParsedData = await mapFetchOnSpecificEphem(engine, mapComponentPda, endpoint);
+        return { endpoint, mapParsedData, mapComponentPda };
+      });
+      const endpointResults = await Promise.all(endpointPromises);
+      const validEndpointResult = endpointResults.find((res) => res.mapParsedData);
+      if (!validEndpointResult) {
+        console.error("No valid endpoint found");
+        return;
+      }
+      engine.setEndpointEphemRpc(validEndpointResult.endpoint);
+      setGameEndpoint(validEndpointResult.endpoint);
+      console.log("Using endpoint:", validEndpointResult.endpoint);
+      
       const mapEntityPda = FindEntityPda({
         worldId: newGameInfo.worldId,
         entityId: new anchor.BN(0),
         seed: stringToUint8Array("origin"),
       });
-
       const mapComponentPda = FindComponentPda({
         componentId: COMPONENT_MAP_ID,
         entity: mapEntityPda,
       });
-      const mapParsedData = await mapFetchOnSpecificEphem(engine, mapComponentPda, endpoint);
-      if (!mapParsedData) {
-        continue;
-      } else {
-        engine.setEndpointEphemRpc(endpoint);
-      }
 
-      console.log(endpoint);
+      const mapParsedData = await mapFetchOnSpecificEphem(engine, mapComponentPda, validEndpointResult.endpoint);
+      const readableMapParsedData = `
+        Name: ${mapParsedData?.name} |
+        Authority: ${mapParsedData?.authority?.toString()} |
+        Width: ${mapParsedData?.width} |
+        Height: ${mapParsedData?.height} |
+        Base Buyin: ${mapParsedData?.baseBuyin} |
+        Min Buyin: ${mapParsedData?.minBuyin} |
+        Max Buyin: ${mapParsedData?.maxBuyin} |
+        Max Players: ${mapParsedData?.maxPlayers} |
+        Total Active Buyins: ${mapParsedData?.totalActiveBuyins} |
+        Total Food on Map: ${mapParsedData?.totalFoodOnMap} |
+        Food Queue: ${mapParsedData?.foodQueue} 
+      `;
+      console.log("readableMapParsedData", readableMapParsedData);
+      setMapParsedData(readableMapParsedData);
+
+
       const anteseed = "ante";
       const anteEntityPda = FindEntityPda({
         worldId: newGameInfo.worldId,
@@ -410,55 +726,42 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
         entity: anteEntityPda,
       });
 
-      const account = anteComponentPda.toString();
-      const { cashOutSum, buyInSum, buyInCount } = await calculateTokenBalances(account);
-      setCashoutStats({
-        cashOutSum: cashOutSum,
-        buyInSum: buyInSum,
-        buyInCount: buyInCount,
-      });
-
       const anteParsedData = await anteroomFetchOnChain(engine, anteComponentPda);
+  
       const readableAnteParsedData = `
-          Map: ${anteParsedData?.map?.toString()} |
-          Base Buyin: ${anteParsedData?.baseBuyin} |
-          Min Buyin: ${anteParsedData?.minBuyin} |
-          Max Buyin: ${anteParsedData?.maxBuyin} |
-          Token: ${anteParsedData?.token?.toString()} |
-          Token Decimals: ${anteParsedData?.tokenDecimals} |
-          Vault Token Account: ${anteParsedData?.vaultTokenAccount?.toString()} |
-          Gamemaster Token Account: ${anteParsedData?.gamemasterTokenAccount?.toString()}
+        Map: ${anteParsedData?.map?.toString()} |
+        Base Buyin: ${anteParsedData?.baseBuyin} |
+        Min Buyin: ${anteParsedData?.minBuyin} |
+        Max Buyin: ${anteParsedData?.maxBuyin} |
+        Token: ${anteParsedData?.token?.toString()} |
+        Token Decimals: ${anteParsedData?.tokenDecimals} |
+        Vault Token Account: ${anteParsedData?.vaultTokenAccount?.toString()} |
+        Gamemaster Token Account: ${anteParsedData?.gamemasterTokenAccount?.toString()}
       `;
+      console.log("readableAnteParsedData", readableAnteParsedData);
       setAnteParsedData(readableAnteParsedData);
-      if (anteParsedData?.tokenDecimals) {
-        setDecimals(anteParsedData.tokenDecimals);
-      }
-      if (anteParsedData?.token) {
-        setTokenAddress(anteParsedData.token.toString());
-      }
-      let mint_of_token_being_sent = new PublicKey(0);
-
-      if (anteParsedData && anteParsedData.token) {
-        mint_of_token_being_sent = anteParsedData.token;
-        if (!anteParsedData.gamemasterTokenAccount) {
-          return;
-        }
-        if (!anteParsedData.tokenDecimals) {
-          return;
-        }
-
-        setGameOwner(anteParsedData.gamemasterTokenAccount.toString());
-
+      if (anteParsedData?.tokenDecimals) setDecimals(anteParsedData.tokenDecimals);
+      if (anteParsedData?.token) setTokenAddress(anteParsedData.token.toString());
+  
+      if (
+        anteParsedData &&
+        anteParsedData.token &&
+        anteParsedData.gamemasterTokenAccount &&
+        anteParsedData.tokenDecimals
+      ) {
+        const mintOfToken = anteParsedData.token;
+        const tokenAccount = await getAccount(engine.getConnectionChain(), new PublicKey(anteParsedData.gamemasterTokenAccount.toString()));
+        console.log("Token Account Owner:", tokenAccount.owner.toString());
+        setGameOwner(tokenAccount.owner.toString());
+  
         const [tokenAccountOwnerPda] = PublicKey.findProgramAddressSync(
-          [Buffer.from("token_account_owner_pda"), mapComponentPda.toBuffer()],
-          new PublicKey("BAP315i1xoAXqbJcTT1LrUS45N3tAQnNnPuNQkCcvbAr"),
+          [Buffer.from("token_account_owner_pda"), validEndpointResult.mapComponentPda.toBuffer()],
+          new PublicKey("BAP315i1xoAXqbJcTT1LrUS45N3tAQnNnPuNQkCcvbAr")
         );
-
-        const tokenVault = await getAssociatedTokenAddress(mint_of_token_being_sent, tokenAccountOwnerPda, true);
-
+        const tokenVault = await getAssociatedTokenAddress(mintOfToken, tokenAccountOwnerPda, true);
         setGameWallet(tokenAccountOwnerPda.toString());
         setGameTokenAccount(tokenVault.toString());
-
+  
         try {
           const tokenAccount = await getAccount(engine.getConnectionChain(), new PublicKey(tokenVault.toString()));
           console.log("Balance:", tokenAccount.amount.toString());
@@ -467,51 +770,52 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
         } catch (error) {
           console.error("Error fetching token account balance:", error);
         }
-
-        let referral_vault_program_id = new PublicKey("CLC46PuyXnSuZGmUrqkFbAh7WwzQm8aBPjSQ3HMP56kp");
-        let [referralTokenAccountOwnerPda] = PublicKey.findProgramAddressSync(
-          [Buffer.from("token_account_owner_pda"), mint_of_token_being_sent.toBuffer()],
-          referral_vault_program_id,
+  
+        // Referral program PDA calculation
+        const referralVaultProgramId = new PublicKey("CLC46PuyXnSuZGmUrqkFbAh7WwzQm8aBPjSQ3HMP56kp");
+        const [referralTokenAccountOwnerPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("token_account_owner_pda"), mintOfToken.toBuffer()],
+          referralVaultProgramId
         );
-        //const referraltokenVault = await getAssociatedTokenAddress(mint_of_token_being_sent, referralTokenAccountOwnerPda, true);
         setReferralProgramAccount(referralTokenAccountOwnerPda.toString());
-
-        if (mint_of_token_being_sent.toString() === "7dnMwS2yE6NE1PX81B9Xpm7zUhFXmQABqUiHHzWXiEBn") {
+  
+        // Fetch token metadata if needed
+        if (mintOfToken.toString() === "7dnMwS2yE6NE1PX81B9Xpm7zUhFXmQABqUiHHzWXiEBn") {
           newGameInfo.image = `${process.env.PUBLIC_URL}/agld.jpg`;
           newGameInfo.token = "AGLD";
         } else {
           try {
-            const { name, image } = await fetchTokenMetadata(mint_of_token_being_sent.toString());
+            const { name, image } = await fetchTokenMetadata(mintOfToken.toString());
             newGameInfo.image = image;
             newGameInfo.token = name;
           } catch (error) {
             console.error("Error fetching token data:", error);
           }
         }
+  
+        // Update the game list, ensuring no duplicates
         setMyGames((prevMyGames) => {
-          const gameExists = prevMyGames.some((game) => game.worldId === newGameInfo.worldId);
-          if (gameExists) {
+          if (prevMyGames.some((game) => game.worldId === newGameInfo.worldId)) {
             return prevMyGames;
           }
           return [newGameInfo, ...prevMyGames];
         });
       }
-
+  
       let foodcomponents = 32;
-
-      const map_size = newGameInfo.size;
-
-      if (map_size === 4000) {
+      const mapSize = newGameInfo.size;
+      if (mapSize === 4000) {
         foodcomponents = 16 * 2;
-      } else if (map_size === 6000) {
+      } else if (mapSize === 6000) {
         foodcomponents = 36 * 2;
-      } else if (map_size === 8000) {
+      } else if (mapSize === 8000) {
         foodcomponents = 64 * 2;
       }
-
-      let sectionMessage = "";
-      for (let i = 1; i < foodcomponents + 1; i++) {
-        const foodseed = "food" + i.toString();
+  
+      // Create an array to fetch all food section data concurrently.
+      const foodPromises = Array.from({ length: foodcomponents }, (_, idx) => {
+        const index = idx + 1; // to match original numbering
+        const foodseed = "food" + index.toString();
         const foodEntityPda = FindEntityPda({
           worldId: newGameInfo.worldId,
           entityId: new anchor.BN(0),
@@ -521,212 +825,98 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
           componentId: COMPONENT_SECTION_ID,
           entity: foodEntityPda,
         });
-        const foodParsedData = await sectionFetchOnChain(engine, foodComponentPda);
-        const index = i;
-        const { x, y } = getTopLeftCorner(i - 1, newGameInfo.size);
-        //console.log('foodParsedData', foodParsedData, x, y)
-        if (foodParsedData && (foodParsedData.topLeftX !== x || foodParsedData.topLeftY !== y)) {
-          console.error(
-            `Food section ${index} has incorrect top left coordinates: (${foodParsedData.topLeftX}, ${foodParsedData.topLeftY})`,
+        return sectionFetchOnEphem(engine, foodComponentPda).then((foodParsedData) => {
+          // Use (idx) as the original code did (i-1)
+          const { x, y } = getTopLeftCorner(idx, newGameInfo.size);
+          return { index, foodParsedData, foodEntityPda, foodComponentPda, seed: foodseed, expectedX: x, expectedY: y };
+        });
+      });
+      const foodResults = await Promise.all(foodPromises);
+      const incorrectFoodEntities = foodResults
+        .filter(({ foodParsedData, expectedX, expectedY, index }) => {
+          if (!foodParsedData) return false;
+          if (foodParsedData.topLeftX !== expectedX || foodParsedData.topLeftY !== expectedY) {
+            console.error(
+              `Food section ${index} has incorrect top left coordinates: (${foodParsedData.topLeftX}, ${foodParsedData.topLeftY})`
+            );
+            return true;
+          }
+          console.log(
+            `Food section ${index} has correct top left coordinates: (${foodParsedData.topLeftX}, ${foodParsedData.topLeftY})`
           );
-          sectionMessage = "section incorrect";
-        } else if (!foodParsedData) {
-          sectionMessage = "section not found";
-        }
-      }
-      if (sectionMessage === "") {
-        sectionMessage = "success";
-      }
+          return false;
+        })
+        .map(({ foodEntityPda, foodComponentPda, seed, expectedX, expectedY }) => ({
+          x: expectedX,
+          y: expectedY,
+          foodEntityPda,
+          foodComponentPda,
+          seed,
+        }));
+      setIncorrectFoodEntities(incorrectFoodEntities);
+      const sectionMessage = incorrectFoodEntities.length > 0 ? "section incorrect" : "success";
       console.log("sectionMessage", sectionMessage);
       setFoodComponentCheck(sectionMessage);
+  
+      await fetchPlayers(newGameInfo);
+      //const checkPlayers = await handleCleanupClick(newGameInfo, false);
+      //console.log("checkPlayers", checkPlayers);
+      //if (checkPlayers !== undefined) {
+      //  setPlayerComponentCheck(checkPlayers);
+      //}
 
-      const checkPlayers = await handleCleanupClick(newGameInfo, false);
-      console.log("checkPlayers", checkPlayers);
-      if (checkPlayers !== undefined) {
-        setPlayerComponentCheck(checkPlayers);
-      }
+      const account = anteComponentPda.toString();
+      const balanceData = await calculateTokenBalances(account);
+      setCashoutStats({
+        cashOutSum: balanceData.cashOutSum,
+        buyInSum: balanceData.buyInSum,
+        buyInCount: balanceData.buyInCount,
+      });
 
-      break;
+    } catch (error) {
+      console.error("Error in handlePanelOpen:", error);
     }
   };
 
-  const handleCleanupClick = async (selectGameId: ActiveGame, isActive: boolean): Promise<void | string> => {
-    const gameInfo = selectGameId;
-    let maxplayer = 20;
-
+  const handleReinitializeClick = async (gameInfo: ActiveGame, foodEntityPda: PublicKey, foodComponentPda: PublicKey, x: number, y: number, seed: string): Promise<void> => {
     const mapEntityPda = FindEntityPda({
       worldId: gameInfo.worldId,
       entityId: new anchor.BN(0),
       seed: stringToUint8Array("origin"),
     });
-
-    const mapComponentPda = FindComponentPda({
-      componentId: COMPONENT_MAP_ID,
-      entity: mapEntityPda,
-    });
-    let map_size = 4000;
-    const mapParsedData = await mapFetchOnEphem(engine, mapComponentPda);
-    if (mapParsedData) {
-      console.log("map size", mapParsedData.width);
-      map_size = mapParsedData.width;
-    }
-
-    if (map_size == 4000) {
-      maxplayer = 20;
-    } else if (map_size == 6000) {
-      maxplayer = 40;
-    } else if (map_size == 10000) {
-      maxplayer = 100;
-    }
-
-    for (let i = 1; i < maxplayer + 1; i++) {
-      const playerentityseed = "player" + i.toString();
-      const playerEntityPda = FindEntityPda({
-        worldId: gameInfo.worldId,
-        entityId: new anchor.BN(0),
-        seed: stringToUint8Array(playerentityseed),
+    //console.log("reinitialize", foodEntityPda.toString(), mapEntityPda.toString(), foodComponentPda.toString(), x, y, seed);
+      console.log("init food", foodEntityPda.toString(), x, y);
+      const tx = new Transaction();
+      const delegateInstruction = createDelegateInstruction({
+        entity: foodEntityPda,
+        account: foodComponentPda,
+        ownerProgram: COMPONENT_SECTION_ID,
+        payer: engine.getSessionPayer(),
       });
-      const playersComponentPda = FindComponentPda({
-        componentId: COMPONENT_PLAYER_ID,
-        entity: playerEntityPda,
-      });
-      const playersacc = await engine.getChainAccountInfo(playersComponentPda);
-
-      if (playersacc) {
-        const playersParsedData = await playerFetchOnChain(engine, playersComponentPda);
-        if (playersParsedData && playersParsedData.authority !== null) {
-          if (playersParsedData.mass.toNumber() == 0 && playersParsedData.score != 0 && isActive) {
-            const undelegateIx = createUndelegateInstruction({
-              payer: engine.getSessionPayer(),
-              delegatedAccount: playersComponentPda,
-              componentPda: COMPONENT_PLAYER_ID,
-            });
-            const tx = new anchor.web3.Transaction().add(undelegateIx);
-            tx.recentBlockhash = (await engine.getConnectionEphem().getLatestBlockhash()).blockhash;
-            tx.feePayer = engine.getSessionPayer();
-            try {
-              const playerundelsignature = await engine.processSessionEphemTransaction(
-                "undelPlayer:" + playersComponentPda.toString(),
-                tx,
-              );
-              console.log("undelegate", playerundelsignature);
-            } catch (error) {
-              console.log("Error undelegating:", error);
-            }
-
-            const anteseed = "ante";
-            const anteEntityPda = FindEntityPda({
-              worldId: gameInfo.worldId,
-              entityId: new anchor.BN(0),
-              seed: stringToUint8Array(anteseed),
-            });
-            const anteComponentPda = FindComponentPda({
-              componentId: COMPONENT_ANTEROOM_ID,
-              entity: anteEntityPda,
-            });
-            const anteParsedData = await anteroomFetchOnChain(engine, anteComponentPda);
-
-            let supersize_token_account = new PublicKey(0);
-            let vault_program_id = new PublicKey("BAP315i1xoAXqbJcTT1LrUS45N3tAQnNnPuNQkCcvbAr");
-
-            if (anteParsedData) {
-              let vault_token_account = anteParsedData.vaultTokenAccount;
-              let mint_of_token_being_sent = anteParsedData.token;
-              let owner_token_account = anteParsedData.gamemasterTokenAccount;
-              if (!mint_of_token_being_sent) {
-                return;
-              }
-              //supersize_token_account = anteParsedData.gamemasterTokenAccount;
-              supersize_token_account = await getAssociatedTokenAddress(
-                mint_of_token_being_sent,
-                new PublicKey("DdGB1EpmshJvCq48W1LvB1csrDnC4uataLnQbUVhp6XB"),
-              );
-              let sender_token_account = playersParsedData.payoutTokenAccount;
-              let [tokenAccountOwnerPda] = PublicKey.findProgramAddressSync(
-                [Buffer.from("token_account_owner_pda"), mapComponentPda.toBuffer()],
-                vault_program_id,
-              );
-
-              const extraAccounts = [
-                {
-                  pubkey: vault_token_account,
-                  isWritable: true,
-                  isSigner: false,
-                },
-                {
-                  pubkey: sender_token_account,
-                  isWritable: true,
-                  isSigner: false,
-                },
-                {
-                  pubkey: owner_token_account,
-                  isWritable: true,
-                  isSigner: false,
-                },
-                {
-                  pubkey: supersize_token_account,
-                  isWritable: true,
-                  isSigner: false,
-                },
-                {
-                  pubkey: tokenAccountOwnerPda,
-                  isWritable: true,
-                  isSigner: false,
-                },
-                {
-                  pubkey: engine.getWalletPayer(),
-                  isWritable: true,
-                  isSigner: false,
-                },
-                {
-                  pubkey: SystemProgram.programId,
-                  isWritable: false,
-                  isSigner: false,
-                },
-                {
-                  pubkey: TOKEN_PROGRAM_ID,
-                  isWritable: false,
-                  isSigner: false,
-                },
-                {
-                  pubkey: SYSVAR_RENT_PUBKEY,
-                  isWritable: false,
-                  isSigner: false,
-                },
-              ];
-
-              const applyCashOutSystem = await ApplySystem({
-                authority: engine.getWalletPayer(),
-                world: gameInfo.worldPda,
-                entities: [
-                  {
-                    entity: playerEntityPda,
-                    components: [{ componentId: COMPONENT_PLAYER_ID }],
-                  },
-                  {
-                    entity: anteEntityPda,
-                    components: [{ componentId: COMPONENT_ANTEROOM_ID }],
-                  },
-                ],
-                systemId: SYSTEM_CASH_OUT_ID,
-                args: {
-                  referred: false,
-                },
-                extraAccounts: extraAccounts as AccountMeta[],
-              });
-              const cashouttx = new anchor.web3.Transaction().add(applyCashOutSystem.transaction);
-              const cashoutsignature = await engine.processWalletTransaction("playercashout", cashouttx);
-
-              console.log("cashout", cashoutsignature);
-            }
-          } else if (playersParsedData.mass.toNumber() == 0 && playersParsedData.score != 0 && !isActive) {
-            return "clogged";
-          }
+      tx.add(delegateInstruction);
+      tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 }));
+      tx.add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1 }));
+      try {
+        const delSig = await engine.processSessionChainTransaction("redelegate", tx);
+        console.log(`Delegated food batch: ${delSig}`);
+      } catch (e) {
+        // @ts-ignore
+        if (e.message.includes("ExternalAccountLamportSpend")) {
+          console.log(e);
+        } else {
+          throw e;
         }
-      }
-    }
-
-    return "clean";
+      } 
+      
+      const initFoodSig = await gameSystemInitSection(
+        engine,
+        gameInfo.worldPda,
+        foodEntityPda,
+        mapEntityPda,
+        x,
+        y,
+      );
+      console.log("initFoodSig", initFoodSig);
   };
 
   async function calculateTokenBalances(account: string) {
@@ -776,7 +966,7 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
 
     return { cashOutSum, buyInSum, buyInCount };
   }
-
+  
   const deposit = async (
     amount: number,
     gameWallet: PublicKey,
@@ -830,17 +1020,25 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
           >
             <div className="game-details" style={{ display: "flex", flexWrap: "wrap" }}>
               <p style={{ flex: "1 1 30%" }}>Game Id: {row.worldId.toString()}</p>
-              <p style={{ flex: "1 1 30%" }}>Server: {getRegion(myGames[idx].endpoint)}</p>
+              <p style={{ flex: "1 1 30%" }}>Server: {getRegion(gameEndpoint)}</p>
               <p style={{ flex: "1 1 30%" }}>Max Players: {row.max_players}</p>
               <p style={{ flex: "1 1 30%" }}>Size: {row.size}</p>
-              <p style={{ flex: "1 1 70%" }}>Token: {row.token.slice(0, 11)}</p>
+              <p style={{ flex: "1 1 60%" }}>Token: {row.token.slice(0, 11)}</p>
               <p style={{ flex: "1 1 20%" }}>Base Buyin: {row.base_buyin}</p>
               <p style={{ flex: "1 1 20%" }}>Min Buyin: {row.min_buyin}</p>
               <p style={{ flex: "1 1 20%" }}>Max Buyin: {row.max_buyin}</p>
-              <p style={{ flex: "1 1 100%", marginTop: "10px" }}>Owner: {gameOwner}</p>
-              <p style={{ flex: "1 1 100%" }}>Game Wallet: {gameWallet}</p>
-              <p style={{ flex: "1 1 100%" }}>Token Account: {gameTokenAccount}</p>
-              <p style={{ flex: "1 1 100%" }}>Referral Program Account (optional): {referralProgramAccount}</p>
+              <p style={{ flex: "1 1 50%", marginTop: "10px" }}>
+                Game Owner: {" "} 
+                <a href={`https://solscan.io/account/${gameOwner}`} target="_blank" rel="noopener noreferrer">
+                  {gameOwner.slice(0, 3)}...{gameOwner.slice(-3)}
+                </a>
+              </p>
+              <p style={{ flex: "1 1 50%", marginTop: "10px"  }}>
+                Game Vault: {" "} 
+                <a href={`https://solscan.io/account/${gameWallet}`} target="_blank" rel="noopener noreferrer">
+                  {gameWallet.slice(0, 3)}...{gameWallet.slice(-3)}
+                </a>
+              </p>
               <div
                 style={{
                   display: "flex",
@@ -851,24 +1049,20 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                 }}
               >
                 <p style={{ flex: "1 1 10%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  Token Balance: {tokenBalance} <br />
-                  {row.token}
+                  Token Balance: {getRoundedAmount(tokenBalance, row.base_buyin / 1000) }<br />
                 </p>
                 <input
-                  type="number"
+                  type="text"
                   placeholder="deposit value"
                   value={depositValue}
-                  style={{ color: "black" }}
-                  onChange={(e) => setDepositValue(parseFloat(e.target.value))}
-                  step={1}
-                  min={0.1}
-                  max={100000000}
+                  onChange={(e) => setDepositValue(e.target.value)}
+                  style={{ color: "black", marginLeft: "10px" }}
                 />
                 <button
                   className="btn-copy"
                   style={{ flex: "1 1 10%", margin: "10px" }}
                   onClick={() =>
-                    deposit(depositValue, new PublicKey(gameTokenAccount), new PublicKey(tokenAddress), decimals)
+                    deposit(parseFloat(depositValue), new PublicKey(gameTokenAccount), new PublicKey(tokenAddress), decimals)
                   }
                 >
                   Deposit{" "}
@@ -883,27 +1077,38 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                   justifyContent: "center",
                 }}
               >
-                <p style={{ margin: "10px" }}>Fees Earned: {cashoutStats.cashOutSum.toFixed(2)}</p>
-                <p style={{ margin: "10px" }}>Total Wagered: {cashoutStats.buyInSum.toFixed(2)}</p>
-                <p style={{ margin: "10px" }}>Total Plays: {cashoutStats.buyInCount}</p>
+                <p style={{ margin: "10px" }}>Fees Earned: {cashoutStats.cashOutSum ? getRoundedAmount(cashoutStats.cashOutSum, row.base_buyin / 1000) : "Loading"}</p>
+                <p style={{ margin: "10px" }}>Total Wagered: {cashoutStats.buyInSum ? getRoundedAmount(cashoutStats.buyInSum, row.base_buyin / 1000) : "Loading"}</p>
+                <p style={{ margin: "10px" }}>Total Plays: {cashoutStats.buyInCount ? cashoutStats.buyInCount : "Loading"}</p>
               </div>
+              {/*
+              <p style={{ flex: "1 1 100%" }}>
+                Referral Program Account (optional):{" "}
+                <a
+                  href={`https://solscan.io/account/${referralProgramAccount}?cluster=mainnet`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {referralProgramAccount}
+                </a>
+              </p>
+              */}
               <p style={{ margin: "10px" }}>
                 Food unit value: {row.base_buyin / 1000} {row.token}
               </p>
-              <p style={{ margin: "10px" }}>Current food in wallet: {tokenBalance / (row.base_buyin / 1000)}</p>
-              <p style={{ margin: "10px" }}>Current food to add: {currentFoodToAdd}</p>
-              <p style={{ margin: "10px" }}>Current token boost (max 1000%): +{currentFoodToAdd}% </p>
+              <p style={{ margin: "10px" }}>Current food in wallet: {getRoundedAmount(tokenBalance / (row.base_buyin / 1000), row.base_buyin / 1000)}</p>
               <p style={{ margin: "10px" }}>Current tax (max 10%): {Math.max(0, (100 - currentFoodToAdd) / 10)}% </p>
-              <p style={{ margin: "10px" }}>
-                *For base buy in or greater, if less than 100 food is available to add, 100 food is still added and the
-                player is taxed the remainder. For less than base buy in, the amount of food added is proportional to
-                the buy in.*
-              </p>
+              <p style={{ margin: "10px" }}>Current food to add: {currentFoodToAdd}</p>
               <Graph
                 maxPlayers={row.max_players}
                 foodInWallet={(tokenBalance * 1000) / row.base_buyin}
                 setCurrentFoodToAdd={setCurrentFoodToAdd}
               />
+              <p style={{ margin: "10px" }}>
+                *For base buy in or greater, if less than 100 food is available to add, 100 food is still added and the
+                player is taxed the remainder. For less than base buy in, the amount of food added is proportional to
+                the buy in.*
+              </p>
               <div
                 style={{
                   display: "flex",
@@ -913,85 +1118,6 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                   justifyContent: "center",
                 }}
               >
-                <p
-                  style={{
-                    flex: "1 1 10%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    margin: "10px",
-                  }}
-                >
-                  Player components check
-                  {playerComponentCheck !== "clean" ? (
-                    <>
-                      {playerComponentCheck !== "clogged" ? (
-                        <svg
-                          className="inline ml-[5px] mt-[2px] h-[20px] w-[20px] stroke-[white]"
-                          width="52"
-                          height="52"
-                          viewBox="0 0 38 38"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <g fill="none" fillRule="evenodd">
-                            <g transform="translate(1 1)" strokeWidth="2">
-                              <circle strokeOpacity=".5" cx="18" cy="18" r="18" />
-                              <path d="M36 18c0-9.94-8.06-18-18-18">
-                                <animateTransform
-                                  attributeName="transform"
-                                  type="rotate"
-                                  from="0 18 18"
-                                  to="360 18 18"
-                                  dur="1s"
-                                  repeatCount="indefinite"
-                                />
-                              </path>
-                            </g>
-                          </g>
-                        </svg>
-                      ) : (
-                        <button
-                          className="btn-copy"
-                          style={{ flex: "1 1 10%", margin: "10px" }}
-                          onClick={() => {
-                            handleCleanupClick(row, true);
-                          }}
-                        >
-                          Clean up
-                        </button>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <svg
-                        className="w-5 h-5 rounded-full inline-block stroke-[2px] stroke-[#15bd12] stroke-miter-10 shadow-inner ml-[5px] mt-[2px]"
-                        style={{
-                          animation: "fill 0.4s ease-in-out 0.4s forwards, scale 0.3s ease-in-out 0.9s both;",
-                        }}
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 52 52"
-                      >
-                        <circle
-                          className="stroke-[2px] stroke-[#15bd12] stroke-miter-10 fill-[#15bd12]"
-                          style={{
-                            strokeDasharray:
-                              "166; stroke-dashoffset: 166; animation: stroke 0.6s cubic-bezier(0.650, 0.000, 0.450, 1.000) forwards;",
-                          }}
-                          cx="26"
-                          cy="26"
-                          r="25"
-                          fill="none"
-                        />
-                        <path
-                          className="stroke-[white] stroke-dasharray-[48] stroke-dashoffset-[48] transform-origin-[50%_50%] animation-stroke"
-                          fill="none"
-                          d="M14.1 27.2l7.1 7.2 16.7-16.8"
-                        />
-                      </svg>
-                    </>
-                  )}
-                </p>
-              </div>
               <p
                 style={{
                   flex: "1 1 100%",
@@ -1001,16 +1127,17 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                   margin: "10px",
                 }}
               >
-                Food components check
                 {foodComponentCheck !== "success" ? (
                   <>
                     {foodComponentCheck !== "section not found" && foodComponentCheck !== "section incorrect" ? (
-                      <svg
-                        className="inline ml-[5px] mt-[2px] h-[20px] w-[20px] stroke-[white]"
-                        width="52"
-                        height="52"
-                        viewBox="0 0 38 38"
-                        xmlns="http://www.w3.org/2000/svg"
+                      <>
+                        Food components check
+                        <svg
+                          className="inline ml-[5px] mt-[2px] h-[20px] w-[20px] stroke-[white]"
+                          width="52"
+                          height="52"
+                          viewBox="0 0 38 38"
+                          xmlns="http://www.w3.org/2000/svg"
                       >
                         <g fill="none" fillRule="evenodd">
                           <g transform="translate(1 1)" strokeWidth="2">
@@ -1028,12 +1155,31 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                           </g>
                         </g>
                       </svg>
+                      </>
                     ) : (
-                      <span style={{ color: "red", margin: "10px", fontWeight: "bold" }}>{foodComponentCheck}</span>
+                      <div style={{  alignItems: "center", justifyContent: "center"}}>
+                        {incorrectFoodEntities.map((entityPda, idx) => (
+                          <>
+                          <div style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
+                            <a href={`https://explorer.solana.com/address/${entityPda.foodComponentPda.toString()}?cluster=custom&customUrl=https%3A%2F%2F${gameEndpoint.replace("https://", "")}`} target="_blank" rel="noopener noreferrer">
+                              Incorrect food section: {entityPda.foodComponentPda.toString().slice(0, 3)}...{entityPda.foodComponentPda.toString().slice(-3)}
+                            </a>
+                            <button
+                              key={idx}
+                              className="btn-copy"
+                              onClick={() => handleReinitializeClick(row, entityPda.foodEntityPda, entityPda.foodComponentPda, entityPda.x, entityPda.y, entityPda.seed)}
+                            >
+                              Reinitialize
+                            </button>
+                          </div>
+                          </>
+                        ))}
+                      </div>
                     )}
                   </>
                 ) : (
                   <>
+                    Food components check
                     <svg
                       className="w-5 h-5 rounded-full inline-block stroke-[2px] stroke-[#15bd12] stroke-miter-10 shadow-inner ml-[5px] mt-[2px]"
                       style={{
@@ -1062,12 +1208,169 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                   </>
                 )}
               </p>
-              <CollapsiblePanel title="Anteroom component check" defaultOpen={true}>
+                <p
+                  style={{
+                    width: "100%",
+                  }}
+                >
+                  <CollapsiblePanel title="Players" defaultOpen={true}>
+                  <div style={{ overflowY: "scroll", maxHeight: "200px" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <tbody>
+                      {players.map((player, index) => (
+                        <React.Fragment key={index}>
+                          <tr
+                            style={{
+                              borderBottom: "1px solid #ccc",
+                              backgroundColor: (index + 1) % 2 === 0 ? "#C0C0C0" : "#A4A4A4",
+                            }}
+                          >
+                            <td colSpan={6} style={{ padding: "5px", textAlign: "center" }}>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  justifyContent: "space-around",
+                                  alignItems: "center",
+                                }}
+                              >
+                                <div>
+                                  <a
+                                    href={`https://solscan.io/account/${
+                                      player.playersComponentPda ? player.playersComponentPda.toString() : "null"
+                                    }`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    {player.seed}
+                                  </a>
+                                </div>
+                                <div style={{ fontSize: "14px" }}>
+                                  {player.delegated ? "Delegated" : "Undelegated"}
+                                </div>
+                                <div>
+                                  {player.parsedData?.mass?.toNumber() === 0 && (
+                                    <button
+                                      className="btn-copy"
+                                      style={{ maxHeight: "40px" }}
+                                      onClick={() => handleUnclogPlayer(player, row)}
+                                    >
+                                      Force Exit
+                                    </button>
+                                  )}
+                                </div>
+                                <div>
+                                  {player.delegated ? (
+                                    <button
+                                      className="btn-copy"
+                                      style={{ maxHeight: "40px" }}
+                                      onClick={() => handleUndelegatePlayer(player)}
+                                    >
+                                      Undelegate
+                                    </button>
+                                  ) : (
+                                    <button
+                                      className="btn-copy"
+                                      style={{ maxHeight: "40px" }}
+                                      onClick={() => handleDelegatePlayer(player, row)}
+                                    >
+                                      Delegate
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                          <tr
+                            style={{
+                              backgroundColor: (index + 1) % 2 === 0 ? "#C0C0C0" : "#A4A4A4",
+                              borderBottom: "1px solid #ccc",
+                            }}
+                          >
+                            <th style={{ padding: "5px", borderBottom: "1px solid #ccc" }}>Network</th>
+                            <th style={{ padding: "5px", borderBottom: "1px solid #ccc" }}>Mass</th>
+                            <th style={{ padding: "5px", borderBottom: "1px solid #ccc" }}>Score</th>
+                            <th style={{ padding: "5px", borderBottom: "1px solid #ccc" }}>Buy in</th>
+                            <th style={{ padding: "5px", borderBottom: "1px solid #ccc" }}>Authority</th>
+                            <th style={{ padding: "5px", borderBottom: "1px solid #ccc" }}>Payout</th>
+                          </tr>
+                          <tr
+                            style={{
+                              borderBottom: "1px solid #ccc",
+                              backgroundColor: (index + 1) % 2 === 0 ? "#C0C0C0" : "#A4A4A4",
+                              textAlign: "center",
+                            }}
+                          >
+                            <td style={{ padding: "5px", fontWeight: "bold" }}>mainnet</td>
+                            <td style={{ padding: "5px" }}>
+                              {player.parsedData?.mass ? parseInt(player.parsedData.mass).toString() : "N/A"}
+                            </td>
+                            <td style={{ padding: "5px" }}>
+                              {player.parsedData?.score ? parseFloat(player.parsedData.score).toFixed(1) : "N/A"}
+                            </td>
+                            <td style={{ padding: "5px" }}>
+                              {player.parsedData?.buyin ? parseFloat(player.parsedData.buyin).toFixed(1) : "N/A"}
+                            </td>
+                            <td style={{ padding: "5px" }}>
+                              {player.parsedData?.authority?.toString().slice(0, 3)}...
+                              {player.parsedData?.authority?.toString().slice(-3)}
+                            </td>
+                            <td style={{ padding: "5px" }}>
+                              <a
+                                href={`https://solscan.io/account/${player.playerWallet?.toString()}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                {player.playerWallet?.toString().slice(0, 3)}...
+                                {player.playerWallet?.toString().slice(-3)}
+                              </a>
+                            </td>
+                          </tr>
+                          <tr
+                            style={{
+                              borderBottom: "1px solid #ccc",
+                              backgroundColor: (index + 1) % 2 === 0 ? "#C0C0C0" : "#A4A4A4",
+                              textAlign: "center",
+                            }}
+                          >
+                            <td style={{ padding: "5px", fontWeight: "bold" }}>ephemeral</td>
+                            <td style={{ padding: "5px" }}>
+                              {parseInt(player.playersParsedDataEphem?.mass).toString() || "N/A"}
+                            </td>
+                            <td style={{ padding: "5px" }}>
+                              {parseFloat(player.playersParsedDataEphem?.score).toFixed(1) || "N/A"}
+                            </td>
+                            <td style={{ padding: "5px" }}>
+                              {parseFloat(player.playersParsedDataEphem?.buyin).toFixed(1) || "N/A"}
+                            </td>
+                            <td style={{ padding: "5px" }}>
+                              {player.playersParsedDataEphem?.authority?.toString().slice(0, 3)}...
+                              {player.playersParsedDataEphem?.authority?.toString().slice(-3)}
+                            </td>
+                            <td style={{ padding: "5px" }}>
+                              <a
+                                href={`https://solscan.io/account/${player.playerWalletEphem?.toString()}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                {player.playerWalletEphem?.toString().slice(0, 3)}...
+                                {player.playerWalletEphem?.toString().slice(-3)}
+                              </a>
+                            </td>
+                          </tr>
+                        </React.Fragment>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                </CollapsiblePanel>
+                </p>
+              </div>
+              <CollapsiblePanel title="Anteroom component" defaultOpen={true}>
                 <p style={{ flex: "1 1 100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   {inspectAnteParsedData}
                 </p>
               </CollapsiblePanel>
-              <CollapsiblePanel title="Map component check" defaultOpen={true}>
+              <CollapsiblePanel title="Map component" defaultOpen={true}>
                 <p style={{ flex: "1 1 100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   {inspectMapParsedData}
                 </p>
