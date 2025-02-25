@@ -24,7 +24,7 @@ import { anteroomFetchOnChain, mapFetchOnChain, mapFetchOnSpecificEphem } from "
 import { useMagicBlockEngine } from "../engine/MagicBlockEngineProvider";
 import { endpoints } from "@utils/constants";
 import { createUnloadedGame } from "@utils/game";
-import { stringToUint8Array, getRegion } from "@utils/helper";
+import { stringToUint8Array, getRegion, getCustomErrorCode } from "@utils/helper";
 import { gameSystemJoin } from "@states/gameSystemJoin";
 import { gameSystemCashOut } from "@states/gameSystemCashOut";
 import { MagicBlockEngine } from "@engine/MagicBlockEngine";
@@ -566,26 +566,15 @@ const Home = ({
         setMyPlayerEntityPda(game.playerInfo.newplayerEntityPda);
         navigate(`/game`);
       } catch (joinError: any) {
-        console.log("error", joinError);
-        const errorDetails = joinError?.message ? JSON.parse(joinError.message) : null;
-        if (
-          errorDetails?.err?.InstructionError &&
-          Array.isArray(errorDetails.err.InstructionError) &&
-          errorDetails.err.InstructionError[1]?.Custom === 6000
-        ) {
+        console.log("Error during join", joinError);
+        const customErrorCode = getCustomErrorCode(joinError);
+        if (customErrorCode === 6000) {
           console.log("Custom error 6000 detected");
           setMyPlayerEntityPda(game.playerInfo.newplayerEntityPda);
           navigate("/game");
+          return;
         }
-        if (
-          joinError.InstructionError &&
-          Array.isArray(joinError.InstructionError) &&
-          joinError.InstructionError[1]?.Custom === 6000
-        ) {
-          console.log("Custom error 6000 detected");
-          setMyPlayerEntityPda(game.playerInfo.newplayerEntityPda);
-          navigate("/game");
-        }
+        console.error("Unexpected error:", joinError);
       }
     }
     if (game.playerInfo.playerStatus === "in_game") {

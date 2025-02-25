@@ -180,7 +180,7 @@ export class MagicBlockEngine {
           log(name, commitment, signature, result.err);
           if (result.err) {
             this.debugError(name, signature, connection);
-            reject(new Error(`Transaction ${signature} failed: ${JSON.stringify(result)}`));
+            reject(new Error(JSON.stringify(result.err)));  
           } else {
             resolve();
           }

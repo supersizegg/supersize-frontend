@@ -14,6 +14,29 @@ import { FindComponentPda } from "@magicblock-labs/bolt-sdk";
 import { BN } from "@coral-xyz/anchor";
 import { HELIUS_API_KEY } from "@utils/constants";
 
+export function getCustomErrorCode(error: any): number | undefined {
+  let parsed: any = error;
+
+  if (error?.message) {
+    try {
+      parsed = JSON.parse(error.message);
+    } catch (parseError) {
+      parsed = error;
+    }
+  }
+
+  const instructionError =
+    parsed?.InstructionError ||
+    parsed?.err?.InstructionError ||
+    error?.InstructionError;
+  
+  if (Array.isArray(instructionError)) {
+    return instructionError[1]?.Custom;
+  }
+  return undefined;
+}
+
+
 // UI helpers
 export async function addTransaction(
   setTransactions: React.Dispatch<React.SetStateAction<{ id: string; status: string }[]>>,
