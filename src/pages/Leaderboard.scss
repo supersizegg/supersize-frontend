@@ -145,6 +145,35 @@
   }
 }
 
+.event-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.event-tab {
+  background: #141516;
+  border: 1px solid #212527;
+  border-radius: 20px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  color: #fff;
+  font-size: 1rem;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+}
+
+.event-tab.active {
+  background: #26282e;
+  border-color: #444;
+}
+
+.event-tab:hover {
+  background: #26282e;
+}
+
 @media (max-width: 768px) {
   .leaderboard-container {
     width: 90vw;

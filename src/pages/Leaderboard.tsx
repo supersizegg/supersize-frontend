@@ -32,12 +32,32 @@ interface LeaderboardApiResponse {
   players: LeaderboardEntry[];
 }
 
+interface Season {
+  icon: string;
+  name: string;
+  token: string;
+}
+
+interface EventOption {
+  id: string;
+  name: string;
+}
+
+const BONK_TOKEN = "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263";
+
+const availableEvents: EventOption[] = [
+  { id: "bonk-preseason-2025", name: "BONK Pre‑Season" },
+  { id: "all", name: "All Time" },
+];
+
 const Leaderboard: React.FC = () => {
-  const [season, setSeason] = useState<{ icon: string; name: string; token: string }>({
+  const [season, setSeason] = useState<Season>({
     icon: `${process.env.PUBLIC_URL}/token.png`,
-    name: "LOADING",
-    token: "",
+    name: "BONK",
+    token: BONK_TOKEN,
   });
+  const [selectedEvent, setSelectedEvent] = useState<string>("bonk-preseason-2025");
+
   const [leaderboardData, setLeaderboardData] = useState<Player[]>([]);
   const [totalRows, setTotalRows] = useState(0);
   const [userInfo, setUserInfo] = useState<UserInfo>({ position: 0, points: 0, address: "" });
@@ -47,17 +67,26 @@ const Leaderboard: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
+    if (season.token !== BONK_TOKEN) {
+      setSelectedEvent("all");
+    }
     setCurrentPage(1);
   }, [season.token]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedEvent]);
 
   useEffect(() => {
     if (season.token === "") return;
 
     const fetchStats = async () => {
       try {
-        const response = await axios.get<LeaderboardApiResponse>(
-          `${API_URL}/api/v1/leaderboard/${season.token}?limit=${limit}&page=${currentPage}`,
-        );
+        let url = `${API_URL}/api/v1/leaderboard/${season.token}?limit=${limit}&page=${currentPage}`;
+        if (selectedEvent !== "all") {
+          url += `&event_id=${selectedEvent}`;
+        }
+        const response = await axios.get<LeaderboardApiResponse>(url);
         const { players, total } = response.data;
         const participants = players.map((entry: LeaderboardEntry) => ({
           name: entry.player,
@@ -71,7 +100,7 @@ const Leaderboard: React.FC = () => {
     };
 
     fetchStats();
-  }, [publicKey, season, currentPage]);
+  }, [publicKey, season, currentPage, selectedEvent]);
 
   useEffect(() => {
     if (season.token === "") return;
@@ -79,13 +108,11 @@ const Leaderboard: React.FC = () => {
     const fetchPlayerRank = async () => {
       try {
         const walletAddress = publicKey ? publicKey.toString() : "11111111111111111111111111111111";
-        const playerRankRes = await axios.get(`${API_URL}/api/v1/player-rank`, {
-          params: {
-            address: walletAddress,
-            token: season.token,
-          },
-        });
-
+        let url = `${API_URL}/api/v1/player-rank?address=${walletAddress}&token=${season.token}`;
+        if (selectedEvent !== "all") {
+          url += `&event_id=${selectedEvent}`;
+        }
+        const playerRankRes = await axios.get(url);
         setUserInfo({
           position: playerRankRes.data.rank,
           points: playerRankRes.data.score,
@@ -98,7 +125,7 @@ const Leaderboard: React.FC = () => {
     };
 
     fetchPlayerRank();
-  }, [season, publicKey]);
+  }, [season, publicKey, selectedEvent]);
 
   const totalPages = Math.ceil(totalRows / limit);
 
@@ -184,6 +211,20 @@ const Leaderboard: React.FC = () => {
             <LeaderboardDropdown season={season} setSeason={setSeason} />
           </div>
         </div>
+
+        {season.token === BONK_TOKEN && (
+          <div className="event-tabs">
+            {availableEvents.map((evt) => (
+              <button
+                key={evt.id}
+                className={`event-tab ${selectedEvent === evt.id ? "active" : ""}`}
+                onClick={() => setSelectedEvent(evt.id)}
+              >
+                {evt.name}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="leaderboard-table">
           <table>
