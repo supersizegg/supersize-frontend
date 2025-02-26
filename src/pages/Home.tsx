@@ -155,11 +155,13 @@ const Home = ({
             let need_to_undelegate = false;
             let newplayerEntityPda = new PublicKey(0);
             let playerStatus = "new_player";
+            let max_players = mapParsedData.maxPlayers;
 
             if (isPlayerStatus(result)) {
               if (result.playerStatus == "error") {
                 console.log("Error fetching player status");
                 activeplayers = result.activeplayers;
+                max_players = result.max_players;
                 if (activeplayers == mapParsedData.maxPlayers) {
                   playerStatus = "Game Full";
                 } else {
@@ -171,12 +173,15 @@ const Home = ({
                 need_to_undelegate = result.need_to_undelegate;
                 newplayerEntityPda = result.newplayerEntityPda;
                 playerStatus = result.playerStatus;
+                max_players = result.max_players;
               }
             } else {
               console.error("Error fetching player status");
             }
 
             newGameInfo.activeGame.active_players = activeplayers;
+            newGameInfo.activeGame.max_players = max_players;
+
             setActiveGamesLoaded([
               ...activeGamesLoaded,
               {
@@ -241,6 +246,7 @@ const Home = ({
           need_to_undelegate: boolean;
           newplayerEntityPda: PublicKey;
           activeplayers: number;
+          max_players: number;
         }
       | "error",
   ) {
@@ -285,7 +291,7 @@ const Home = ({
       let need_to_undelegate = false;
       let newplayerEntityPda = new PublicKey(0);
       let playerStatus = "new_player";
-
+      let max_players = activeGamesLoaded[index].activeGame.max_players;
       const result = await getMyPlayerStatus(
         engine,
         activeGamesLoaded[index].activeGame.worldId,
@@ -296,6 +302,7 @@ const Home = ({
         if (result.playerStatus == "error") {
           console.log("Error fetching player status");
           activeplayers = result.activeplayers;
+          max_players = result.max_players;
           if (activeplayers == activeGamesLoaded[index].activeGame.max_players) {
             playerStatus = "Game Full";
           } else {
@@ -307,6 +314,7 @@ const Home = ({
           playerStatus = result.playerStatus;
           activeplayers = result.activeplayers;
           newplayerEntityPda = result.newplayerEntityPda;
+          max_players = result.max_players;
         }
       } else {
         console.log("Error fetching player status");
@@ -319,6 +327,7 @@ const Home = ({
           active_players: activeplayers,
           ping:
             pingResults.find((ping) => ping.endpoint === activeGamesLoaded[index].activeGame.endpoint)?.pingTime || 0,
+          max_players: max_players,
         } as ActiveGame,
         playerInfo: {
           playerStatus: playerStatus,
@@ -428,6 +437,7 @@ const Home = ({
             let need_to_undelegate = false;
             let newplayerEntityPda: PublicKey | null = new PublicKey(0);
             let playerStatus = "new_player";
+            let max_players = mapParsedData.maxPlayers;
 
             const result = await getMyPlayerStatus(
               engine,
@@ -439,6 +449,7 @@ const Home = ({
               if (result.playerStatus == "error") {
                 console.log("Error fetching player status");
                 activeplayers = result.activeplayers;
+                max_players = result.max_players;
                 if (activeplayers == mapParsedData.maxPlayers) {
                   playerStatus = "Game Full";
                 } else {
@@ -450,6 +461,7 @@ const Home = ({
                 need_to_undelegate = result.need_to_undelegate;
                 newplayerEntityPda = result.newplayerEntityPda;
                 playerStatus = result.playerStatus;
+                max_players = result.max_players;
               }
             } else {
               console.log("Error fetching player status");
@@ -461,7 +473,7 @@ const Home = ({
                 isLoaded: true,
                 name: mapParsedData.name,
                 active_players: activeplayers,
-                max_players: mapParsedData.maxPlayers,
+                max_players: max_players,
                 size: mapParsedData.width,
                 image: token_image,
                 token: token_name,

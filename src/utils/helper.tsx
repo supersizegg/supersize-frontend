@@ -401,6 +401,7 @@ export const getMyPlayerStatus = async (
       need_to_undelegate: boolean;
       newplayerEntityPda: PublicKey;
       activeplayers: number;
+      max_players: number;
     }
   | "error"
 > => {
@@ -410,6 +411,7 @@ export const getMyPlayerStatus = async (
   let need_to_undelegate = false;
   let need_to_delegate = false;
   let activeplayers = 0;
+  let max_players = maxplayer;
   // Prepare promises for fetching data
   const fetchPromises = [];
   for (let i = 1; i < maxplayer + 1; i++) {
@@ -449,9 +451,32 @@ export const getMyPlayerStatus = async (
     if (!playersacc || !playersParsedData) {
       continue;
     }
-
+    //console.log(playersParsedDataER, playersParsedData);
     if (playersParsedData.authority != null) {
-      activeplayers += 1;
+      if (
+        playersParsedDataER 
+      ) {
+        if(
+          playersParsedDataER.authority != null && //filter eaten players
+          playersParsedDataER.authority.toString() == playersParsedData.authority.toString()
+        ){
+          if(playersParsedDataER.mass.toNumber() == 0){
+            //no cash out
+            max_players = max_players - 1;
+          }else{
+            activeplayers += 1;
+          }
+        }
+        else if(
+          playersParsedDataER.authority == null ||
+          playersParsedDataER.authority.toString() != playersParsedData.authority.toString()
+        ){
+          //need distinction between "bought in + didn't join" and "got eaten"
+          if(playersParsedData.buyIn !== 0){
+            max_players = max_players - 1;
+          }
+        }
+      }
     }
 
     if (playersParsedData.authority == null) {
@@ -509,7 +534,7 @@ export const getMyPlayerStatus = async (
       playersParsedDataER.score == 0 &&
       newplayerEntityPda == null
     ) {
-      const startTime = playersParsedDataER.joinTime.toNumber() * 1000;
+      const startTime = playersParsedData.joinTime.toNumber() * 1000;
       const currentTime = Date.now();
       const elapsedTime = currentTime - startTime;
       if (elapsedTime >= 10000) {
@@ -534,6 +559,7 @@ export const getMyPlayerStatus = async (
       need_to_undelegate: false,
       newplayerEntityPda: new PublicKey(0),
       activeplayers: activeplayers,
+      max_players: max_players,
     };
   return {
     playerStatus: playerStatus,
@@ -541,5 +567,6 @@ export const getMyPlayerStatus = async (
     need_to_undelegate: need_to_undelegate,
     newplayerEntityPda: newplayerEntityPda,
     activeplayers: activeplayers,
+    max_players: max_players,
   };
 };
