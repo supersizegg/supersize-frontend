@@ -751,6 +751,22 @@ const Home = ({
   return (
     <div className="main-container">
       <MenuBar />
+
+      <div className="banner">
+        <img
+          src="https://d23exngyjlavgo.cloudfront.net/solana_DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263"
+          alt="BONK Logo"
+          className="banner-logo"
+        />
+        <div className="banner-text">
+          <h1 className="banner-title">BONK Pre‑season is live!</h1>
+          <p className="banner-description">
+            The top 10 players will share a <span className="highlight">150,000,000 BONK</span> prize pool. The
+            leaderboard snapshot will be taken at 00:00 UTC on March 5.
+          </p>
+        </div>
+      </div>
+
       {isBuyInModalOpen && selectedGame && (
         <BuyInModal
           setIsBuyInModalOpen={setIsBuyInModalOpen}
