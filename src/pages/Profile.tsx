@@ -832,9 +832,10 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
         });
       });
       const foodResults = await Promise.all(foodPromises);
+      //console.log("foodResults", foodcomponents, foodResults);
       const incorrectFoodEntities = foodResults
         .filter(({ foodParsedData, expectedX, expectedY, index }) => {
-          if (!foodParsedData) return false;
+          if (!foodParsedData) return true;
           if (foodParsedData.topLeftX !== expectedX || foodParsedData.topLeftY !== expectedY) {
             console.error(
               `Food section ${index} has incorrect top left coordinates: (${foodParsedData.topLeftX}, ${foodParsedData.topLeftY})`
