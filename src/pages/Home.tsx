@@ -774,7 +774,15 @@ const Home = ({
           <h1 className="banner-title">BONK Pre‑season is live!</h1>
           <p className="banner-description">
             The top 10 players will share a <span className="highlight">150,000,000 BONK</span> prize pool. The
-            leaderboard snapshot will be taken at 00:00 UTC on March 5.
+            leaderboard snapshot will be taken at 00:00 UTC on March 5.{" "}
+            <a
+              href="https://x.com/supersizegg/status/1894802350646403538"
+              style={{ textDecoration: "underline", color: "#ffa500" }}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Read more
+            </a>
           </p>
         </div>
       </div>
