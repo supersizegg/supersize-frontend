@@ -764,7 +764,7 @@ const Home = ({
     <div className="main-container">
       <MenuBar />
 
-      <div className="banner">
+      {/* <div className="banner">
         <img
           src="https://d23exngyjlavgo.cloudfront.net/solana_DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263"
           alt="BONK Logo"
@@ -785,7 +785,7 @@ const Home = ({
             </a>
           </p>
         </div>
-      </div>
+      </div> */}
 
       {isBuyInModalOpen && selectedGame && (
         <BuyInModal

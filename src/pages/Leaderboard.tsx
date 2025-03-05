@@ -46,9 +46,29 @@ interface EventOption {
 const BONK_TOKEN = "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263";
 
 const availableEvents: EventOption[] = [
-  { id: "bonk-preseason-2025", name: "BONK Pre‑Season" },
   { id: "all", name: "All Time" },
+  { id: "bonk-preseason-2025", name: "BONK Pre‑Season" },
 ];
+
+const eventRewards: { [key: string]: { rank?: number; minRank?: number; maxRank?: number; reward: string }[] } = {
+  "bonk-preseason-2025": [
+    { rank: 1, reward: "60M Bonk" },
+    { rank: 2, reward: "30M Bonk" },
+    { rank: 3, reward: "20M Bonk" },
+    { rank: 4, reward: "10M Bonk" },
+    { minRank: 5, maxRank: 10, reward: "5M Bonk" },
+  ],
+};
+
+const getRewardForRank = (eventId: string, rank: number) => {
+  const rules = eventRewards[eventId];
+  if (!rules) return "";
+  for (const rule of rules) {
+    if (rule.rank && rule.rank === rank) return rule.reward;
+    if (rule.minRank && rule.maxRank && rank >= rule.minRank && rank <= rule.maxRank) return rule.reward;
+  }
+  return "";
+};
 
 const Leaderboard: React.FC = () => {
   const [season, setSeason] = useState<Season>({
@@ -56,7 +76,7 @@ const Leaderboard: React.FC = () => {
     name: "BONK",
     token: BONK_TOKEN,
   });
-  const [selectedEvent, setSelectedEvent] = useState<string>("bonk-preseason-2025");
+  const [selectedEvent, setSelectedEvent] = useState<string>("all");
 
   const [leaderboardData, setLeaderboardData] = useState<Player[]>([]);
   const [totalRows, setTotalRows] = useState(0);
@@ -227,26 +247,30 @@ const Leaderboard: React.FC = () => {
         )}
 
         <div className="leaderboard-table">
-          <table>
-            <thead>
-              <tr>
-                <th>Rank</th>
-                <th>Player</th>
-                <th className="text-right">Total</th>
-              </tr>
-            </thead>
-          </table>
-
           <div className="table-scroll">
             <table>
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Player</th>
+                  <th className="">Total</th>
+                  {selectedEvent === "bonk-preseason-2025" && <th>Reward</th>}
+                </tr>
+              </thead>
               <tbody>
-                {leaderboardData.map((player, i) => (
-                  <tr key={i} className={player.name === userInfo.address ? "player-row-highlight" : ""}>
-                    <td>{(currentPage - 1) * limit + i + 1}</td>
-                    <td>{player.name}</td>
-                    <td className="text-right">{player.total.toLocaleString()}</td>
-                  </tr>
-                ))}
+                {leaderboardData.map((player, i) => {
+                  const rank = (currentPage - 1) * limit + i + 1;
+                  return (
+                    <tr key={i} className={player.name === userInfo.address ? "player-row-highlight" : ""}>
+                      <td>{rank}</td>
+                      <td>{player.name}</td>
+                      <td className="">{player.total.toLocaleString()}</td>
+                      {selectedEvent === "bonk-preseason-2025" && (
+                        <td className="reward-cell">{getRewardForRank(selectedEvent, rank)}</td>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
