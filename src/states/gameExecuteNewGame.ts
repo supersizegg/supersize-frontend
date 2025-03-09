@@ -32,8 +32,7 @@ import {
 export async function gameExecuteNewGame(
   engine: MagicBlockEngine,
   game_size: number,
-  max_buyin: number,
-  min_buyin: number,
+  buy_in: number,
   game_owner_wallet_string: string,
   game_token_string: string,
   game_name: string,
@@ -51,26 +50,10 @@ export async function gameExecuteNewGame(
   if (max_multiple > 10 || min_multiple > 10) {
     throw new Error("Min-Max buy-in spread too large (max 10x).");
   }*/
-  const spread = max_buyin / min_buyin;
-  let base_buyin;
-
-  if (spread <= 10) {
-    base_buyin = min_buyin;
-  } else {
-    base_buyin = max_buyin / 10;
-  }
-
-  const max_multiple = max_buyin / base_buyin;
-  const min_multiple = base_buyin / min_buyin;
-
-  if (max_multiple > 10 || min_multiple > 10) {
-    throw new Error("Min-Max buy-in spread too large (max 10x).");
-  }
-
   const gameParams = {
-    4000: { maxplayer: 20, foodcomponents: 32, cost: 0.4 },
-    6000: { maxplayer: 45, foodcomponents: 72, cost: 1.0 },
-    8000: { maxplayer: 80, foodcomponents: 128, cost: 1.6 },
+    4000: { maxplayer: 10, foodcomponents: 32, cost: 0.4 },
+    6000: { maxplayer: 20, foodcomponents: 72, cost: 1.0 },
+    8000: { maxplayer: 40, foodcomponents: 128, cost: 1.6 },
   }[game_size];
   if (!gameParams) throw new Error("Invalid game size.");
 
@@ -100,9 +83,7 @@ export async function gameExecuteNewGame(
     anteroomEntityPda: null,
     foodComponentPdas: [],
     gameParams,
-    base_buyin,
-    max_multiple,
-    min_multiple,
+    buy_in,
   };
 
   await stepTransferSOL(context, gameParams.cost, setTransactions, showPrompt);
@@ -116,7 +97,7 @@ export async function gameExecuteNewGame(
   await stepInitPlayerComponents(context, setTransactions, showPrompt);
   await stepInitAnteroomComponent(context, setTransactions, showPrompt);
   await stepSetupVault(context, mint_of_token, gameOwnerWallet, setTransactions, showPrompt);
-  await stepInitializeGame(context, game_name, game_size, setTransactions, showPrompt);
+  await stepInitializeGame(context, game_name, game_size, buy_in, mint_of_token.toString(), decimals, setTransactions, showPrompt);
   await stepInitPlayers(context, setTransactions, showPrompt);
 
   // Compute tokenVault (needed for initializing the anteroom).
@@ -134,9 +115,7 @@ export async function gameExecuteNewGame(
 
   await stepInitAnteroom(
     context,
-    mint_of_token,
     tokenVault,
-    decimals,
     owner_token_account,
     setTransactions,
     showPrompt,
@@ -159,9 +138,7 @@ export async function gameExecuteNewGame(
       size: game_size,
       image: tokenMetadata.image || `${process.env.PUBLIC_URL}/default.png`,
       token: tokenMetadata.name || "TOKEN",
-      base_buyin,
-      min_buyin,
-      max_buyin,
+      buy_in: buy_in,
       endpoint: engine.getEndpointEphemRpc(),
       ping: 1000,
     } as ActiveGame,

@@ -8,7 +8,7 @@ export type Player = {
   "address": "2ewyq31Atu7yLcYMg51CEa22HmcCSJwM4jjHH8kKVAJw",
   "metadata": {
     "name": "player",
-    "version": "0.1.10",
+    "version": "0.2.0",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -49,7 +49,7 @@ export type Player = {
           "writable": true
         },
         {
-          "name": "delegateAccountSeeds",
+          "name": "delegationMetadata",
           "writable": true
         },
         {
@@ -61,12 +61,14 @@ export type Player = {
       ],
       "args": [
         {
-          "name": "validUntil",
-          "type": "i64"
-        },
-        {
           "name": "commitFrequencyMs",
           "type": "u32"
+        },
+        {
+          "name": "validator",
+          "type": {
+            "option": "pubkey"
+          }
         }
       ]
     },
@@ -291,8 +293,8 @@ export type Player = {
             }
           },
           {
-            "name": "buyIn",
-            "type": "f64"
+            "name": "status",
+            "type": "string"
           },
           {
             "name": "payoutTokenAccount",
@@ -302,15 +304,7 @@ export type Player = {
           },
           {
             "name": "currentGameWalletBalance",
-            "type": "f64"
-          },
-          {
-            "name": "tax",
-            "type": "f64"
-          },
-          {
-            "name": "joinTime",
-            "type": "i64"
+            "type": "u64"
           },
           {
             "name": "x",
@@ -334,15 +328,27 @@ export type Player = {
           },
           {
             "name": "score",
-            "type": "f64"
+            "type": "u64"
           },
           {
             "name": "mass",
             "type": "u64"
           },
           {
+            "name": "foodEaten",
+            "type": "u64"
+          },
+          {
+            "name": "playersEaten",
+            "type": "u16"
+          },
+          {
             "name": "speed",
             "type": "f32"
+          },
+          {
+            "name": "joinTime",
+            "type": "i64"
           },
           {
             "name": "scheduledRemovalTime",

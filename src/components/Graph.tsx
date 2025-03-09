@@ -16,30 +16,28 @@ const Graph: React.FC<GraphProps> = ({ maxPlayers, foodInWallet, setCurrentFoodT
   const calculateK = (z: number, epsilon: number): number => {
     const numerator = epsilon / (100.0 - 0.6);
     const logValue = Math.log(numerator);
-    const k = -logValue / (z * 1000.0);
-    return k;
+    return -logValue / (z * 1000.0);
   };
 
   const calculateY = (x: number, k: number): number => {
-    const exponent = -(k / 4.0) * x;
+    const exponent = -(k / 25.0) * x; 
     const y = 100.0 - (100.0 - 0.6) * Math.exp(exponent);
-    return y;
+    return y * (1.0 / 1000.0);
   };
 
   const k = calculateK(maxPlayers, epsilon);
 
-  const foodInWalletValues = Array.from({ length: 30000 }, (_, i) => i);
-  const foodToAddValues = foodInWalletValues.map((x) => calculateY(x, k) * 10);
+  const foodInWalletValues = Array.from({ length: 100000 }, (_, i) => i);
+  const foodToAddValues = foodInWalletValues.map((x) => calculateY(x, k) * 100);
 
-  const currentFoodToAdd = Math.floor(calculateY(foodInWallet, k)) * 10;
+  const currentFoodToAdd = Math.floor(calculateY(foodInWallet, k) * 100);
   setCurrentFoodToAdd(currentFoodToAdd);
   const roundedFoodInWallet = Math.round(foodInWallet);
-
   const data = {
     labels: foodInWalletValues,
     datasets: [
       {
-        label: "Food to Add",
+        label: "Gold food spawn chance",
         data: foodToAddValues,
         borderColor: "rgba(75,192,192,1)",
         borderWidth: 2,
@@ -74,16 +72,16 @@ const Graph: React.FC<GraphProps> = ({ maxPlayers, foodInWallet, setCurrentFoodT
       x: {
         title: {
           display: true,
-          text: "Food in Wallet",
+          text: "food in wallet",
         },
       },
       y: {
         title: {
           display: true,
-          text: "Food to Add",
+          text: "spawn chance (%)",
         },
         min: 0,
-        max: Math.max(...foodToAddValues) + 10,
+        max: Math.max(...foodToAddValues),
       },
     },
   };

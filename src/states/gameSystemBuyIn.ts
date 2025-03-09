@@ -6,7 +6,6 @@ import { COMPONENT_PLAYER_ID, SYSTEM_BUY_IN_ID, COMPONENT_ANTEROOM_ID } from "./
 
 import { ActiveGame } from "@utils/types";
 import { getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { getMemberPDA } from "buddy.link";
 import { anteroomFetchOnChain } from "./gameFetch";
 
 type GameExecuteBuyInResult = {
@@ -22,6 +21,7 @@ export async function gameSystemBuyIn(
   newplayerEntityPda: PublicKey,
   anteEntityPda: PublicKey,
   buyIn: number,
+  playerName: string,
 ): Promise<GameExecuteBuyInResult> {
   const playerComponentPda = FindComponentPda({
     componentId: COMPONENT_PLAYER_ID,
@@ -38,7 +38,6 @@ export async function gameSystemBuyIn(
   let vault_token_account = new PublicKey(0);
   let mint_of_token_being_sent = new PublicKey(0);
   let payout_token_account = new PublicKey(0);
-  const referral_vault_program_id = new PublicKey("CLC46PuyXnSuZGmUrqkFbAh7WwzQm8aBPjSQ3HMP56kp");
   const combinedTx = new Transaction();
   console.log("anteParsedData", anteParsedData);
   if (anteParsedData && anteParsedData.vaultTokenAccount && anteParsedData.token) {
@@ -47,27 +46,6 @@ export async function gameSystemBuyIn(
     const usertokenAccountInfo = await getAssociatedTokenAddress(mint_of_token_being_sent, engine.getWalletPayer());
     payout_token_account = usertokenAccountInfo;
   }
-
-  const [referralTokenAccountOwnerPda] = PublicKey.findProgramAddressSync(
-    [Buffer.from("token_account_owner_pda"), mint_of_token_being_sent.toBuffer()],
-    referral_vault_program_id,
-  );
-  const referraltokenVault = await getAssociatedTokenAddress(
-    mint_of_token_being_sent,
-    referralTokenAccountOwnerPda,
-    true,
-  );
-
-  const BUDDY_LINK_PROGRAM_ID = new PublicKey("BUDDYtQp7Di1xfojiCSVDksiYLQx511DPdj2nbtG9Yu5");
-
-  const memberName = "notmembersalt";
-  const buddyMemberPdaAccount = getMemberPDA(BUDDY_LINK_PROGRAM_ID, "supersize", memberName);
-
-  const [refferalPdaAccount] = PublicKey.findProgramAddressSync(
-    [Buffer.from("subsidize"), buddyMemberPdaAccount.toBuffer(), mint_of_token_being_sent.toBuffer()],
-    referral_vault_program_id,
-  );
-  console.log("vault_token_account", vault_token_account.toString());
   const extraAccounts = [
     {
       pubkey: vault_token_account,
@@ -84,26 +62,7 @@ export async function gameSystemBuyIn(
       isWritable: true,
       isSigner: false,
     },
-    {
-      pubkey: referraltokenVault,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: referralTokenAccountOwnerPda,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: refferalPdaAccount,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: buddyMemberPdaAccount,
-      isWritable: true,
-      isSigner: false,
-    },
+
     {
       pubkey: engine.getWalletPayer(),
       isWritable: true,
@@ -140,11 +99,10 @@ export async function gameSystemBuyIn(
       },
     ],
     systemId: SYSTEM_BUY_IN_ID,
-    args: {
-      buyin: buyIn,
-      member_name: memberName,
-    },
     extraAccounts: extraAccounts,
+    args: {
+      name: playerName,
+    },
   });
   combinedTx.add(applyBuyInSystem.transaction);
 

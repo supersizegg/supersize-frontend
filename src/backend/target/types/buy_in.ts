@@ -8,7 +8,7 @@ export type BuyIn = {
   "address": "CLC46PuyXnSuZGmUrqkFbAh7WwzQm8aBPjSQ3HMP56kp",
   "metadata": {
     "name": "buyIn",
-    "version": "0.1.10",
+    "version": "0.2.0",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -70,22 +70,6 @@ export type BuyIn = {
           "writable": true
         },
         {
-          "name": "referralVaultTokenAccount",
-          "writable": true
-        },
-        {
-          "name": "referralTokenAccountOwnerPda",
-          "writable": true
-        },
-        {
-          "name": "refferalPdaAccount",
-          "writable": true
-        },
-        {
-          "name": "buddyMemberPdaAccount",
-          "writable": true
-        },
-        {
           "name": "signer",
           "writable": true
         },
@@ -138,48 +122,23 @@ export type BuyIn = {
     },
     {
       "code": 6001,
-      "name": "invalidBuyIn",
-      "msg": "Invalid buy in."
-    },
-    {
-      "code": 6002,
       "name": "invalidGameVault",
       "msg": "Invalid game vault."
     },
     {
-      "code": 6003,
+      "code": 6002,
       "name": "invalidGameVaultOwner",
       "msg": "Invalid game vault owner."
     },
     {
-      "code": 6004,
+      "code": 6003,
       "name": "invalidMint",
       "msg": "Token mint mismatch."
     },
     {
-      "code": 6005,
-      "name": "missingTokenDecimals",
-      "msg": "Token decimals not set."
-    },
-    {
-      "code": 6006,
+      "code": 6004,
       "name": "mapKeyMismatch",
       "msg": "Player component doesn't belong to map."
-    },
-    {
-      "code": 6007,
-      "name": "invalidMember",
-      "msg": "Given buddy link member account not valid."
-    },
-    {
-      "code": 6008,
-      "name": "invalidReferrer",
-      "msg": "Given referrer-subsidize account not valid."
-    },
-    {
-      "code": 6009,
-      "name": "invalidReferralVaultOwner",
-      "msg": "Invalid referral vault owner."
     }
   ],
   "types": [
@@ -195,16 +154,16 @@ export type BuyIn = {
             }
           },
           {
-            "name": "baseBuyin",
-            "type": "f64"
+            "name": "width",
+            "type": "u16"
           },
           {
-            "name": "maxBuyin",
-            "type": "f64"
+            "name": "height",
+            "type": "u16"
           },
           {
-            "name": "minBuyin",
-            "type": "f64"
+            "name": "buyIn",
+            "type": "u64"
           },
           {
             "name": "token",
@@ -214,9 +173,7 @@ export type BuyIn = {
           },
           {
             "name": "tokenDecimals",
-            "type": {
-              "option": "u32"
-            }
+            "type": "u32"
           },
           {
             "name": "vaultTokenAccount",
@@ -229,6 +186,10 @@ export type BuyIn = {
             "type": {
               "option": "pubkey"
             }
+          },
+          {
+            "name": "totalActiveBuyins",
+            "type": "u64"
           },
           {
             "name": "boltMetadata",
@@ -278,8 +239,8 @@ export type BuyIn = {
             }
           },
           {
-            "name": "buyIn",
-            "type": "f64"
+            "name": "status",
+            "type": "string"
           },
           {
             "name": "payoutTokenAccount",
@@ -289,15 +250,7 @@ export type BuyIn = {
           },
           {
             "name": "currentGameWalletBalance",
-            "type": "f64"
-          },
-          {
-            "name": "tax",
-            "type": "f64"
-          },
-          {
-            "name": "joinTime",
-            "type": "i64"
+            "type": "u64"
           },
           {
             "name": "x",
@@ -321,15 +274,27 @@ export type BuyIn = {
           },
           {
             "name": "score",
-            "type": "f64"
+            "type": "u64"
           },
           {
             "name": "mass",
             "type": "u64"
           },
           {
+            "name": "foodEaten",
+            "type": "u64"
+          },
+          {
+            "name": "playersEaten",
+            "type": "u16"
+          },
+          {
             "name": "speed",
             "type": "f32"
+          },
+          {
+            "name": "joinTime",
+            "type": "i64"
           },
           {
             "name": "scheduledRemovalTime",

@@ -8,7 +8,7 @@ export type InitMap = {
   "address": "NrQkd31YsAWX6qyuLgktt4VPG4Q2DY94rBq7fWdRgo7",
   "metadata": {
     "name": "initMap",
-    "version": "0.1.10",
+    "version": "0.2.0",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -77,6 +77,11 @@ export type InitMap = {
       "code": 6003,
       "name": "badMapSize",
       "msg": "Map size not supported."
+    },
+    {
+      "code": 6004,
+      "name": "accountNotFound",
+      "msg": "Account not found."
     }
   ],
   "types": [
@@ -136,31 +141,25 @@ export type InitMap = {
             "type": "u16"
           },
           {
-            "name": "baseBuyin",
-            "type": "f64"
+            "name": "buyIn",
+            "type": "u64"
           },
           {
-            "name": "maxBuyin",
-            "type": "f64"
+            "name": "token",
+            "type": {
+              "option": "pubkey"
+            }
           },
           {
-            "name": "minBuyin",
-            "type": "f64"
+            "name": "tokenDecimals",
+            "type": "u32"
           },
           {
             "name": "maxPlayers",
             "type": "u8"
           },
           {
-            "name": "totalActiveBuyins",
-            "type": "f64"
-          },
-          {
-            "name": "totalFoodOnMap",
-            "type": "u64"
-          },
-          {
-            "name": "foodQueue",
+            "name": "walletBalance",
             "type": "u64"
           },
           {
@@ -172,10 +171,6 @@ export type InitMap = {
                 }
               }
             }
-          },
-          {
-            "name": "frozen",
-            "type": "bool"
           },
           {
             "name": "boltMetadata",

@@ -2,7 +2,7 @@
   "address": "2ewyq31Atu7yLcYMg51CEa22HmcCSJwM4jjHH8kKVAJw",
   "metadata": {
     "name": "player",
-    "version": "0.1.10",
+    "version": "0.2.0",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -43,7 +43,7 @@
           "writable": true
         },
         {
-          "name": "delegate_account_seeds",
+          "name": "delegation_metadata",
           "writable": true
         },
         {
@@ -55,12 +55,14 @@
       ],
       "args": [
         {
-          "name": "valid_until",
-          "type": "i64"
-        },
-        {
           "name": "commit_frequency_ms",
           "type": "u32"
+        },
+        {
+          "name": "validator",
+          "type": {
+            "option": "pubkey"
+          }
         }
       ]
     },
@@ -285,8 +287,8 @@
             }
           },
           {
-            "name": "buy_in",
-            "type": "f64"
+            "name": "status",
+            "type": "string"
           },
           {
             "name": "payout_token_account",
@@ -296,15 +298,7 @@
           },
           {
             "name": "current_game_wallet_balance",
-            "type": "f64"
-          },
-          {
-            "name": "tax",
-            "type": "f64"
-          },
-          {
-            "name": "join_time",
-            "type": "i64"
+            "type": "u64"
           },
           {
             "name": "x",
@@ -328,15 +322,27 @@
           },
           {
             "name": "score",
-            "type": "f64"
+            "type": "u64"
           },
           {
             "name": "mass",
             "type": "u64"
           },
           {
+            "name": "food_eaten",
+            "type": "u64"
+          },
+          {
+            "name": "players_eaten",
+            "type": "u16"
+          },
+          {
             "name": "speed",
             "type": "f32"
+          },
+          {
+            "name": "join_time",
+            "type": "i64"
           },
           {
             "name": "scheduled_removal_time",

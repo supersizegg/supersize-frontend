@@ -12,9 +12,9 @@ type launchProps = {
 
 const LanchGame: React.FC<launchProps> = ({ activeGamesLoaded, setActiveGamesLoaded }) => {
   const options = [
-    { id: 0, size: 4000, players: 20, cost: "0.4 SOL" },
-    { id: 1, size: 6000, players: 45, cost: "1.0 SOL" },
-    { id: 2, size: 8000, players: 80, cost: "1.6 SOL" },
+    { id: 0, size: 4000, players: 10, cost: "0.4 SOL" },
+    { id: 1, size: 6000, players: 20, cost: "1.0 SOL" },
+    { id: 2, size: 8000, players: 40, cost: "1.6 SOL" },
   ];
 
   const [selectedOption, setSelectedOption] = useState(0);

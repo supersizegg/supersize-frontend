@@ -2,7 +2,7 @@
   "address": "BEox2GnPkZ1upBAdUi7FVqTstjsC4tDjsbTpTiE17bah",
   "metadata": {
     "name": "section",
-    "version": "0.1.10",
+    "version": "0.2.0",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -43,7 +43,7 @@
           "writable": true
         },
         {
-          "name": "delegate_account_seeds",
+          "name": "delegation_metadata",
           "writable": true
         },
         {
@@ -55,12 +55,14 @@
       ],
       "args": [
         {
-          "name": "valid_until",
-          "type": "i64"
-        },
-        {
           "name": "commit_frequency_ms",
           "type": "u32"
+        },
+        {
+          "name": "validator",
+          "type": {
+            "option": "pubkey"
+          }
         }
       ]
     },

@@ -2,7 +2,7 @@
   "address": "AxmRc9buNLgWVMinrH2WunSxKmdsBXVCghhYZgh2hJT6",
   "metadata": {
     "name": "init_anteroom",
-    "version": "0.1.10",
+    "version": "0.2.0",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -97,16 +97,16 @@
             }
           },
           {
-            "name": "base_buyin",
-            "type": "f64"
+            "name": "width",
+            "type": "u16"
           },
           {
-            "name": "max_buyin",
-            "type": "f64"
+            "name": "height",
+            "type": "u16"
           },
           {
-            "name": "min_buyin",
-            "type": "f64"
+            "name": "buy_in",
+            "type": "u64"
           },
           {
             "name": "token",
@@ -116,9 +116,7 @@
           },
           {
             "name": "token_decimals",
-            "type": {
-              "option": "u32"
-            }
+            "type": "u32"
           },
           {
             "name": "vault_token_account",
@@ -131,6 +129,10 @@
             "type": {
               "option": "pubkey"
             }
+          },
+          {
+            "name": "total_active_buyins",
+            "type": "u64"
           },
           {
             "name": "bolt_metadata",
@@ -199,31 +201,25 @@
             "type": "u16"
           },
           {
-            "name": "base_buyin",
-            "type": "f64"
+            "name": "buy_in",
+            "type": "u64"
           },
           {
-            "name": "max_buyin",
-            "type": "f64"
+            "name": "token",
+            "type": {
+              "option": "pubkey"
+            }
           },
           {
-            "name": "min_buyin",
-            "type": "f64"
+            "name": "token_decimals",
+            "type": "u32"
           },
           {
             "name": "max_players",
             "type": "u8"
           },
           {
-            "name": "total_active_buyins",
-            "type": "f64"
-          },
-          {
-            "name": "total_food_on_map",
-            "type": "u64"
-          },
-          {
-            "name": "food_queue",
+            "name": "wallet_balance",
             "type": "u64"
           },
           {
@@ -235,10 +231,6 @@
                 }
               }
             }
-          },
-          {
-            "name": "frozen",
-            "type": "bool"
           },
           {
             "name": "bolt_metadata",

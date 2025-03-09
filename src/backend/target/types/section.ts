@@ -8,7 +8,7 @@ export type Section = {
   "address": "BEox2GnPkZ1upBAdUi7FVqTstjsC4tDjsbTpTiE17bah",
   "metadata": {
     "name": "section",
-    "version": "0.1.10",
+    "version": "0.2.0",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -49,7 +49,7 @@ export type Section = {
           "writable": true
         },
         {
-          "name": "delegateAccountSeeds",
+          "name": "delegationMetadata",
           "writable": true
         },
         {
@@ -61,12 +61,14 @@ export type Section = {
       ],
       "args": [
         {
-          "name": "validUntil",
-          "type": "i64"
-        },
-        {
           "name": "commitFrequencyMs",
           "type": "u32"
+        },
+        {
+          "name": "validator",
+          "type": {
+            "option": "pubkey"
+          }
         }
       ]
     },

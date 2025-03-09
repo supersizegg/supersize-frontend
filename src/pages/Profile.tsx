@@ -330,6 +330,7 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
           delegated = true;
         } 
         const playersParsedDataEphem = await playerFetchOnEphem(engine, playersComponentPda);
+        console.log("playersParsedDataEphem", playersParsedDataEphem);
         const parsedData = await playerFetchOnChain(engine, playersComponentPda);
         let playerWallet = "";
         if(parsedData && parsedData.payoutTokenAccount) {
@@ -361,16 +362,15 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
     setPlayers(playersArr);
   };
 
-  const handleUnclogPlayer = async (playerData: {
+  const handleCashout = async (playerData: {
     seed: string;
     playersComponentPda: PublicKey;
     parsedData: any;
     playersParsedDataEphem: any;
-  }, selectGameId: ActiveGame) => {
+  }, selectGameId: ActiveGame, withdraw: number = -1) => {
     try {
       const gameInfo = selectGameId;
-      let maxplayer = 20;
-  
+      console.log("gameInfo", playerData, selectGameId);
       const mapEntityPda = FindEntityPda({
         worldId: gameInfo.worldId,
         entityId: new anchor.BN(0),
@@ -387,38 +387,26 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
         componentId: COMPONENT_MAP_ID,
         entity: mapEntityPda,
       });
-      let map_size = 4000;
-      const mapParsedData = await mapFetchOnEphem(engine, mapComponentPda);
-      if (mapParsedData) {
-        console.log("map size", mapParsedData.width);
-        map_size = mapParsedData.width;
-      }
-  
-      if (map_size == 4000) {
-        maxplayer = 20;
-      } else if (map_size == 6000) {
-        maxplayer = 40;
-      } else if (map_size == 10000) {
-        maxplayer = 100;
-      }
 
       console.log("cashout player");
-      const undelegateIx = createUndelegateInstruction({
-        payer: engine.getSessionPayer(),
-        delegatedAccount: playerData.playersComponentPda,
-        componentPda: COMPONENT_PLAYER_ID,
-      });
-      const tx = new anchor.web3.Transaction().add(undelegateIx);
-      tx.recentBlockhash = (await engine.getConnectionEphem().getLatestBlockhash()).blockhash;
-      tx.feePayer = engine.getSessionPayer();
-      try {
-        const playerundelsignature = await engine.processSessionEphemTransaction(
-          "undelPlayer:" + playerData.playersComponentPda.toString(),
-          tx,
-        );
-        console.log("undelegate", playerundelsignature);
-      } catch (error) {
-        console.log("Error undelegating:", error);
+      if(withdraw == -1) {
+        const undelegateIx = createUndelegateInstruction({
+          payer: engine.getSessionPayer(),
+          delegatedAccount: playerData.playersComponentPda,
+          componentPda: COMPONENT_PLAYER_ID,
+        });
+        const tx = new anchor.web3.Transaction().add(undelegateIx);
+        tx.recentBlockhash = (await engine.getConnectionEphem().getLatestBlockhash()).blockhash;
+        tx.feePayer = engine.getSessionPayer();
+        try {
+          const playerundelsignature = await engine.processSessionEphemTransaction(
+            "undelPlayer:" + playerData.playersComponentPda.toString(),
+            tx,
+          );
+          console.log("undelegate", playerundelsignature);
+        } catch (error) {
+            console.log("Error undelegating:", error);
+        }
       }
 
       const anteseed = "ante";
@@ -454,7 +442,7 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
           vault_program_id,
         );
 
-        const extraAccounts = [
+        let extraAccounts = [
           {
             pubkey: vault_token_account,
             isWritable: true,
@@ -502,27 +490,60 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
           },
         ];
 
-        const applyCashOutSystem = await ApplySystem({
-          authority: engine.getWalletPayer(),
-          world: gameInfo.worldPda,
-          entities: [
-            {
-              entity: playerEntityPda,
-              components: [{ componentId: COMPONENT_PLAYER_ID }],
+        const cashouttx = new anchor.web3.Transaction()
+        if(withdraw == -1) {
+          const applyCashOutSystem = await ApplySystem({
+              authority: engine.getWalletPayer(),
+              world: gameInfo.worldPda,
+              entities: [
+              {
+                entity: playerEntityPda,
+                components: [{ componentId: COMPONENT_PLAYER_ID }],
+              },
+              {
+                entity: anteEntityPda,
+                components: [{ componentId: COMPONENT_ANTEROOM_ID }],
+              },
+            ],
+            systemId: SYSTEM_CASH_OUT_ID,
+            args: {
+              referred: false,
             },
-            {
-              entity: anteEntityPda,
-              components: [{ componentId: COMPONENT_ANTEROOM_ID }],
+            extraAccounts: extraAccounts as AccountMeta[],
+          });
+          cashouttx.add(applyCashOutSystem.transaction);
+        }else{
+            extraAccounts[1] = {
+              pubkey: supersize_token_account,
+              isWritable: true,
+              isSigner: false,
+            }
+            
+            const applyCashOutSystem = await ApplySystem({
+              authority: engine.getWalletPayer(),
+              world: gameInfo.worldPda,
+              entities: [
+              {
+                entity: playerEntityPda,
+                components: [{ componentId: COMPONENT_PLAYER_ID }],
+              },
+              {
+                entity: anteEntityPda,
+                components: [{ componentId: COMPONENT_ANTEROOM_ID }],
+              },
+            ],
+            systemId: SYSTEM_CASH_OUT_ID,
+            args: {
+              referred: false,
+              widthdrawl_amount: withdraw,
             },
-          ],
-          systemId: SYSTEM_CASH_OUT_ID,
-          args: {
-            referred: false,
-          },
-          extraAccounts: extraAccounts as AccountMeta[],
-        });
-        const cashouttx = new anchor.web3.Transaction().add(applyCashOutSystem.transaction);
-        await engine.processWalletTransaction("playercashout", cashouttx);
+            extraAccounts: extraAccounts as AccountMeta[],
+          });
+          cashouttx.add(applyCashOutSystem.transaction);
+        }
+        
+        const cashoutsignature = await engine.processWalletTransaction("playercashout", cashouttx);
+        console.log("cashoutsignature", cashoutsignature);
     } 
     }catch (error) {
       console.error(`Error unclogging player ${playerData.seed}:`, error);
@@ -535,7 +556,7 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
       isLoading.current = true;
       console.log("fetching games");
   
-      const startIndices = { devnet: 1800, mainnet: 0 };
+      const startIndices = { devnet: 1970, mainnet: 0 };
       const startIndex = startIndices[NETWORK];
   
       // Create an array of promises for fetching each game
@@ -570,9 +591,8 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                 size: mapParsedData.width,
                 image: "",
                 token: "",
-                base_buyin: mapParsedData.baseBuyin,
-                min_buyin: mapParsedData.minBuyin,
-                max_buyin: mapParsedData.maxBuyin,
+                buy_in: mapParsedData.buyIn.toNumber(),
+                decimals: 0,
                 endpoint: "",
                 ping: 0,
                 isLoaded: true,
@@ -674,11 +694,16 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
           componentId: COMPONENT_MAP_ID,
           entity: mapEntityPda,
         });
-        const mapParsedData = await mapFetchOnSpecificEphem(engine, mapComponentPda, endpoint);
-        return { endpoint, mapParsedData, mapComponentPda };
+        try {
+          const mapParsedData = await mapFetchOnSpecificEphem(engine, mapComponentPda, endpoint);
+          return { endpoint, mapParsedData, mapComponentPda };
+        } catch (error) {
+          console.log("error", error);
+          return null;
+        }
       });
       const endpointResults = await Promise.all(endpointPromises);
-      const validEndpointResult = endpointResults.find((res) => res.mapParsedData);
+      const validEndpointResult = endpointResults.find((res) => res?.mapParsedData);
       if (!validEndpointResult) {
         console.error("No valid endpoint found");
         return;
@@ -703,13 +728,9 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
         Authority: ${mapParsedData?.authority?.toString()} |
         Width: ${mapParsedData?.width} |
         Height: ${mapParsedData?.height} |
-        Base Buyin: ${mapParsedData?.baseBuyin} |
-        Min Buyin: ${mapParsedData?.minBuyin} |
-        Max Buyin: ${mapParsedData?.maxBuyin} |
+        Buy in: ${mapParsedData?.buyIn} |
         Max Players: ${mapParsedData?.maxPlayers} |
-        Total Active Buyins: ${mapParsedData?.totalActiveBuyins} |
-        Total Food on Map: ${mapParsedData?.totalFoodOnMap} |
-        Food Queue: ${mapParsedData?.foodQueue} 
+        Wallet Balance: ${mapParsedData?.walletBalance.toNumber()} |
       `;
       console.log("readableMapParsedData", readableMapParsedData);
       setMapParsedData(readableMapParsedData);
@@ -730,13 +751,12 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
   
       const readableAnteParsedData = `
         Map: ${anteParsedData?.map?.toString()} |
-        Base Buyin: ${anteParsedData?.baseBuyin} |
-        Min Buyin: ${anteParsedData?.minBuyin} |
-        Max Buyin: ${anteParsedData?.maxBuyin} |
+        Buy in: ${anteParsedData?.buyIn} |
         Token: ${anteParsedData?.token?.toString()} |
         Token Decimals: ${anteParsedData?.tokenDecimals} |
         Vault Token Account: ${anteParsedData?.vaultTokenAccount?.toString()} |
-        Gamemaster Token Account: ${anteParsedData?.gamemasterTokenAccount?.toString()}
+        Gamemaster Token Account: ${anteParsedData?.gamemasterTokenAccount?.toString()} |
+        Total Active Buyins: ${anteParsedData?.totalActiveBuyins.toNumber()}
       `;
       console.log("readableAnteParsedData", readableAnteParsedData);
       setAnteParsedData(readableAnteParsedData);
@@ -765,7 +785,7 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
         try {
           const tokenAccount = await getAccount(engine.getConnectionChain(), new PublicKey(tokenVault.toString()));
           console.log("Balance:", tokenAccount.amount.toString());
-          const readableBalance = Number(tokenAccount.amount) / 10 ** anteParsedData.tokenDecimals;
+          const readableBalance = Number(tokenAccount.amount) - anteParsedData.totalActiveBuyins.toNumber() * anteParsedData.buyIn.toNumber(); // / 10 ** anteParsedData.tokenDecimals;
           setTokenBalance(readableBalance);
         } catch (error) {
           console.error("Error fetching token account balance:", error);
@@ -1024,22 +1044,23 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
               <p style={{ flex: "1 1 30%" }}>Server: {getRegion(gameEndpoint)}</p>
               <p style={{ flex: "1 1 30%" }}>Max Players: {row.max_players}</p>
               <p style={{ flex: "1 1 30%" }}>Size: {row.size}</p>
-              <p style={{ flex: "1 1 60%" }}>Token: {row.token.slice(0, 11)}</p>
-              <p style={{ flex: "1 1 20%" }}>Base Buyin: {row.base_buyin}</p>
-              <p style={{ flex: "1 1 20%" }}>Min Buyin: {row.min_buyin}</p>
-              <p style={{ flex: "1 1 20%" }}>Max Buyin: {row.max_buyin}</p>
-              <p style={{ flex: "1 1 50%", marginTop: "10px" }}>
+              <p style={{ flex: "1 1 30%" }}>Token: {row.token.slice(0, 11)}</p>
+              <p style={{ flex: "1 1 30%" }}>Buy in: {row.buy_in / 10 ** decimals}</p>
+              <p style={{ flex: "1 1 100%", marginTop: "10px" }}>
                 Game Owner: {" "} 
                 <a href={`https://solscan.io/account/${gameOwner}`} target="_blank" rel="noopener noreferrer">
                   {gameOwner.slice(0, 3)}...{gameOwner.slice(-3)}
                 </a>
               </p>
-              <p style={{ flex: "1 1 50%", marginTop: "10px"  }}>
+              <p style={{ flex: "1 1 30%" }}>
                 Game Vault: {" "} 
                 <a href={`https://solscan.io/account/${gameWallet}`} target="_blank" rel="noopener noreferrer">
                   {gameWallet.slice(0, 3)}...{gameWallet.slice(-3)}
                 </a>
               </p>
+              <p style={{ flex: "1 1 30%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  Token Balance: {getRoundedAmount(tokenBalance / 10 ** decimals, row.buy_in / (1000 * 10 ** decimals) )}<br />
+                </p>
               <div
                 style={{
                   display: "flex",
@@ -1049,12 +1070,9 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                   justifyContent: "center",
                 }}
               >
-                <p style={{ flex: "1 1 10%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  Token Balance: {getRoundedAmount(tokenBalance, row.base_buyin / 1000) }<br />
-                </p>
                 <input
                   type="text"
-                  placeholder="deposit value"
+                  placeholder="# of tokens"
                   value={depositValue}
                   onChange={(e) => setDepositValue(e.target.value)}
                   style={{ color: "black", marginLeft: "10px" }}
@@ -1068,6 +1086,15 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                 >
                   Deposit{" "}
                 </button>
+                <button
+                  className="btn-copy"
+                  style={{ flex: "1 1 10%", margin: "10px" }}
+                  onClick={() =>
+                    handleCashout(players[players.length - 1], row, parseFloat(depositValue) * 10 ** decimals)
+                  }
+                >
+                  Withdraw{" "}
+                </button>
               </div>
               <div
                 style={{
@@ -1078,8 +1105,8 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                   justifyContent: "center",
                 }}
               >
-                <p style={{ margin: "10px" }}>Fees Earned: {cashoutStats.cashOutSum ? getRoundedAmount(cashoutStats.cashOutSum, row.base_buyin / 1000) : "Loading"}</p>
-                <p style={{ margin: "10px" }}>Total Wagered: {cashoutStats.buyInSum ? getRoundedAmount(cashoutStats.buyInSum, row.base_buyin / 1000) : "Loading"}</p>
+                <p style={{ margin: "10px" }}>Fees Earned: {cashoutStats.cashOutSum ? getRoundedAmount(cashoutStats.cashOutSum, row.buy_in / 1000) : "Loading"}</p>
+                <p style={{ margin: "10px" }}>Total Wagered: {cashoutStats.buyInSum ? getRoundedAmount(cashoutStats.buyInSum, row.buy_in / 1000) : "Loading"}</p>
                 <p style={{ margin: "10px" }}>Total Plays: {cashoutStats.buyInCount ? cashoutStats.buyInCount : "Loading"}</p>
               </div>
               {/*
@@ -1094,21 +1121,22 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                 </a>
               </p>
               */}
-              <p style={{ margin: "10px" }}>
-                Food unit value: {row.base_buyin / 1000} {row.token}
+              <p style={{ margin: "10px"}}>
+                Gold food value: {row.buy_in / (1000 * 10 ** decimals)}
               </p>
-              <p style={{ margin: "10px" }}>Current food in wallet: {getRoundedAmount(tokenBalance / (row.base_buyin / 1000), row.base_buyin / 1000)}</p>
-              <p style={{ margin: "10px" }}>Current tax (max 10%): {Math.max(0, (100 - currentFoodToAdd) / 10)}% </p>
-              <p style={{ margin: "10px" }}>Current food to add: {currentFoodToAdd}</p>
+              <p style={{ margin: "10px"}}>
+                Green - Purple food value: {row.buy_in / (200000 * 10 ** decimals)} - {(row.buy_in * 7) / (200000 * 10 ** decimals)}
+              </p>              
+              <p style={{ margin: "10px"}}>
+                Gold food spawn chance: {currentFoodToAdd}%
+              </p>
               <Graph
                 maxPlayers={row.max_players}
-                foodInWallet={(tokenBalance * 1000) / row.base_buyin}
+                foodInWallet={Math.floor(tokenBalance / row.buy_in) * 1000}
                 setCurrentFoodToAdd={setCurrentFoodToAdd}
               />
               <p style={{ margin: "10px" }}>
-                *For base buy in or greater, if less than 100 food is available to add, 100 food is still added and the
-                player is taxed the remainder. For less than base buy in, the amount of food added is proportional to
-                the buy in.*
+                *Green and purple food are fully accounted for by 5% exit tax, 3% goes to the game treasury
               </p>
               <div
                 style={{
@@ -1215,6 +1243,7 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                   }}
                 >
                   <CollapsiblePanel title="Players" defaultOpen={true}>
+                  <p style={{ margin: "5px" }}>* if someone is playing, the player should be delegated</p>
                   <div style={{ overflowY: "scroll", maxHeight: "200px" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <tbody>
@@ -1249,13 +1278,14 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                                   {player.delegated ? "Delegated" : "Undelegated"}
                                 </div>
                                 <div>
-                                  {player.parsedData?.mass?.toNumber() === 0 && (
+                                  {((!player.delegated && player.parsedData?.status === "exited") || (player.delegated && player.playersParsedDataEphem?.status === "exited")) 
+                                  && (
                                     <button
                                       className="btn-copy"
                                       style={{ maxHeight: "40px" }}
-                                      onClick={() => handleUnclogPlayer(player, row)}
+                                      onClick={() => handleCashout(player, row)}
                                     >
-                                      Force Exit
+                                      Cash Out
                                     </button>
                                   )}
                                 </div>
@@ -1288,28 +1318,30 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                             }}
                           >
                             <th style={{ padding: "5px", borderBottom: "1px solid #ccc" }}>Network</th>
+                            <th style={{ padding: "5px", borderBottom: "1px solid #ccc" }}>Status</th>
                             <th style={{ padding: "5px", borderBottom: "1px solid #ccc" }}>Mass</th>
                             <th style={{ padding: "5px", borderBottom: "1px solid #ccc" }}>Score</th>
-                            <th style={{ padding: "5px", borderBottom: "1px solid #ccc" }}>Buy in</th>
                             <th style={{ padding: "5px", borderBottom: "1px solid #ccc" }}>Authority</th>
                             <th style={{ padding: "5px", borderBottom: "1px solid #ccc" }}>Payout</th>
                           </tr>
                           <tr
                             style={{
                               borderBottom: "1px solid #ccc",
-                              backgroundColor: (index + 1) % 2 === 0 ? "#C0C0C0" : "#A4A4A4",
+                              backgroundColor: !player.delegated ? ((index + 1) % 2 === 0 ? "#CAD6CD" : "#BCC8BF") : (index + 1) % 2 === 0 ? "#C0C0C0" : "#A4A4A4",
                               textAlign: "center",
                             }}
                           >
                             <td style={{ padding: "5px", fontWeight: "bold" }}>mainnet</td>
                             <td style={{ padding: "5px" }}>
+                              {player.parsedData?.status ? player.parsedData.status : "N/A"}
+                            </td>
+                            <td style={{ padding: "5px" }}>
                               {player.parsedData?.mass ? parseInt(player.parsedData.mass).toString() : "N/A"}
                             </td>
                             <td style={{ padding: "5px" }}>
-                              {player.parsedData?.score ? parseFloat(player.parsedData.score).toFixed(1) : "N/A"}
-                            </td>
-                            <td style={{ padding: "5px" }}>
-                              {player.parsedData?.buyin ? parseFloat(player.parsedData.buyin).toFixed(1) : "N/A"}
+                              {typeof player.playersParsedDataEphem?.score.toNumber() === "number"
+                                ? (player.playersParsedDataEphem.score / 10 ** decimals).toFixed(1)
+                                : "N/A"}
                             </td>
                             <td style={{ padding: "5px" }}>
                               {player.parsedData?.authority?.toString().slice(0, 3)}...
@@ -1329,19 +1361,21 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                           <tr
                             style={{
                               borderBottom: "1px solid #ccc",
-                              backgroundColor: (index + 1) % 2 === 0 ? "#C0C0C0" : "#A4A4A4",
+                              backgroundColor: player.delegated ? ((index + 1) % 2 === 0 ? "#CAD6CD" : "#BCC8BF") : (index + 1) % 2 === 0 ? "#C0C0C0" : "#A4A4A4",
                               textAlign: "center",
                             }}
                           >
                             <td style={{ padding: "5px", fontWeight: "bold" }}>ephemeral</td>
                             <td style={{ padding: "5px" }}>
+                              {player.playersParsedDataEphem?.status}
+                            </td>
+                            <td style={{ padding: "5px" }}>
                               {parseInt(player.playersParsedDataEphem?.mass).toString() || "N/A"}
                             </td>
                             <td style={{ padding: "5px" }}>
-                              {parseFloat(player.playersParsedDataEphem?.score).toFixed(1) || "N/A"}
-                            </td>
-                            <td style={{ padding: "5px" }}>
-                              {parseFloat(player.playersParsedDataEphem?.buyin).toFixed(1) || "N/A"}
+                              {typeof player.playersParsedDataEphem?.score.toNumber() === "number"
+                                ? (player.playersParsedDataEphem.score / 10 ** decimals).toFixed(1)
+                                : "N/A"}
                             </td>
                             <td style={{ padding: "5px" }}>
                               {player.playersParsedDataEphem?.authority?.toString().slice(0, 3)}...

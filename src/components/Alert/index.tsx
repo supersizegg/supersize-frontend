@@ -26,7 +26,7 @@ const Alert: React.FC<AlertProps> = ({ type, message, onClose }) => {
 
   return (
     <div
-      className={`fixed bottom-5 left-1/2 transform -translate-x-1/2 
+      className={`fixed bottom-10 left-1/2 transform -translate-x-1/2 
             p-5 mb-2.5 rounded-lg text-center text-sm 
             transition-opacity duration-1000 ease-in-out 
             flex justify-center items-center max-w-[90%] 

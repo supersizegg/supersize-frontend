@@ -449,6 +449,9 @@ export async function stepInitializeGame(
   context: GameContext,
   game_name: string,
   game_size: number,
+  buy_in: number,
+  mint_of_token: string,
+  decimals: number,
   setTransactions: React.Dispatch<React.SetStateAction<{ id: string; status: string }[]>>,
   showPrompt: (errorMessage: string) => Promise<boolean>,
 ) {
@@ -462,9 +465,9 @@ export async function stepInitializeGame(
         context.mapEntityPda,
         game_name,
         game_size,
-        context.base_buyin,
-        context.max_multiple,
-        context.min_multiple,
+        buy_in,
+        mint_of_token,
+        decimals,
       );
       console.log(`Game initialized with signature: ${initGameSig}`);
     },
@@ -502,9 +505,7 @@ export async function stepInitPlayers(
 // 14) Initialize the anteroom
 export async function stepInitAnteroom(
   context: GameContext,
-  mint_of_token: PublicKey,
   tokenVault: PublicKey,
-  decimals: number,
   owner_token_account: PublicKey,
   setTransactions: React.Dispatch<React.SetStateAction<{ id: string; status: string }[]>>,
   showPrompt: (errorMessage: string) => Promise<boolean>,
@@ -518,9 +519,7 @@ export async function stepInitAnteroom(
         context.world.worldPda,
         context.anteroomEntityPda,
         context.mapEntityPda,
-        mint_of_token,
         tokenVault,
-        decimals,
         owner_token_account,
       );
       console.log(`Initialized anteroom with signature: ${initAnteroomSig}`);

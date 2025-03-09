@@ -8,7 +8,7 @@ export type EatPlayer = {
   "address": "F6rDhVKjVTdGKdxEK9UWfFDcxeT3vFbAckX6U2aWeEKZ",
   "metadata": {
     "name": "eatPlayer",
-    "version": "0.1.10",
+    "version": "0.2.0",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -165,31 +165,25 @@ export type EatPlayer = {
             "type": "u16"
           },
           {
-            "name": "baseBuyin",
-            "type": "f64"
+            "name": "buyIn",
+            "type": "u64"
           },
           {
-            "name": "maxBuyin",
-            "type": "f64"
+            "name": "token",
+            "type": {
+              "option": "pubkey"
+            }
           },
           {
-            "name": "minBuyin",
-            "type": "f64"
+            "name": "tokenDecimals",
+            "type": "u32"
           },
           {
             "name": "maxPlayers",
             "type": "u8"
           },
           {
-            "name": "totalActiveBuyins",
-            "type": "f64"
-          },
-          {
-            "name": "totalFoodOnMap",
-            "type": "u64"
-          },
-          {
-            "name": "foodQueue",
+            "name": "walletBalance",
             "type": "u64"
           },
           {
@@ -201,10 +195,6 @@ export type EatPlayer = {
                 }
               }
             }
-          },
-          {
-            "name": "frozen",
-            "type": "bool"
           },
           {
             "name": "boltMetadata",
@@ -239,8 +229,8 @@ export type EatPlayer = {
             }
           },
           {
-            "name": "buyIn",
-            "type": "f64"
+            "name": "status",
+            "type": "string"
           },
           {
             "name": "payoutTokenAccount",
@@ -250,15 +240,7 @@ export type EatPlayer = {
           },
           {
             "name": "currentGameWalletBalance",
-            "type": "f64"
-          },
-          {
-            "name": "tax",
-            "type": "f64"
-          },
-          {
-            "name": "joinTime",
-            "type": "i64"
+            "type": "u64"
           },
           {
             "name": "x",
@@ -282,15 +264,27 @@ export type EatPlayer = {
           },
           {
             "name": "score",
-            "type": "f64"
+            "type": "u64"
           },
           {
             "name": "mass",
             "type": "u64"
           },
           {
+            "name": "foodEaten",
+            "type": "u64"
+          },
+          {
+            "name": "playersEaten",
+            "type": "u16"
+          },
+          {
             "name": "speed",
             "type": "f32"
+          },
+          {
+            "name": "joinTime",
+            "type": "i64"
           },
           {
             "name": "scheduledRemovalTime",

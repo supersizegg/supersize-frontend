@@ -2,7 +2,7 @@
   "address": "CLC46PuyXnSuZGmUrqkFbAh7WwzQm8aBPjSQ3HMP56kp",
   "metadata": {
     "name": "buy_in",
-    "version": "0.1.10",
+    "version": "0.2.0",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -64,22 +64,6 @@
           "writable": true
         },
         {
-          "name": "referral_vault_token_account",
-          "writable": true
-        },
-        {
-          "name": "referral_token_account_owner_pda",
-          "writable": true
-        },
-        {
-          "name": "refferal_pda_account",
-          "writable": true
-        },
-        {
-          "name": "buddy_member_pda_account",
-          "writable": true
-        },
-        {
           "name": "signer",
           "writable": true
         },
@@ -132,48 +116,23 @@
     },
     {
       "code": 6001,
-      "name": "InvalidBuyIn",
-      "msg": "Invalid buy in."
-    },
-    {
-      "code": 6002,
       "name": "InvalidGameVault",
       "msg": "Invalid game vault."
     },
     {
-      "code": 6003,
+      "code": 6002,
       "name": "InvalidGameVaultOwner",
       "msg": "Invalid game vault owner."
     },
     {
-      "code": 6004,
+      "code": 6003,
       "name": "InvalidMint",
       "msg": "Token mint mismatch."
     },
     {
-      "code": 6005,
-      "name": "MissingTokenDecimals",
-      "msg": "Token decimals not set."
-    },
-    {
-      "code": 6006,
+      "code": 6004,
       "name": "MapKeyMismatch",
       "msg": "Player component doesn't belong to map."
-    },
-    {
-      "code": 6007,
-      "name": "InvalidMember",
-      "msg": "Given buddy link member account not valid."
-    },
-    {
-      "code": 6008,
-      "name": "InvalidReferrer",
-      "msg": "Given referrer-subsidize account not valid."
-    },
-    {
-      "code": 6009,
-      "name": "InvalidReferralVaultOwner",
-      "msg": "Invalid referral vault owner."
     }
   ],
   "types": [
@@ -189,16 +148,16 @@
             }
           },
           {
-            "name": "base_buyin",
-            "type": "f64"
+            "name": "width",
+            "type": "u16"
           },
           {
-            "name": "max_buyin",
-            "type": "f64"
+            "name": "height",
+            "type": "u16"
           },
           {
-            "name": "min_buyin",
-            "type": "f64"
+            "name": "buy_in",
+            "type": "u64"
           },
           {
             "name": "token",
@@ -208,9 +167,7 @@
           },
           {
             "name": "token_decimals",
-            "type": {
-              "option": "u32"
-            }
+            "type": "u32"
           },
           {
             "name": "vault_token_account",
@@ -223,6 +180,10 @@
             "type": {
               "option": "pubkey"
             }
+          },
+          {
+            "name": "total_active_buyins",
+            "type": "u64"
           },
           {
             "name": "bolt_metadata",
@@ -272,8 +233,8 @@
             }
           },
           {
-            "name": "buy_in",
-            "type": "f64"
+            "name": "status",
+            "type": "string"
           },
           {
             "name": "payout_token_account",
@@ -283,15 +244,7 @@
           },
           {
             "name": "current_game_wallet_balance",
-            "type": "f64"
-          },
-          {
-            "name": "tax",
-            "type": "f64"
-          },
-          {
-            "name": "join_time",
-            "type": "i64"
+            "type": "u64"
           },
           {
             "name": "x",
@@ -315,15 +268,27 @@
           },
           {
             "name": "score",
-            "type": "f64"
+            "type": "u64"
           },
           {
             "name": "mass",
             "type": "u64"
           },
           {
+            "name": "food_eaten",
+            "type": "u64"
+          },
+          {
+            "name": "players_eaten",
+            "type": "u16"
+          },
+          {
             "name": "speed",
             "type": "f32"
+          },
+          {
+            "name": "join_time",
+            "type": "i64"
           },
           {
             "name": "scheduled_removal_time",

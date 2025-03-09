@@ -1,5 +1,5 @@
 import { PublicKey } from "@solana/web3.js";
-import { createUndelegateInstruction, FindComponentPda, FindEntityPda } from "@magicblock-labs/bolt-sdk";
+import { ApplySystem, createUndelegateInstruction, FindComponentPda, FindEntityPda } from "@magicblock-labs/bolt-sdk";
 
 import { ActiveGame } from "@utils/types";
 import { fetchTokenMetadata } from "@utils/helper";
@@ -7,7 +7,7 @@ import { fetchTokenMetadata } from "@utils/helper";
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
 import { gameSystemJoin } from "./gameSystemJoin";
 import { gameSystemBuyIn } from "./gameSystemBuyIn";
-import { COMPONENT_PLAYER_ID, COMPONENT_ANTEROOM_ID } from "./gamePrograms";
+import { COMPONENT_PLAYER_ID, COMPONENT_ANTEROOM_ID, SYSTEM_MOVEMENT_ID, COMPONENT_MAP_ID, COMPONENT_SECTION_ID } from "./gamePrograms";
 
 import * as anchor from "@coral-xyz/anchor";
 import { anteroomFetchOnChain } from "./gameFetch";
@@ -47,6 +47,12 @@ export async function gameExecuteJoin(
     worldId: gameInfo.worldId,
     entityId: new anchor.BN(0),
     seed: stringToUint8Array(mapseed),
+  });
+  const foodseed = "food1";
+  const foodEntityPda = FindEntityPda({
+    worldId: gameInfo.worldId,
+    entityId: new anchor.BN(0),
+    seed: stringToUint8Array(foodseed),
   });
 
   let newplayerEntityPda = selectedGamePlayerInfo.newplayerEntityPda;
@@ -128,7 +134,7 @@ export async function gameExecuteJoin(
   }
 
   try {
-    let buyInResult = await gameSystemBuyIn(engine, selectGameId, newplayerEntityPda, anteEntityPda, buyIn);
+    let buyInResult = await gameSystemBuyIn(engine, selectGameId, newplayerEntityPda, anteEntityPda, buyIn, playerName);
     if (!buyInResult.success) {
       return { success: false, error: buyInResult.error, message: "buyin_failed" };
     }
@@ -164,7 +170,54 @@ export async function gameExecuteJoin(
       message: "buyin_failed",
     };
   }
+  try{
+    const makeMove = await ApplySystem({
+      authority: engine.getSessionPayer(),
+      world: gameInfo.worldPda,
+      entities: [
+        {
+          entity: newplayerEntityPda,
+          components: [{ componentId: COMPONENT_PLAYER_ID }],
+        },
+        {
+          entity: foodEntityPda,
+          components: [{ componentId: COMPONENT_SECTION_ID }],
+        },
+        {
+          entity: mapEntityPda,
+          components: [{ componentId: COMPONENT_MAP_ID }],
+        },
+      ],
+      systemId: SYSTEM_MOVEMENT_ID,
+      args: {
+        x: 0,
+        y: 0,
+        boost: false,
+        timestamp: performance.now(),
+      },
+    });
 
+    const alltransaction = new anchor.web3.Transaction();
+    alltransaction.add(makeMove.transaction);
+
+    let moveSig = await engine.processSessionEphemTransaction("txn:" + performance.now(), alltransaction).catch((error) => {
+      console.log(error);
+    });
+    if (moveSig) {
+      setMyPlayerEntityPda(newplayerEntityPda);
+      return { success: true, transactionSignature: moveSig };
+    } else {
+      return { success: false, error: `Error joining the game`, message: "join_failed" };
+    }
+  }
+  catch(error){
+    console.log("error", error);
+    return {
+      success: false,
+      error: `Error joining the game: ${(error as Error)?.message}`,
+      message: "join_failed",
+    };  }
+  /*
   try {
     const joinsig = await gameSystemJoin(engine, selectGameId, newplayerEntityPda, mapEntityPda, playerName);
     if (joinsig) {
@@ -181,4 +234,5 @@ export async function gameExecuteJoin(
       message: "join_failed",
     };
   }
+  */
 }

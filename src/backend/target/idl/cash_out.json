@@ -2,7 +2,7 @@
   "address": "BAP315i1xoAXqbJcTT1LrUS45N3tAQnNnPuNQkCcvbAr",
   "metadata": {
     "name": "cash_out",
-    "version": "0.1.10",
+    "version": "0.2.0",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -159,23 +159,23 @@
     },
     {
       "code": 6008,
-      "name": "MissingTokenDecimals",
-      "msg": "Token decimals not set."
-    },
-    {
-      "code": 6009,
       "name": "InvalidMint",
       "msg": "Token mint mismatch."
     },
     {
-      "code": 6010,
+      "code": 6009,
       "name": "MapKeyMismatch",
       "msg": "Component doesn't belong to map."
     },
     {
-      "code": 6011,
+      "code": 6010,
       "name": "InvalidBuddyLinkProgram",
       "msg": "Invalid Buddy Link Program."
+    },
+    {
+      "code": 6011,
+      "name": "NotGameOwner",
+      "msg": "Not game owner."
     }
   ],
   "types": [
@@ -191,16 +191,16 @@
             }
           },
           {
-            "name": "base_buyin",
-            "type": "f64"
+            "name": "width",
+            "type": "u16"
           },
           {
-            "name": "max_buyin",
-            "type": "f64"
+            "name": "height",
+            "type": "u16"
           },
           {
-            "name": "min_buyin",
-            "type": "f64"
+            "name": "buy_in",
+            "type": "u64"
           },
           {
             "name": "token",
@@ -210,9 +210,7 @@
           },
           {
             "name": "token_decimals",
-            "type": {
-              "option": "u32"
-            }
+            "type": "u32"
           },
           {
             "name": "vault_token_account",
@@ -225,6 +223,10 @@
             "type": {
               "option": "pubkey"
             }
+          },
+          {
+            "name": "total_active_buyins",
+            "type": "u64"
           },
           {
             "name": "bolt_metadata",
@@ -274,8 +276,8 @@
             }
           },
           {
-            "name": "buy_in",
-            "type": "f64"
+            "name": "status",
+            "type": "string"
           },
           {
             "name": "payout_token_account",
@@ -285,15 +287,7 @@
           },
           {
             "name": "current_game_wallet_balance",
-            "type": "f64"
-          },
-          {
-            "name": "tax",
-            "type": "f64"
-          },
-          {
-            "name": "join_time",
-            "type": "i64"
+            "type": "u64"
           },
           {
             "name": "x",
@@ -317,15 +311,27 @@
           },
           {
             "name": "score",
-            "type": "f64"
+            "type": "u64"
           },
           {
             "name": "mass",
             "type": "u64"
           },
           {
+            "name": "food_eaten",
+            "type": "u64"
+          },
+          {
+            "name": "players_eaten",
+            "type": "u16"
+          },
+          {
             "name": "speed",
             "type": "f32"
+          },
+          {
+            "name": "join_time",
+            "type": "i64"
           },
           {
             "name": "scheduled_removal_time",

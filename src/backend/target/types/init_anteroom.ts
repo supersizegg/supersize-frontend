@@ -8,7 +8,7 @@ export type InitAnteroom = {
   "address": "AxmRc9buNLgWVMinrH2WunSxKmdsBXVCghhYZgh2hJT6",
   "metadata": {
     "name": "initAnteroom",
-    "version": "0.1.10",
+    "version": "0.2.0",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -103,16 +103,16 @@ export type InitAnteroom = {
             }
           },
           {
-            "name": "baseBuyin",
-            "type": "f64"
+            "name": "width",
+            "type": "u16"
           },
           {
-            "name": "maxBuyin",
-            "type": "f64"
+            "name": "height",
+            "type": "u16"
           },
           {
-            "name": "minBuyin",
-            "type": "f64"
+            "name": "buyIn",
+            "type": "u64"
           },
           {
             "name": "token",
@@ -122,9 +122,7 @@ export type InitAnteroom = {
           },
           {
             "name": "tokenDecimals",
-            "type": {
-              "option": "u32"
-            }
+            "type": "u32"
           },
           {
             "name": "vaultTokenAccount",
@@ -137,6 +135,10 @@ export type InitAnteroom = {
             "type": {
               "option": "pubkey"
             }
+          },
+          {
+            "name": "totalActiveBuyins",
+            "type": "u64"
           },
           {
             "name": "boltMetadata",
@@ -205,31 +207,25 @@ export type InitAnteroom = {
             "type": "u16"
           },
           {
-            "name": "baseBuyin",
-            "type": "f64"
+            "name": "buyIn",
+            "type": "u64"
           },
           {
-            "name": "maxBuyin",
-            "type": "f64"
+            "name": "token",
+            "type": {
+              "option": "pubkey"
+            }
           },
           {
-            "name": "minBuyin",
-            "type": "f64"
+            "name": "tokenDecimals",
+            "type": "u32"
           },
           {
             "name": "maxPlayers",
             "type": "u8"
           },
           {
-            "name": "totalActiveBuyins",
-            "type": "f64"
-          },
-          {
-            "name": "totalFoodOnMap",
-            "type": "u64"
-          },
-          {
-            "name": "foodQueue",
+            "name": "walletBalance",
             "type": "u64"
           },
           {
@@ -241,10 +237,6 @@ export type InitAnteroom = {
                 }
               }
             }
-          },
-          {
-            "name": "frozen",
-            "type": "bool"
           },
           {
             "name": "boltMetadata",

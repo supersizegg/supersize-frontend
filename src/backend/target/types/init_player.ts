@@ -8,7 +8,7 @@ export type InitPlayer = {
   "address": "58N5j49P3u351T6DSFKhPeKwBiXGnXwaYE1nWjtVkRZQ",
   "metadata": {
     "name": "initPlayer",
-    "version": "0.1.10",
+    "version": "0.2.0",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -142,31 +142,25 @@ export type InitPlayer = {
             "type": "u16"
           },
           {
-            "name": "baseBuyin",
-            "type": "f64"
+            "name": "buyIn",
+            "type": "u64"
           },
           {
-            "name": "maxBuyin",
-            "type": "f64"
+            "name": "token",
+            "type": {
+              "option": "pubkey"
+            }
           },
           {
-            "name": "minBuyin",
-            "type": "f64"
+            "name": "tokenDecimals",
+            "type": "u32"
           },
           {
             "name": "maxPlayers",
             "type": "u8"
           },
           {
-            "name": "totalActiveBuyins",
-            "type": "f64"
-          },
-          {
-            "name": "totalFoodOnMap",
-            "type": "u64"
-          },
-          {
-            "name": "foodQueue",
+            "name": "walletBalance",
             "type": "u64"
           },
           {
@@ -178,10 +172,6 @@ export type InitPlayer = {
                 }
               }
             }
-          },
-          {
-            "name": "frozen",
-            "type": "bool"
           },
           {
             "name": "boltMetadata",
@@ -216,8 +206,8 @@ export type InitPlayer = {
             }
           },
           {
-            "name": "buyIn",
-            "type": "f64"
+            "name": "status",
+            "type": "string"
           },
           {
             "name": "payoutTokenAccount",
@@ -227,15 +217,7 @@ export type InitPlayer = {
           },
           {
             "name": "currentGameWalletBalance",
-            "type": "f64"
-          },
-          {
-            "name": "tax",
-            "type": "f64"
-          },
-          {
-            "name": "joinTime",
-            "type": "i64"
+            "type": "u64"
           },
           {
             "name": "x",
@@ -259,15 +241,27 @@ export type InitPlayer = {
           },
           {
             "name": "score",
-            "type": "f64"
+            "type": "u64"
           },
           {
             "name": "mass",
             "type": "u64"
           },
           {
+            "name": "foodEaten",
+            "type": "u64"
+          },
+          {
+            "name": "playersEaten",
+            "type": "u16"
+          },
+          {
             "name": "speed",
             "type": "f32"
+          },
+          {
+            "name": "joinTime",
+            "type": "i64"
           },
           {
             "name": "scheduledRemovalTime",

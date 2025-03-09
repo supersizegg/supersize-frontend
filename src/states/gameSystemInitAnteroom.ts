@@ -9,9 +9,7 @@ export async function gameSystemInitAnteroom(
   worldPda: PublicKey,
   newanteentityPda: PublicKey,
   newmapentityPda: PublicKey,
-  mint_of_token: PublicKey,
   tokenVault: PublicKey,
-  decimals: number,
   owner_token_account: PublicKey,
 ) {
   const initAnteroom = await ApplySystem({
@@ -30,8 +28,6 @@ export async function gameSystemInitAnteroom(
     systemId: SYSTEM_INIT_ANTEROOM_ID,
     args: {
       vault_token_account_string: tokenVault.toString(),
-      token_string: mint_of_token.toString(),
-      token_decimals: decimals,
       gamemaster_wallet_string: owner_token_account.toString(),
     },
   });

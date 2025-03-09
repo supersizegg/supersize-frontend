@@ -8,7 +8,7 @@ export type Anteroom = {
   "address": "EbGkJPaMY8XCJCNjkWwk971xzE32X5LBPg5s2g4LDYcW",
   "metadata": {
     "name": "anteroom",
-    "version": "0.1.10",
+    "version": "0.2.0",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -126,16 +126,16 @@ export type Anteroom = {
             }
           },
           {
-            "name": "baseBuyin",
-            "type": "f64"
+            "name": "width",
+            "type": "u16"
           },
           {
-            "name": "maxBuyin",
-            "type": "f64"
+            "name": "height",
+            "type": "u16"
           },
           {
-            "name": "minBuyin",
-            "type": "f64"
+            "name": "buyIn",
+            "type": "u64"
           },
           {
             "name": "token",
@@ -145,9 +145,7 @@ export type Anteroom = {
           },
           {
             "name": "tokenDecimals",
-            "type": {
-              "option": "u32"
-            }
+            "type": "u32"
           },
           {
             "name": "vaultTokenAccount",
@@ -160,6 +158,10 @@ export type Anteroom = {
             "type": {
               "option": "pubkey"
             }
+          },
+          {
+            "name": "totalActiveBuyins",
+            "type": "u64"
           },
           {
             "name": "boltMetadata",

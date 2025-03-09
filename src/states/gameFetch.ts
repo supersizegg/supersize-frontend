@@ -41,7 +41,10 @@ export async function playerFetchOnChain(engine: MagicBlockEngine, gamePda: Publ
   const componentPlayer = getComponentPlayerOnChain(engine);
   return componentPlayer.account.player.fetchNullable(gamePda);
 }
-
+export async function playerFetchOnChainProcessed(engine: MagicBlockEngine, gamePda: PublicKey) {
+  const componentPlayer = getComponentPlayerOnChain(engine);
+  return componentPlayer.account.player.fetchNullable(gamePda, "processed");
+}
 export async function playerFetchOnEphem(engine: MagicBlockEngine, gamePda: PublicKey) {
   const componentPlayer = getComponentPlayerOnEphem(engine);
   return componentPlayer.account.player.fetchNullable(gamePda);
@@ -49,6 +52,10 @@ export async function playerFetchOnEphem(engine: MagicBlockEngine, gamePda: Publ
 export async function playerFetchOnSpecificEphem(engine: MagicBlockEngine, gamePda: PublicKey, endpoint: string) {
   const componentPlayer = getComponentPlayerOnSpecificEphem(engine, endpoint);
   return componentPlayer.account.player.fetchNullable(gamePda);
+}
+export async function playerFetchOnSpecificEphemProcessed(engine: MagicBlockEngine, gamePda: PublicKey, endpoint: string) {
+  const componentPlayer = getComponentPlayerOnSpecificEphem(engine, endpoint);
+  return componentPlayer.account.player.fetchNullable(gamePda, "processed");
 }
 
 export async function sectionFetchOnChain(engine: MagicBlockEngine, gamePda: PublicKey) {

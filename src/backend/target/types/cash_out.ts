@@ -8,7 +8,7 @@ export type CashOut = {
   "address": "BAP315i1xoAXqbJcTT1LrUS45N3tAQnNnPuNQkCcvbAr",
   "metadata": {
     "name": "cashOut",
-    "version": "0.1.10",
+    "version": "0.2.0",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -165,23 +165,23 @@ export type CashOut = {
     },
     {
       "code": 6008,
-      "name": "missingTokenDecimals",
-      "msg": "Token decimals not set."
-    },
-    {
-      "code": 6009,
       "name": "invalidMint",
       "msg": "Token mint mismatch."
     },
     {
-      "code": 6010,
+      "code": 6009,
       "name": "mapKeyMismatch",
       "msg": "Component doesn't belong to map."
     },
     {
-      "code": 6011,
+      "code": 6010,
       "name": "invalidBuddyLinkProgram",
       "msg": "Invalid Buddy Link Program."
+    },
+    {
+      "code": 6011,
+      "name": "notGameOwner",
+      "msg": "Not game owner."
     }
   ],
   "types": [
@@ -197,16 +197,16 @@ export type CashOut = {
             }
           },
           {
-            "name": "baseBuyin",
-            "type": "f64"
+            "name": "width",
+            "type": "u16"
           },
           {
-            "name": "maxBuyin",
-            "type": "f64"
+            "name": "height",
+            "type": "u16"
           },
           {
-            "name": "minBuyin",
-            "type": "f64"
+            "name": "buyIn",
+            "type": "u64"
           },
           {
             "name": "token",
@@ -216,9 +216,7 @@ export type CashOut = {
           },
           {
             "name": "tokenDecimals",
-            "type": {
-              "option": "u32"
-            }
+            "type": "u32"
           },
           {
             "name": "vaultTokenAccount",
@@ -231,6 +229,10 @@ export type CashOut = {
             "type": {
               "option": "pubkey"
             }
+          },
+          {
+            "name": "totalActiveBuyins",
+            "type": "u64"
           },
           {
             "name": "boltMetadata",
@@ -280,8 +282,8 @@ export type CashOut = {
             }
           },
           {
-            "name": "buyIn",
-            "type": "f64"
+            "name": "status",
+            "type": "string"
           },
           {
             "name": "payoutTokenAccount",
@@ -291,15 +293,7 @@ export type CashOut = {
           },
           {
             "name": "currentGameWalletBalance",
-            "type": "f64"
-          },
-          {
-            "name": "tax",
-            "type": "f64"
-          },
-          {
-            "name": "joinTime",
-            "type": "i64"
+            "type": "u64"
           },
           {
             "name": "x",
@@ -323,15 +317,27 @@ export type CashOut = {
           },
           {
             "name": "score",
-            "type": "f64"
+            "type": "u64"
           },
           {
             "name": "mass",
             "type": "u64"
           },
           {
+            "name": "foodEaten",
+            "type": "u64"
+          },
+          {
+            "name": "playersEaten",
+            "type": "u16"
+          },
+          {
             "name": "speed",
             "type": "f32"
+          },
+          {
+            "name": "joinTime",
+            "type": "i64"
           },
           {
             "name": "scheduledRemovalTime",

@@ -8,7 +8,7 @@ export type Map = {
   "address": "2dZ5DLJhEVFRA5xRnRD779ojsWsf3HMi6YB1zmVDdsYb",
   "metadata": {
     "name": "map",
-    "version": "0.1.10",
+    "version": "0.2.0",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -49,7 +49,7 @@ export type Map = {
           "writable": true
         },
         {
-          "name": "delegateAccountSeeds",
+          "name": "delegationMetadata",
           "writable": true
         },
         {
@@ -61,12 +61,14 @@ export type Map = {
       ],
       "args": [
         {
-          "name": "validUntil",
-          "type": "i64"
-        },
-        {
           "name": "commitFrequencyMs",
           "type": "u32"
+        },
+        {
+          "name": "validator",
+          "type": {
+            "option": "pubkey"
+          }
         }
       ]
     },
@@ -310,31 +312,25 @@ export type Map = {
             "type": "u16"
           },
           {
-            "name": "baseBuyin",
-            "type": "f64"
+            "name": "buyIn",
+            "type": "u64"
           },
           {
-            "name": "maxBuyin",
-            "type": "f64"
+            "name": "token",
+            "type": {
+              "option": "pubkey"
+            }
           },
           {
-            "name": "minBuyin",
-            "type": "f64"
+            "name": "tokenDecimals",
+            "type": "u32"
           },
           {
             "name": "maxPlayers",
             "type": "u8"
           },
           {
-            "name": "totalActiveBuyins",
-            "type": "f64"
-          },
-          {
-            "name": "totalFoodOnMap",
-            "type": "u64"
-          },
-          {
-            "name": "foodQueue",
+            "name": "walletBalance",
             "type": "u64"
           },
           {
@@ -346,10 +342,6 @@ export type Map = {
                 }
               }
             }
-          },
-          {
-            "name": "frozen",
-            "type": "bool"
           },
           {
             "name": "boltMetadata",

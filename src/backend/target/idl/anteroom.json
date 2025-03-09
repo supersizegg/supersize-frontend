@@ -2,7 +2,7 @@
   "address": "EbGkJPaMY8XCJCNjkWwk971xzE32X5LBPg5s2g4LDYcW",
   "metadata": {
     "name": "anteroom",
-    "version": "0.1.10",
+    "version": "0.2.0",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -120,16 +120,16 @@
             }
           },
           {
-            "name": "base_buyin",
-            "type": "f64"
+            "name": "width",
+            "type": "u16"
           },
           {
-            "name": "max_buyin",
-            "type": "f64"
+            "name": "height",
+            "type": "u16"
           },
           {
-            "name": "min_buyin",
-            "type": "f64"
+            "name": "buy_in",
+            "type": "u64"
           },
           {
             "name": "token",
@@ -139,9 +139,7 @@
           },
           {
             "name": "token_decimals",
-            "type": {
-              "option": "u32"
-            }
+            "type": "u32"
           },
           {
             "name": "vault_token_account",
@@ -154,6 +152,10 @@
             "type": {
               "option": "pubkey"
             }
+          },
+          {
+            "name": "total_active_buyins",
+            "type": "u64"
           },
           {
             "name": "bolt_metadata",

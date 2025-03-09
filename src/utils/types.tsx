@@ -5,6 +5,7 @@ export interface Food {
   x: number;
   y: number;
   size: number;
+  food_type: boolean;
 }
 
 export interface Blob {
@@ -15,8 +16,6 @@ export interface Blob {
   radius: number;
   mass: number;
   score: number;
-  tax: number;
-  buyIn: number;
   payoutTokenAccount: PublicKey | null;
   speed: number;
   removal: BN;
@@ -37,9 +36,8 @@ export type ActiveGame = {
   image: string;
   token: string;
   tokenMint?: PublicKey;
-  base_buyin: number;
-  min_buyin: number;
-  max_buyin: number;
+  buy_in: number;
+  decimals: number;
   endpoint: string;
   ping: number;
 };

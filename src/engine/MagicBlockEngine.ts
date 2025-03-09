@@ -254,6 +254,10 @@ export class MagicBlockEngine {
   getChainAccountInfo(address: PublicKey) {
     return connectionChain.getAccountInfo(address);
   }
+  
+  getChainAccountInfoProcessed(address: PublicKey) {
+    return connectionChain.getAccountInfo(address, "processed");
+  }
 
   getEphemAccountInfo(address: PublicKey) {
     return this.connectionEphem.getAccountInfo(address);

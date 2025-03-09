@@ -97,7 +97,11 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
       const elapsedTime = currentTime - playerRemovalTimeRef.current.toNumber() * 1000;
 
       if (elapsedTime > 10000 || elapsedTime < 5000) {
-        gameSystemExit(engine, gameInfo, currentPlayerEntity.current, entityMatch.current);
+        try {
+          gameSystemExit(engine, gameInfo, currentPlayerEntity.current, entityMatch.current);
+        } catch (error) {
+          console.log("error", error);
+        }
       } else {
         return;
       }
@@ -105,18 +109,22 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
 
     countdown.current = 5;
     setPlayerExiting(true);
-    gameSystemExit(engine, gameInfo, currentPlayerEntity.current, entityMatch.current).then(async () => {
-      if (currentPlayerEntity.current) {
-        const myplayerComponent = FindComponentPda({
-          componentId: COMPONENT_PLAYER_ID,
-          entity: currentPlayerEntity.current,
-        });
-        const playerData = await playerFetchOnEphem(engine, myplayerComponent);
-        if (playerData) {
-          updateMyPlayer(playerData, setCurrentPlayer, gameEnded, setGameEnded);
+    try {
+      gameSystemExit(engine, gameInfo, currentPlayerEntity.current, entityMatch.current).then(async () => {
+        if (currentPlayerEntity.current) {
+          const myplayerComponent = FindComponentPda({
+            componentId: COMPONENT_PLAYER_ID,
+            entity: currentPlayerEntity.current,
+          });
+          const playerData = await playerFetchOnEphem(engine, myplayerComponent);
+          if (playerData) {
+            updateMyPlayer(playerData, setCurrentPlayer, gameEnded, setGameEnded);
+          }
         }
-      }
-    });
+      });
+    } catch (error) {
+      console.log("error", error);
+    }
 
     const interval = setInterval(() => {
       countdown.current = countdown.current - 1;
@@ -142,7 +150,11 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
               return;
             }
             console.log("5 seconds have passed");
-            gameSystemExit(engine, gameInfo, currentPlayerEntity.current, entityMatch.current);
+            try {
+              gameSystemExit(engine, gameInfo, currentPlayerEntity.current, entityMatch.current);
+            } catch (error) {
+              console.log("error", error);
+            }
             clearInterval(timeoutinterval);
             clearInterval(interval);
             setPlayerExiting(false);
@@ -173,22 +185,24 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
         entity: entityMatch.current,
       });
 
-      let newFood = { x: 0, y: 0 };
+      let newFood = { x: 0, y: 0, size: 0, food_type: false };
       const mapParsedData = await mapFetchOnEphem(engine, mapComponent);
+      if (mapParsedData) {
+        console.log("mapParsedData", mapParsedData.walletBalance.toNumber());
+      }
       if (mapParsedData && mapParsedData.nextFood) {
         const foodDataArray = new Uint8Array(mapParsedData.nextFood.data);
         const decodedFood = decodeFood(foodDataArray);
-        newFood = { x: decodedFood.x, y: decodedFood.y };
-      } else if (mapParsedData && mapParsedData.foodQueue.gt(new BN(0))) {
-        newFood = { x: 0, y: 0 };
-      } else {
-        return;
-      }
+        console.log("decodedFood", decodedFood);
+        newFood = { x: decodedFood.x, y: decodedFood.y, size: decodedFood.size, food_type: decodedFood.food_type };
+      } 
+
       await gameSystemSpawnFood(
         engine,
         gameInfo,
         newFood.x,
         newFood.y,
+        newFood.food_type,
         foodListLen,
         entityMatch.current,
         foodEntities.current,
@@ -212,17 +226,17 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
       seed: stringToUint8Array("ante"),
     });
     const foodEntityPdas: PublicKey[] = [];
-    let maxplayer = 20;
+    let maxplayer = 10;
     let foodcomponents = 32;
 
     if (gameInfo.size == 4000) {
-      maxplayer = 20;
+      maxplayer = 10;
       foodcomponents = 16 * 2;
     } else if (gameInfo.size == 6000) {
-      maxplayer = 45;
+      maxplayer = 20;
       foodcomponents = 36 * 2;
     } else if (gameInfo.size == 8000) {
-      maxplayer = 80;
+      maxplayer = 40;
       foodcomponents = 64 * 2;
     }
 
@@ -260,8 +274,6 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
       radius: 0,
       mass: 0,
       score: 0,
-      tax: 0,
-      buyIn: 0,
       payoutTokenAccount: null,
       speed: 0,
       removal: new BN(0),
@@ -371,6 +383,7 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
               x: foodItem.x,
               y: foodItem.y,
               size: foodItem.size,
+              food_type: foodItem.food_type,
             });
           }
           return innerAcc;
@@ -468,8 +481,6 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
                 radius: 4 + Math.sqrt(playerx.mass / 10) * 6,
                 mass: playerx.mass,
                 score: playerx.score,
-                tax: playerx.tax,
-                buyIn: playerx.buyIn,
                 payoutTokenAccount: playerx.payoutTokenAccount,
                 speed: playerx.speed,
                 removal: playerx.removal,
@@ -489,7 +500,7 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
   useEffect(() => {
     const intervalId = setInterval(() => {
       processNewFoodTransaction();
-    }, 200);
+    }, 50);
 
     return () => clearInterval(intervalId);
   }, []);
@@ -599,7 +610,7 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
         <div>
           <span className="opacity-50">Your size: </span>
           <span className="opacity-100">
-            {currentPlayer ? getRoundedAmount(currentPlayer.score, gameInfo.base_buyin / 1000) : null}
+            {currentPlayer ? getRoundedAmount(currentPlayer.score, gameInfo.buy_in / 1000) : null}
           </span>
         </div>
       </div>
@@ -641,20 +652,18 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
             <div className="bg-black flex flex-col items-center justify-center select-text">
               <p className=" p-0 m-1 text-center text-white text-xl inline">
                 Final score:{" "}
-                {currentPlayer
-                  ? getRoundedAmount(currentPlayer.score + currentPlayer.tax, gameInfo.base_buyin / 1000)
-                  : ""}
+                {currentPlayer ? getRoundedAmount(currentPlayer.score, gameInfo.buy_in / 1000) : ""}
               </p>
               <p className=" p-0 m-1 text-center text-white text-xl inline">
                 Exit tax:{" "}
                 {currentPlayer
-                  ? getRoundedAmount(currentPlayer.tax + currentPlayer.score * 0.02, gameInfo.base_buyin / 1000)
+                  ? getRoundedAmount(currentPlayer.score * 0.05, gameInfo.buy_in / 1000)
                   : ""}
               </p>
               <p className=" p-0 m-1 text-center text-white text-xl inline">
                 <b>
                   Payout:{" "}
-                  {currentPlayer ? getRoundedAmount(currentPlayer.score * 0.98, gameInfo.base_buyin / 1000) : ""}
+                  {currentPlayer ? getRoundedAmount(currentPlayer.score * 0.95, gameInfo.buy_in / 1000) : ""}
                 </b>
               </p>
               <div className="flex items-center justify-center" style={{ flexDirection: "column" }}>

@@ -32,7 +32,7 @@ const BuyInModal: React.FC<BuyInModalProps> = ({
   const engine = useMagicBlockEngine();
 
   const [hasInsufficientTokenBalance, setHasInsufficientTokenBalance] = useState(false);
-  const [buyIn, setBuyIn] = useState(0);
+  const [buyIn, setBuyIn] = useState(activeGame.buy_in);
   const [tokenBalance, setTokenBalance] = useState(-1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [retryModalView, setRetryModalView] = useState(0);
@@ -66,7 +66,7 @@ const BuyInModal: React.FC<BuyInModalProps> = ({
           balance = balanceInfo.value.uiAmount || 0;
           setTokenBalance(balance);
         }
-        if (balance < activeGame.min_buyin) {
+        if (balance < activeGame.buy_in) {
           setHasInsufficientTokenBalance(true);
         } else {
           setHasInsufficientTokenBalance(false);
@@ -122,24 +122,13 @@ const BuyInModal: React.FC<BuyInModalProps> = ({
     return typeof result === "object" && "activeplayers" in result;
   }
 
-  const handleSliderChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    let value = parseFloat(event.target.value);
-    if (activeGame?.max_buyin) {
-      value = value > activeGame.max_buyin ? activeGame.max_buyin : value;
-    } else {
-      value = value > 10 ? 10 : value;
-    }
-    value = value > 0.1 ? parseFloat(value.toFixed(1)) : value;
-    setBuyIn(value);
-  };
-
   useEffect(() => {
     if (!activeGame) return;
 
-    if (buyIn > activeGame.max_buyin) {
-      setBuyIn(activeGame.max_buyin);
-    } else if (buyIn < activeGame.min_buyin) {
-      setBuyIn(activeGame.min_buyin);
+    if (buyIn > activeGame.buy_in) {
+      setBuyIn(activeGame.buy_in);
+    } else if (buyIn < activeGame.buy_in) {
+      setBuyIn(activeGame.buy_in);
     }
   }, [buyIn, activeGame]);
 
@@ -155,7 +144,6 @@ const BuyInModal: React.FC<BuyInModalProps> = ({
         componentId: COMPONENT_PLAYER_ID,
         entity: playerEntityPda,
       });
-      console.log("playerComponentPda", playerComponentPda.toString());
       const thisPlayerStatus = await playerFetchOnChain(engine, playerComponentPda);
       let retryModalViewNum = 0;
       if (thisPlayerStatus?.authority !== null || errorMessageRef.current !== "") {
@@ -414,25 +402,9 @@ const BuyInModal: React.FC<BuyInModalProps> = ({
                   className="BuyInText"
                   type="number"
                   value={buyIn}
-                  onChange={(e) => setBuyIn(parseFloat(e.target.value))}
-                  placeholder={activeGame ? activeGame.base_buyin.toString() : "0"}
-                  step={activeGame ? activeGame.min_buyin / 10 : 0}
-                  min={activeGame ? activeGame.min_buyin : 0}
-                  max={activeGame ? activeGame.max_buyin : 0}
+                  placeholder={activeGame ? activeGame.buy_in.toString() : "0"}
                 />
               </div>
-            </div>
-
-            <div className="buyInSlider">
-              <input
-                type="range"
-                className="slider"
-                min={activeGame ? activeGame.min_buyin : 0}
-                max={activeGame ? activeGame.max_buyin + activeGame.min_buyin / 10 : 0}
-                step={activeGame ? activeGame.min_buyin / 10 : 0}
-                value={buyIn}
-                onChange={handleSliderChange}
-              />
             </div>
 
             {(hasInsufficientTokenBalance || (tokenBalance !== -1 && tokenBalance < buyIn)) && BalanceWarning()}

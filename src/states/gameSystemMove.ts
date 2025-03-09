@@ -43,7 +43,11 @@ export async function gameSystemMove(
 
     const alltransaction = new anchor.web3.Transaction();
 
-    const currentSection = getSectionIndex(currentPlayer.x, currentPlayer.y, gameInfo.size, 2);
+    const currentSection: number[] = [];  
+    for (let i = 1; i < 3; i++) { 
+      const currentSectionA = getSectionIndex(currentPlayer.x, currentPlayer.y, gameInfo.size, i);
+      currentSection.push(currentSectionA);
+    }
     for (const section_index of currentSection) {
       const eatFoodTx = await ApplySystem({
         authority: engine.getSessionPayer(),
@@ -112,12 +116,11 @@ export async function gameSystemMove(
     );
 
     const targetSectionBoosting = getSectionIndex(food_x, food_y, gameInfo.size, 2);
-    const selectedSection = targetSectionBoosting.reduce(
+    /* const selectedSection = targetSectionBoosting.reduce(
       (minIndex: number, currentIndex: number) =>
         foodListLen[currentIndex] < foodListLen[minIndex] ? currentIndex : minIndex,
       targetSectionBoosting[0],
-    );
-
+    ); */
     const makeMove = await ApplySystem({
       authority: engine.getSessionPayer(),
       world: gameInfo.worldPda,
@@ -127,7 +130,7 @@ export async function gameSystemMove(
           components: [{ componentId: COMPONENT_PLAYER_ID }],
         },
         {
-          entity: foodEntities[selectedSection],
+          entity: foodEntities[targetSectionBoosting],
           components: [{ componentId: COMPONENT_SECTION_ID }],
         },
         {

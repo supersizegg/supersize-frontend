@@ -6,7 +6,7 @@ import { PublicKey, Keypair } from "@solana/web3.js";
 import * as crypto from "crypto-js";
 import * as anchor from "@coral-xyz/anchor";
 import { MagicBlockEngine } from "@engine/MagicBlockEngine";
-import { playerFetchOnChain, playerFetchOnSpecificEphem } from "@states/gameFetch";
+import { playerFetchOnChain, playerFetchOnChainProcessed, playerFetchOnSpecificEphemProcessed, playerFetchOnSpecificEphem } from "@states/gameFetch";
 import { playerFetchOnEphem } from "@states/gameFetch";
 import { FindEntityPda } from "@magicblock-labs/bolt-sdk";
 import { COMPONENT_PLAYER_ID } from "@states/gamePrograms";
@@ -311,7 +311,7 @@ export function getRegion(endpoint: string): string {
   return "unknown";
 }
 
-export const getSectionIndex = (x: number, y: number, mapSize: number, duplicateEncodings: number = 5): number[] => {
+export const getSectionIndex = (x: number, y: number, mapSize: number, duplicateEncodings: number = 1): number => {
   const sectionSize = 1000;
   const sectionsPerRow = mapSize / sectionSize;
   const mapSectionCount = sectionsPerRow * sectionsPerRow;
@@ -320,11 +320,11 @@ export const getSectionIndex = (x: number, y: number, mapSize: number, duplicate
   const row = Math.floor(adjustedY / sectionSize);
   const col = Math.floor(adjustedX / sectionSize);
   const baseIndex = row * sectionsPerRow + col;
-  const food_indices: number[] = [];
-  for (let i = 0; i < duplicateEncodings; i++) {
-    food_indices.push(baseIndex + i * mapSectionCount);
-  }
-  return food_indices;
+  //const food_indices: number[] = [];
+  //for (let i = 0; i < duplicateEncodings; i++) {
+  //  food_indices.push(baseIndex + i * mapSectionCount);
+  //}
+  return baseIndex + (duplicateEncodings - 1) * mapSectionCount;
 };
 
 export const getClampedFoodPosition = (
@@ -385,8 +385,9 @@ export const decodeFood = (data: Uint8Array) => {
   const packed = new DataView(buffer).getUint32(data.byteOffset, true); // Little-endian
   const x = packed & 0x3fff;
   const y = (packed >> 14) & 0x3fff;
-  const size = (packed >> 28) & 0x0f;
-  return { x, y, size };
+  const size = (packed >> 28) & 0x07;
+  const food_type = ((packed >> 31) & 0x01) != 0;
+  return { x, y, size, food_type };
 };
 
 export const getMyPlayerStatus = async (
@@ -430,9 +431,9 @@ export const getMyPlayerStatus = async (
     
     fetchPromises.push(
       Promise.all([
-        engine.getChainAccountInfo(playersComponentPda),
-        playerFetchOnChain(engine, playersComponentPda),
-        playerFetchOnSpecificEphem(engine, playersComponentPda, endpoint),
+        engine.getChainAccountInfoProcessed(playersComponentPda),
+        playerFetchOnChainProcessed(engine, playersComponentPda),
+        playerFetchOnSpecificEphemProcessed(engine, playersComponentPda, endpoint),
       ]).then(([playersacc, playersParsedData, playersParsedDataER]) => ({
         playersComponentPda,
         playersacc,
@@ -451,104 +452,77 @@ export const getMyPlayerStatus = async (
     if (!playersacc || !playersParsedData) {
       continue;
     }
-    //console.log(playersParsedDataER, playersParsedData);
-    if (playersParsedData.authority != null) {
-      if (
-        playersParsedDataER 
-      ) {
+
+    if (playersacc.owner.toString() === "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh") {
+      if ( playersParsedDataER) {
         if(
-          playersParsedDataER.authority != null && //filter eaten players
-          playersParsedDataER.authority.toString() == playersParsedData.authority.toString()
+          playersParsedDataER.status == "in_game"
         ){
-          if(playersParsedDataER.mass.toNumber() == 0){
-            //no cash out
-            max_players = max_players - 1;
-          }else{
-            activeplayers += 1;
-          }
+          activeplayers += 1;
         }
-        else if(
-          playersParsedDataER.authority == null ||
-          playersParsedDataER.authority.toString() != playersParsedData.authority.toString()
+        if(
+          playersParsedDataER.status == "exited"
         ){
-          //need distinction between "bought in + didn't join" and "got eaten"
-          if(playersParsedData.buyIn !== 0){
-            max_players = max_players - 1;
-          }
+          max_players = max_players - 1;
         }
-      }
-    }
-
-    if (playersParsedData.authority == null) {
-      if (newplayerEntityPda == null) {
-        newplayerEntityPda = playerEntityPda;
-        if (playersacc.owner.toString() === "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh") {
-          need_to_undelegate = true;
-          need_to_delegate = false;
-        } else {
-          need_to_undelegate = false;
-          need_to_delegate = false;
-        }
-      }
-    } else if (playersParsedData.authority.toString() == engine.getSessionPayer().toString()) {
-      if (playersParsedData.mass.toNumber() == 0 && playersParsedData.score == 0) {
-        playerStatus = "bought_in";
-      } else if (
-        playersParsedDataER &&
-        playersParsedDataER.authority &&
-        playersParsedDataER.authority.toString() == engine.getSessionPayer().toString() &&
-        playersParsedDataER.mass.toNumber() == 0 &&
-        playersParsedDataER.score !== 0
-      ) {
-        playerStatus = "cashing_out";
-      } else {
-        playerStatus = "in_game";
       }
 
-      if (playersParsedDataER && playersParsedDataER.authority == null && playersParsedDataER.score == 0) {
-        playerStatus = "new_player";
-      }
-      if (playerStatus == "bought_in" || playerStatus == "in_game") {
-        if (playersacc.owner.toString() !== "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh") {
-          need_to_delegate = true;
-          need_to_undelegate = false;
-        } else {
-          need_to_delegate = false;
-          need_to_undelegate = false;
-        }
-      }
-      if (playerStatus == "cashing_out" || playerStatus == "new_player") {
-        if (playersacc.owner.toString() === "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh") {
-          need_to_undelegate = true;
-          need_to_delegate = false;
-        } else {
-          need_to_undelegate = false;
-          need_to_delegate = false;
-        }
-      }
-      newplayerEntityPda = playerEntityPda;
-    } else if (
-      playersParsedDataER &&
-      playersParsedDataER.authority == null &&
-      playersParsedData.authority !== null &&
-      playersParsedDataER.score == 0 &&
-      newplayerEntityPda == null
-    ) {
-      const startTime = playersParsedData.joinTime.toNumber() * 1000;
-      const currentTime = Date.now();
-      const elapsedTime = currentTime - startTime;
-      if (elapsedTime >= 10000) {
+      //on ER: if eaten then undelegate and play, if in_game then resume iff you, if exited then chashing out need to undelegate
+      if(playersParsedDataER && playersParsedDataER.authority && (playersParsedDataER.authority.toString() == engine.getSessionPayer().toString())){
         newplayerEntityPda = playerEntityPda;
-        if (playersacc.owner.toString() === "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh") {
-          need_to_undelegate = true;
-          need_to_delegate = false;
-        } else {
+        if(playersParsedDataER.status == "in_game"){
           need_to_undelegate = false;
           need_to_delegate = false;
+          playerStatus = "in_game";
+        }
+        if(playersParsedDataER.status == "exited"){
+          need_to_undelegate = true;
+          need_to_delegate = false;
+          playerStatus = "cashing_out";
+        }
+      }else{
+        if(playersParsedDataER && (playersParsedDataER.status == "eaten" || playersParsedDataER.status == "ready") 
+          && newplayerEntityPda == null){
+          need_to_undelegate = true;
+          need_to_delegate = false;
+          newplayerEntityPda = playerEntityPda;
         }
       }
     } else {
-      continue;
+      if ( playersParsedData) {
+        if(
+          playersParsedData.status == "in_game"
+        ){
+          activeplayers += 1;
+        }
+        if(
+          playersParsedData.status == "exited"
+        ){
+          max_players = max_players - 1;
+        }
+      }
+
+      if(playersParsedData && playersParsedData.authority && (playersParsedData.authority.toString() == engine.getSessionPayer().toString())){
+        newplayerEntityPda = playerEntityPda;
+        if(playersParsedData.status == "in_game"){
+          need_to_undelegate = false;
+          need_to_delegate = true;
+          playerStatus = "in_game";
+        }
+        if(playersParsedData.status == "exited"){
+          need_to_undelegate = false;
+          need_to_delegate = false;
+          playerStatus = "cashing_out";
+        }
+      }else{
+        if(playersParsedData && (playersParsedData.status == "eaten" || playersParsedData.status == "ready")
+           && newplayerEntityPda == null){
+          need_to_undelegate = false;
+          need_to_delegate = false;
+          newplayerEntityPda = playerEntityPda;
+        }
+      }
+      //on mainnet: if eaten then play, if in_game then delegate and resume iff you, if exited then chash out
     }
   }
 

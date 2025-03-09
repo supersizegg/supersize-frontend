@@ -10,9 +10,9 @@ export async function gameSystemInitMap(
   newmapentityPda: PublicKey,
   game_name: string,
   game_size: number,
-  base_buyin: number,
-  max_multiple: number,
-  min_multiple: number,
+  buy_in: number,
+  token_string: string,
+  decimals: number,
 ) {
   const initGame = await ApplySystem({
     authority: engine.getSessionPayer(),
@@ -27,10 +27,9 @@ export async function gameSystemInitMap(
     args: {
       name: game_name,
       size: game_size,
-      entry_fee: base_buyin,
-      entry_fee_upper_bound_mul: max_multiple,
-      entry_fee_lower_bound_mul: min_multiple,
-      frozen: false,
+      buy_in: buy_in,
+      token_string: token_string,
+      token_decimals: decimals,
     },
   });
 

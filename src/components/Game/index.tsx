@@ -26,21 +26,13 @@ const OPPONENT_COLORS = [
 ];
 
 const FOOD_COLORS = [
-  "#FFD700", // Gold
-  "#FFCE33",
-  "#FFBD66",
-  "#FFAC99",
-  "#FF9BBD",
-  "#FF8AC0",
-  "#FF79C3",
-  "#FF68C6",
-  "#FF57C9",
-  "#FF46CC",
-  "#FF35CF",
-  "#F924D2",
-  "#E013D5",
-  "#C902D8",
-  "#9C27B0", // Purple
+  "#12F194", // Green
+  "#27D7A2",
+  "#3DB7B5",
+  "#579BCB",
+  "#6C7BDE",
+  "#825AF0",
+  "#9A47FF", // Purple
 ];
 
 function hashCode(str: string): number {
@@ -75,6 +67,7 @@ interface Food {
   x: number;
   y: number;
   size: number;
+  food_type: boolean;
 }
 
 interface GameComponentProps {
@@ -156,6 +149,8 @@ const GameComponent: React.FC<GameComponentProps> = ({
     if (currentPlayerRef.current && currentPlayer) {
       currentPlayerRef.current.radius = currentPlayer.radius;
       currentPlayerRef.current.speed = currentPlayer.speed;
+      currentPlayerRef.current.target_x = currentPlayer.target_x;
+      currentPlayerRef.current.target_y = currentPlayer.target_y;
     }
     foodRef.current = visibleFood;
   }, [currentPlayer]);
@@ -169,7 +164,7 @@ const GameComponent: React.FC<GameComponentProps> = ({
     const deg = Math.atan2(dy, dx);
 
     let effective_mass = 100.0;
-    let true_mass = player.mass / 10;
+    let true_mass = player.mass;
     if (true_mass > 100.0) {
       effective_mass = true_mass;
     }
@@ -182,7 +177,7 @@ const GameComponent: React.FC<GameComponentProps> = ({
     if (true_mass < 100.0) {
       scale_up = -0.01 * true_mass + 4.0;
     }
-
+    /*
     if (boost) {
       if (player.mass > 100.0) {
         let boosted_speed = 12.0;
@@ -192,6 +187,7 @@ const GameComponent: React.FC<GameComponentProps> = ({
         player.speed = boosted_speed;
       }
     }
+    */
 
     const delta_y = (player.speed * scale_up * Math.sin(deg)) / slow_down;
     const delta_x = (player.speed * scale_up * Math.cos(deg)) / slow_down;
@@ -219,6 +215,9 @@ const GameComponent: React.FC<GameComponentProps> = ({
           newTargetRef.current.x,
           newTargetRef.current.y,
           newTargetRef.current.boost,
+          //currentPlayerRef.current.target_x,
+          //currentPlayerRef.current.target_y,
+          //currentPlayerRef.current.speed > 6.25,
         );
       }
       if (playersRef.current) {
@@ -478,8 +477,17 @@ const GameComponent: React.FC<GameComponentProps> = ({
 
   const drawFood = (ctx: CanvasRenderingContext2D, food: Food) => {
     const diameter = 20;
-    const index = Math.max(0, Math.min(FOOD_COLORS.length - 1, food.size - 1));
-    const color = FOOD_COLORS[index];
+    let color;
+    if (food.food_type) {
+      color = "#FFD700";
+      ctx.shadowBlur = 30;
+      ctx.shadowColor = "rgba(255, 215, 0, 1.0)";
+    } else {
+      const index = Math.max(0, Math.min(FOOD_COLORS.length - 1, food.size - 1));
+      color = FOOD_COLORS[index];
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = "transparent";
+    }
 
     ctx.beginPath();
     ctx.arc(food.x, food.y, diameter / 2, 0, 2 * Math.PI);

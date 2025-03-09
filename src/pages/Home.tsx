@@ -6,10 +6,10 @@ import FooterLink from "@components/Footer";
 import "./Home.scss";
 
 import { ActiveGame } from "@utils/types";
-import { NETWORK, options } from "@utils/constants";
+import { cachedTokenMetadata, NETWORK, options } from "@utils/constants";
 
 import { fetchTokenMetadata, getMyPlayerStatus, formatBuyIn } from "@utils/helper";
-import { FindEntityPda, FindComponentPda, FindWorldPda, createDelegateInstruction } from "@magicblock-labs/bolt-sdk";
+import { FindEntityPda, FindComponentPda, FindWorldPda, createDelegateInstruction, createUndelegateInstruction } from "@magicblock-labs/bolt-sdk";
 import { PublicKey, Transaction } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import { Tooltip } from "react-tooltip";
@@ -17,10 +17,11 @@ import { Tooltip } from "react-tooltip";
 import { MenuBar } from "@components/menu/MenuBar";
 import BuyInModal from "@components/buyInModal";
 import { Spinner } from "@components/util/Spinner";
+import { gameExecuteJoin } from "@states/gameExecuteJoin";
 
 import { COMPONENT_MAP_ID, COMPONENT_ANTEROOM_ID, COMPONENT_PLAYER_ID } from "../states/gamePrograms";
 import { FetchedGame, PlayerInfo } from "@utils/types";
-import { anteroomFetchOnChain, mapFetchOnChain, mapFetchOnSpecificEphem } from "../states/gameFetch";
+import { anteroomFetchOnChain, mapFetchOnChain, mapFetchOnSpecificEphem, playerFetchOnEphem, playerFetchOnSpecificEphem } from "../states/gameFetch";
 import { useMagicBlockEngine } from "../engine/MagicBlockEngineProvider";
 import { endpoints } from "@utils/constants";
 import { createUnloadedGame } from "@utils/game";
@@ -75,6 +76,9 @@ const Home = ({
   const checkActiveGamesLoadedCallCount = useRef(0);
   const checkActiveGamesLoadedWait = useRef(500);
   const [numberOfGamesInEndpoint, setNumberOfGamesInEndpoint] = useState<null | number>(null);
+  const [hasInsufficientTokenBalance, setHasInsufficientTokenBalance] = useState(false);
+  const [tokenBalance, setTokenBalance] = useState(-1);
+  const [submittingBuyIn, setSubmittingBuyIn] = useState(false);
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(event.target.value);
@@ -110,9 +114,7 @@ const Home = ({
             newGameInfo.activeGame.name = mapParsedData.name;
             newGameInfo.activeGame.max_players = mapParsedData.maxPlayers;
             newGameInfo.activeGame.size = mapParsedData.width;
-            newGameInfo.activeGame.base_buyin = mapParsedData.baseBuyin;
-            newGameInfo.activeGame.min_buyin = mapParsedData.minBuyin;
-            newGameInfo.activeGame.max_buyin = mapParsedData.maxBuyin;
+            newGameInfo.activeGame.buy_in = mapParsedData.buyIn.toNumber();
             newGameInfo.activeGame.isLoaded = true;
 
             const pingTime = await pingEndpoint(thisEndpoint);
@@ -130,6 +132,7 @@ const Home = ({
             const anteParsedData = await anteroomFetchOnChain(engine, anteComponentPda);
             let mint_of_token_being_sent = new PublicKey(0);
             if (anteParsedData && anteParsedData.token) {
+              newGameInfo.activeGame.decimals = anteParsedData.tokenDecimals;
               mint_of_token_being_sent = anteParsedData.token;
               try {
                 const { name, image } = await fetchTokenMetadata(mint_of_token_being_sent.toString());
@@ -256,26 +259,11 @@ const Home = ({
   const handleRefresh = async (engine: MagicBlockEngine, activeGamesLoaded: FetchedGame[], index: number) => {
     setIsLoadingCurrentGames(true);
     try {
-      // const playerComponentPda = FindComponentPda({
-      //   componentId: COMPONENT_PLAYER_ID,
-      //   entity: activeGamesLoaded[index].playerInfo.newplayerEntityPda,
-      // });
-
-      const pingResults = await Promise.all(
-        endpoints[NETWORK].map(async (endpoint) => {
-          const pingTimes = await Promise.all([pingEndpoint(endpoint), pingEndpoint(endpoint), pingEndpoint(endpoint)]);
-          const bestPingTime = Math.min(...pingTimes);
-          return { endpoint, pingTime: bestPingTime };
-        }),
-      );
-
       const refreshedGames = [...activeGamesLoaded];
       const prewnewgame: FetchedGame = {
         activeGame: {
           ...refreshedGames[index].activeGame,
           active_players: -1,
-          ping:
-            pingResults.find((ping) => ping.endpoint === activeGamesLoaded[index].activeGame.endpoint)?.pingTime || 0,
         } as ActiveGame,
         playerInfo: {
           ...refreshedGames[index].playerInfo,
@@ -285,7 +273,6 @@ const Home = ({
       refreshedGames[index] = prewnewgame;
       setActiveGamesLoaded(refreshedGames);
 
-      //engine.setEndpointEphemRpc(reloadActiveGame.activeGame.endpoint);
       let activeplayers = 0;
       let need_to_delegate = false;
       let need_to_undelegate = false;
@@ -325,8 +312,6 @@ const Home = ({
           ...activeGamesLoaded[index].activeGame,
           isLoaded: true,
           active_players: activeplayers,
-          ping:
-            pingResults.find((ping) => ping.endpoint === activeGamesLoaded[index].activeGame.endpoint)?.pingTime || 0,
           max_players: max_players,
         } as ActiveGame,
         playerInfo: {
@@ -350,19 +335,15 @@ const Home = ({
     engine: MagicBlockEngine,
     activeGamesLoaded: FetchedGame[],
     server: string,
-    pingList: any = null,
     firstLoad: boolean = false,
   ) => {
-    let pingResults = pingList;
-    if (!pingResults) {
-      pingResults = await pingEndpoints();
-      pingResults = pingResults.pingResults;
-    }
+    let pingResults = await pingSpecificEndpoint(server);
+    let pingTime = pingResults.pingTime;
+    pingResultsRef.current = pingResultsRef.current.map((result) =>
+      result.endpoint === server ? { ...result, pingTime: pingTime } : result
+    );
+    
     const gameCopy = [...activeGamesLoaded];
-    /*let filteredGames = gameCopy.filter((game) => {
-      return endpoints[NETWORK][options.indexOf(server)] === game.activeGame.endpoint;
-    });*/
-
     let filteredGames = gameCopy.filter((game) => {
       return server === game.activeGame.endpoint;
     });
@@ -374,7 +355,6 @@ const Home = ({
             ...filteredGames[i].activeGame,
             isLoaded: true,
             active_players: -1,
-            ping: 0,
           } as ActiveGame,
           playerInfo: {
             ...filteredGames[i].playerInfo,
@@ -401,9 +381,8 @@ const Home = ({
           let token_image = `${process.env.PUBLIC_URL}/token.png`;
           let token_name = "LOADING";
           let token_mint = new PublicKey(0);
-          let base_buyin = 0;
-          let min_buyin = 0;
-          let max_buyin = 0;
+          let buy_in = 0;
+          let decimals = 0;
           const anteseed = "ante";
           const anteEntityPda = FindEntityPda({
             worldId: filteredGames[i].activeGame.worldId,
@@ -418,14 +397,13 @@ const Home = ({
           let mint_of_token_being_sent = new PublicKey(0);
           if (anteParsedData && anteParsedData.token) {
             mint_of_token_being_sent = anteParsedData.token;
-            base_buyin = anteParsedData.baseBuyin;
-            max_buyin = anteParsedData.maxBuyin;
-            min_buyin = anteParsedData.minBuyin;
+            buy_in = anteParsedData.buyIn.toNumber();
             try {
               const { name, image } = await fetchTokenMetadata(mint_of_token_being_sent.toString());
               token_image = image;
               token_name = name;
               token_mint = mint_of_token_being_sent;
+              decimals = anteParsedData.tokenDecimals;
             } catch (error) {
               console.error("Error fetching token data:", error);
             }
@@ -446,6 +424,7 @@ const Home = ({
               server,
             );
             if (isPlayerStatus(result)) {
+              //console.log("result", result);
               if (result.playerStatus == "error") {
                 console.log("Error fetching player status");
                 activeplayers = result.activeplayers;
@@ -466,7 +445,6 @@ const Home = ({
             } else {
               console.log("Error fetching player status");
             }
-            console.log("activeplayers", activeplayers);
             const newgame: FetchedGame = {
               activeGame: {
                 ...filteredGames[i].activeGame,
@@ -478,13 +456,10 @@ const Home = ({
                 image: token_image,
                 token: token_name,
                 tokenMint: token_mint,
-                base_buyin: base_buyin,
-                min_buyin: min_buyin,
-                max_buyin: max_buyin,
+                buy_in: buy_in,
+                decimals: decimals,
                 endpoint: filteredGames[i].activeGame.endpoint,
-                ping:
-                  pingResults.find((ping: any) => ping.endpoint === filteredGames[i].activeGame.endpoint)?.pingTime ||
-                  0,
+                ping: pingTime  || 0,
               } as ActiveGame,
               playerInfo: {
                 playerStatus: playerStatus,
@@ -500,7 +475,7 @@ const Home = ({
             activeGamesRef.current.forEach((game, index) => {
               if (game.activeGame.worldId.toString() === filteredGames[i].activeGame.worldId.toString()) {
                 if (
-                  (filteredGames[i].activeGame.ping == 0 && !firstLoad) ||
+                  // (filteredGames[i].activeGame.ping == 0 && !firstLoad) ||
                   (activeGamesRef.current[i].activeGame.ping == 0 && firstLoad)
                 ) {
                   activeGamesRef.current[index] = filteredGames[i];
@@ -518,32 +493,143 @@ const Home = ({
     }
   };
 
+  const fetchTokenBalance = async (activeGame: ActiveGame) => {
+    if (!activeGame || !activeGame.tokenMint) return;
+    const connection = engine.getConnectionChain();
+    const wallet = engine.getWalletPayer();
+    if (!wallet) return;
+
+    try {
+      if (!activeGame.tokenMint) return;
+      const tokenMint = new PublicKey(activeGame.tokenMint);
+
+      const tokenAccounts = await connection.getTokenAccountsByOwner(wallet, {
+        mint: tokenMint,
+      });
+      let balance = 0;
+      if (tokenAccounts.value.length > 0) {
+        const accountInfo = tokenAccounts.value[0].pubkey;
+        const balanceInfo = await connection.getTokenAccountBalance(accountInfo);
+        console.log("balanceInfo", balanceInfo);
+        balance = parseInt(balanceInfo.value.amount) || 0;
+        setTokenBalance(balance);
+      }
+      if (balance < activeGame.buy_in) {
+        setHasInsufficientTokenBalance(true);
+      } else {
+        setHasInsufficientTokenBalance(false);
+      }
+    } catch (error) {
+      console.log("Error fetching token balance:", error);
+    }
+  };
+  
+  const BalanceWarning: React.FC<{ activeGame: ActiveGame }> = ({ activeGame }) => {
+    const tokenMint = activeGame.tokenMint?.toString();
+    const tokenMetadata = tokenMint ? cachedTokenMetadata[tokenMint] : null;
+
+    let swapLink = "";
+    let swapText = "";
+
+    if (tokenMint) {
+      if (tokenMetadata?.raydium) {
+        swapLink = `https://raydium.io/swap/?inputMint=sol&outputMint=${tokenMint}`;
+        swapText = "Buy some on Raydium.";
+      } else {
+        swapLink = `https://jup.ag/swap/SOL-${tokenMint}`;
+        swapText = "Buy some on Jupiter.";
+      }
+    }
+
+    const [opacity, setOpacity] = React.useState(100);
+
+    React.useEffect(() => {
+      const fadeOutTimer = setTimeout(() => {
+        setOpacity(0);
+        setTimeout(() => {
+          setHasInsufficientTokenBalance(false);
+          setTokenBalance(-1);
+        }, 1000);
+      }, 4000);
+
+      return () => {
+        clearTimeout(fadeOutTimer);
+      };
+    }, []);
+
+    return (
+      <div
+        className={`balance-warning fixed bottom-10 left-1/2 transform -translate-x-1/2 z-[900]`}
+        style={{ opacity: opacity, transition: "opacity 1s ease-in-out" }}
+      >
+        Your token balance <b>{tokenBalance >= 0 ? tokenBalance : ""}</b> is below the buy-in amount.{" "}
+        {swapLink && (
+          <a href={swapLink} target="_blank" rel="noopener noreferrer">
+            {swapText}
+          </a>
+        )}
+      </div>
+    );
+  };
+
   const handlePlayButtonClick = async (game: FetchedGame) => {
     engine.setEndpointEphemRpc(game.activeGame.endpoint);
     setSelectedGame(game.activeGame);
     setSelectedGamePlayerInfo(game.playerInfo);
-    if (game.playerInfo.need_to_delegate) {
-      try {
-        const playerComponentPda = FindComponentPda({
-          componentId: COMPONENT_PLAYER_ID,
-          entity: game.playerInfo.newplayerEntityPda,
-        });
-        const playerdelegateIx = createDelegateInstruction({
-          entity: game.playerInfo.newplayerEntityPda,
-          account: playerComponentPda,
-          ownerProgram: COMPONENT_PLAYER_ID,
-          payer: engine.getWalletPayer(),
-        });
-        const deltx = new Transaction().add(playerdelegateIx);
-        const playerdelsignature = await engine.processWalletTransaction("playerdelegate", deltx);
-        console.log(`delegation signature: ${playerdelsignature}`);
-      } catch (error) {
-        console.log("Error delegating:", error);
-      }
-    }
 
     if (game.playerInfo.playerStatus === "new_player") {
-      setIsBuyInModalOpen(true);
+      setSubmittingBuyIn(true);
+      const statusCheck = await getMyPlayerStatus(
+        engine,
+        game.activeGame.worldId,
+        game.activeGame.max_players,
+        game.activeGame.endpoint,
+      );
+      if (isPlayerStatus(statusCheck)) {
+        let activeplayers = 0;
+        let need_to_delegate = false;
+        let need_to_undelegate = false;
+        let newplayerEntityPda = new PublicKey(0);
+        let playerStatus = "new_player";
+        if (statusCheck.playerStatus == "error") {
+          console.log("Error fetching player status");
+          activeplayers = statusCheck.activeplayers;
+          if (activeplayers == game.activeGame.max_players) {
+            playerStatus = "Game Full";
+          } else {
+            playerStatus = statusCheck.playerStatus;
+          }
+        } else {  
+          need_to_delegate = statusCheck.need_to_delegate;
+          need_to_undelegate = statusCheck.need_to_undelegate;
+          newplayerEntityPda = statusCheck.newplayerEntityPda;
+          playerStatus = statusCheck.playerStatus;
+        }
+        game.playerInfo = {
+          playerStatus: playerStatus,
+          need_to_delegate: need_to_delegate,
+          need_to_undelegate: need_to_undelegate,
+          newplayerEntityPda: newplayerEntityPda,
+        };
+      }
+      fetchTokenBalance(game.activeGame);
+      const retrievedUser = localStorage.getItem("user");
+      let myusername = "unnamed";
+      if (retrievedUser) {
+        myusername = JSON.parse(retrievedUser).name;
+      }
+      const result = await gameExecuteJoin(
+        engine,
+        game.activeGame,
+        game.activeGame.buy_in,
+        myusername,
+        game.playerInfo,
+        setMyPlayerEntityPda,
+      );
+      setSubmittingBuyIn(false);
+      if (result.success) { 
+        navigate("/game"); 
+      }
     }
     if (game.playerInfo.playerStatus === "cashing_out") {
       try {
@@ -566,30 +652,26 @@ const Home = ({
         console.log("error", cashoutError);
       }
     }
-    if (game.playerInfo.playerStatus === "bought_in") {
-      try {
-        const mapseed = "origin";
-        const mapEntityPda = FindEntityPda({
-          worldId: game.activeGame.worldId,
-          entityId: new anchor.BN(0),
-          seed: stringToUint8Array(mapseed),
-        });
-        await gameSystemJoin(engine, game.activeGame, game.playerInfo.newplayerEntityPda, mapEntityPda, "unnamed");
-        setMyPlayerEntityPda(game.playerInfo.newplayerEntityPda);
-        navigate(`/game`);
-      } catch (joinError: any) {
-        console.log("Error during join", joinError);
-        const customErrorCode = getCustomErrorCode(joinError);
-        if (customErrorCode === 6000) {
-          console.log("Custom error 6000 detected");
-          setMyPlayerEntityPda(game.playerInfo.newplayerEntityPda);
-          navigate("/game");
-          return;
-        }
-        console.error("Unexpected error:", joinError);
-      }
-    }
     if (game.playerInfo.playerStatus === "in_game") {
+      if (game.playerInfo.need_to_delegate) {
+        try {
+          const playerComponentPda = FindComponentPda({
+            componentId: COMPONENT_PLAYER_ID,
+            entity: game.playerInfo.newplayerEntityPda,
+          });
+          const playerdelegateIx = createDelegateInstruction({
+            entity: game.playerInfo.newplayerEntityPda,
+            account: playerComponentPda,
+            ownerProgram: COMPONENT_PLAYER_ID,
+            payer: engine.getWalletPayer(),
+          });
+          const deltx = new Transaction().add(playerdelegateIx);
+          const playerdelsignature = await engine.processWalletTransaction("playerdelegate", deltx);
+          console.log(`delegation signature: ${playerdelsignature}`);
+        } catch (error) {
+          console.log("Error delegating:", error);
+        }
+      }
       setMyPlayerEntityPda(game.playerInfo.newplayerEntityPda);
       navigate(`/game`);
     }
@@ -607,11 +689,16 @@ const Home = ({
       }),
     );
     const lowestPingEndpoint = pingResults.reduce((a, b) => (a.pingTime < b.pingTime ? a : b));
-    //const index = endpoints.indexOf(lowestPingEndpoint.endpoint);
     return { pingResults: pingResults, lowestPingEndpoint: lowestPingEndpoint };
   };
 
-  const checkActiveGamesLoaded = async (thisServer: string, pingResults: any) => {
+  const pingSpecificEndpoint = async (endpoint: string) => {
+    const pingTimes = await Promise.all([pingEndpoint(endpoint), pingEndpoint(endpoint), pingEndpoint(endpoint)]);
+    const bestPingTime = Math.min(...pingTimes);
+    return { endpoint: endpoint, pingTime: bestPingTime, region: options[endpoints[NETWORK].indexOf(endpoint)] };
+  };
+
+  const checkActiveGamesLoaded = async (thisServer: string) => {
     if (checkActiveGamesLoadedCallCount.current >= 5) {
       console.error("checkActiveGamesLoaded called too many times.");
       setIsLoadingCurrentGames(false);
@@ -619,7 +706,7 @@ const Home = ({
     }
 
     if (activeGamesRef.current.filter((row) => row.activeGame.ping > 0).length === 0) {
-      await fetchAndLogMapData(engine, activeGamesRef.current, thisServer, pingResults, true);
+      await fetchAndLogMapData(engine, activeGamesRef.current, thisServer, true);
 
       checkActiveGamesLoadedCallCount.current++;
       checkActiveGamesLoadedWait.current *= 2;
@@ -635,14 +722,10 @@ const Home = ({
   const refreshAllGames = async () => {
     console.log(`Refreshing games in ${selectedEndpoint}`);
     setIsLoadingCurrentGames(true);
-    let pingResults = await pingEndpoints();
-    pingResultsRef.current = pingResults.pingResults;
     await fetchAndLogMapData(
       engine,
       activeGamesRef.current,
       selectedEndpoint,
-      //selectedServer.current,
-      pingResults.pingResults,
     );
     setIsLoadingCurrentGames(false);
   };
@@ -680,12 +763,11 @@ const Home = ({
       }
       try {
         setIsLoadingCurrentGames(true);
-        await fetchAndLogMapData(engine, activeGamesRef.current, selectedEndpoint, pingResultsRef.current, true);
+        await fetchAndLogMapData(engine, activeGamesRef.current, selectedEndpoint, true);
         setTimeout(
           checkActiveGamesLoaded,
           checkActiveGamesLoadedWait.current,
           selectedEndpoint,
-          pingResultsRef.current,
         );
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -713,6 +795,8 @@ const Home = ({
             }`}
             onClick={async () => {
               if (selectedServer.current === item.region) {
+                let pingResults = await pingEndpoints();
+                pingResultsRef.current = pingResults.pingResults;
                 refreshAllGames();
                 return;
               }
@@ -734,19 +818,8 @@ const Home = ({
               }
               activeGamesRef.current = clearPingGames;
               setActiveGamesLoaded(clearPingGames);
-              // const thisServer = item.region;
               const thisEndpoint = item.endpoint;
-              // selectedServer.current = thisServer;
               setSelectedEndpoint(thisEndpoint);
-              /*
-              setSelectedEndpoint((prevEndpoint) => {
-                if (prevEndpoint === thisEndpoint) {
-                  return ""; // Trigger an update by setting to an empty string first
-                }
-                return thisEndpoint;
-              });
-              setTimeout(() => setSelectedEndpoint(thisEndpoint), 0); // Ensure the update is triggered
-              */
             }}
             disabled={isLoadingCurrentGames}
           >
@@ -900,7 +973,7 @@ const Home = ({
                     </td>
                     <td style={{ color: "#898989" }}>
                       {row.activeGame.isLoaded ? (
-                        formatBuyIn(row.activeGame.min_buyin) + " - " + formatBuyIn(row.activeGame.max_buyin)
+                        formatBuyIn(row.activeGame.buy_in / 10 ** row.activeGame.decimals)
                       ) : (
                         <Spinner />
                       )}
@@ -933,7 +1006,6 @@ const Home = ({
                         {{
                           new_player: "Play",
                           cashing_out: "Cash Out",
-                          bought_in: "Resume",
                           in_game: "Resume",
                         }[row.playerInfo.playerStatus] || row.playerInfo.playerStatus}
                       </button>
@@ -948,7 +1020,8 @@ const Home = ({
                             setLoadingGameNum(idx);
                             await handleRefresh(
                               engine,
-                              activeGamesRef.current.filter((row) => row.activeGame.ping > 0),
+                              //activeGamesRef.current.filter((row) => row.activeGame.ping > 0),
+                              activeGamesLoaded.filter((row) => row.activeGame.endpoint === selectedEndpoint),
                               idx,
                             );
                             setLoadingGameNum(-1);
@@ -981,6 +1054,13 @@ const Home = ({
           }}
         />
       )}
+      {(selectedGame && selectedGame.buy_in && (hasInsufficientTokenBalance || (tokenBalance !== -1 && tokenBalance < selectedGame.buy_in))) 
+      && 
+      <BalanceWarning 
+        activeGame={selectedGame} />}
+      {(submittingBuyIn && selectedGame && selectedGame.buy_in && (!hasInsufficientTokenBalance || tokenBalance >= selectedGame.buy_in)) 
+      && 
+      <><div className={`text-[#FFD700] fixed bottom-10 left-1/2 transform -translate-x-1/2 z-[900]`}>Submitting buy in...</div> </>}
       <FooterLink />
     </div>
   );
