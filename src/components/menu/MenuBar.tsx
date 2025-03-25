@@ -13,7 +13,7 @@ export function MenuBar() {
       <div className="menu-bar-left">
         <Link to="/" className="logo">
           <img src="/token.png" alt="Supersize" />
-          <span>Supersize</span>
+          <span style={{ fontFamily: "AzoSans", color: "white", marginLeft: "-0.5rem"}}>Supersize</span>
         </Link>
       </div>
 

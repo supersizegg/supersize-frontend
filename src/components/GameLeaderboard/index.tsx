@@ -11,7 +11,7 @@ interface LeaderboardItem {
 interface LeaderboardProps {
   leaderboard: LeaderboardItem[];
   currentPlayer: LeaderboardItem | null;
-  gameInfo: { buy_in: number };
+  gameInfo: { decimals: number };
 }
 
 const shortenAuthority = (authorityStr: string): string =>
@@ -44,7 +44,7 @@ const GameLeaderboard: React.FC<LeaderboardProps> = ({ leaderboard, currentPlaye
               key={item.authority ? item.authority.toString() : `${item.name}-${index}`}
               className={isCurrentPlayer ? "me" : ""}
             >
-              <b>{displayName}</b> <span>{getRoundedAmount(item.score, gameInfo.buy_in / 1000)}</span>
+              <b>{displayName}</b> <span>{item.score / 10 ** gameInfo.decimals}</span>
             </li>
           );
         })}

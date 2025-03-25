@@ -67,6 +67,48 @@
       ]
     },
     {
+      "name": "destroy",
+      "discriminator": [
+        157,
+        40,
+        96,
+        3,
+        135,
+        203,
+        143,
+        74
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "receiver",
+          "writable": true
+        },
+        {
+          "name": "entity"
+        },
+        {
+          "name": "component",
+          "writable": true
+        },
+        {
+          "name": "component_program_data"
+        },
+        {
+          "name": "instruction_sysvar_account",
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "initialize",
       "discriminator": [
         175,
@@ -194,11 +236,48 @@
           "writable": true
         },
         {
-          "name": "authority"
+          "name": "authority",
+          "signer": true
         },
         {
           "name": "instruction_sysvar_account",
           "address": "Sysvar1nstructions1111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "data",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
+      "name": "update_with_session",
+      "discriminator": [
+        221,
+        55,
+        212,
+        141,
+        57,
+        85,
+        61,
+        182
+      ],
+      "accounts": [
+        {
+          "name": "bolt_component",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "instruction_sysvar_account",
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        },
+        {
+          "name": "session_token"
         }
       ],
       "args": [
@@ -234,6 +313,19 @@
         155,
         206,
         218
+      ]
+    },
+    {
+      "name": "SessionToken",
+      "discriminator": [
+        233,
+        4,
+        115,
+        14,
+        46,
+        21,
+        1,
+        15
       ]
     }
   ],
@@ -363,6 +455,30 @@
                 "name": "BoltMetadata"
               }
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "SessionToken",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "target_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "session_signer",
+            "type": "pubkey"
+          },
+          {
+            "name": "valid_until",
+            "type": "i64"
           }
         ]
       }

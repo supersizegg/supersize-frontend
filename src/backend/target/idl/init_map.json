@@ -8,6 +8,33 @@
   },
   "instructions": [
     {
+      "name": "bolt_execute",
+      "discriminator": [
+        75,
+        206,
+        62,
+        210,
+        52,
+        215,
+        104,
+        109
+      ],
+      "accounts": [
+        {
+          "name": "authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": "bytes"
+        }
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
+    },
+    {
       "name": "execute",
       "discriminator": [
         130,
@@ -24,8 +51,7 @@
           "name": "map"
         },
         {
-          "name": "authority",
-          "signer": true
+          "name": "authority"
         }
       ],
       "args": [
@@ -33,7 +59,10 @@
           "name": "_args",
           "type": "bytes"
         }
-      ]
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
     }
   ],
   "accounts": [

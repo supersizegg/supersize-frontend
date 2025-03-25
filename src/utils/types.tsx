@@ -4,8 +4,8 @@ import BN from "bn.js";
 export interface Food {
   x: number;
   y: number;
-  size: number;
-  food_type: boolean;
+  food_value: number;
+  food_multiple: number;
 }
 
 export interface Blob {

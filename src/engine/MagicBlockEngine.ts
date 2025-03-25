@@ -18,6 +18,11 @@ const TRANSACTION_COST_LAMPORTS = 5000;
 const connectionChain = new Connection(ENDPOINT_CHAIN_RPC, {
   wsEndpoint: ENDPOINT_CHAIN_WS,
 });
+
+const connectionChainDevnet = new Connection(RPC_CONNECTION["devnet"], {
+  wsEndpoint: RPC_CONNECTION["devnet"].replace("http", "ws"),
+});
+
 /*
 let connectionEphem = new Connection("https://supersize-sin.magicblock.app", {
   wsEndpoint: "wss://supersize-sin.magicblock.app",
@@ -62,6 +67,18 @@ export class MagicBlockEngine {
     });
   }
 
+  public setChain(): void {
+    this.provider = new AnchorProvider(connectionChain, new NodeWallet(this.sessionKey), {
+      preflightCommitment: "processed",
+    });
+  }
+
+  public setDevnet(): void {
+    this.provider = new AnchorProvider(connectionChainDevnet, new NodeWallet(this.sessionKey), {
+      preflightCommitment: "processed",
+    });
+  }
+
   public setEndpointEphemRpc(endpoint: string): void {
     this.endpointEphemRpc = endpoint;
     this.connectionEphem = new Connection(endpoint, {
@@ -95,6 +112,9 @@ export class MagicBlockEngine {
   getConnectionChain(): Connection {
     return connectionChain;
   }
+  getConnectionChainDevnet(): Connection {
+    return connectionChainDevnet;
+  }
   getConnectionEphem(): Connection {
     return this.connectionEphem;
   }
@@ -127,15 +147,15 @@ export class MagicBlockEngine {
 
   async processWalletTransaction(name: string, transaction: Transaction): Promise<string> {
     log(name, "sending");
-    const signature = await this.walletContext.sendTransaction(transaction, connectionChain);
-    await this.waitSignatureConfirmation(name, signature, connectionChain, "confirmed");
+    const signature = await this.walletContext.sendTransaction(transaction, this.provider.connection);
+    await this.waitSignatureConfirmation(name, signature, this.provider.connection, "confirmed");
     return signature;
   }
 
   async processSessionChainTransaction(name: string, transaction: Transaction): Promise<string> {
     log(name, "sending");
-    const signature = await connectionChain.sendTransaction(transaction, [this.sessionKey], { skipPreflight: true });
-    await this.waitSignatureConfirmation(name, signature, connectionChain, "confirmed");
+    const signature = await this.provider.connection.sendTransaction(transaction, [this.sessionKey], { skipPreflight: true });
+    await this.waitSignatureConfirmation(name, signature, this.provider.connection, "confirmed");
     return signature;
   }
 
@@ -252,11 +272,12 @@ export class MagicBlockEngine {
   }
 
   getChainAccountInfo(address: PublicKey) {
-    return connectionChain.getAccountInfo(address);
+    //return connectionChain.getAccountInfo(address);
+    return this.provider.connection.getAccountInfo(address);
   }
   
   getChainAccountInfoProcessed(address: PublicKey) {
-    return connectionChain.getAccountInfo(address, "processed");
+    return this.provider.connection.getAccountInfo(address, "processed");
   }
 
   getEphemAccountInfo(address: PublicKey) {

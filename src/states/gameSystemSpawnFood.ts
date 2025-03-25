@@ -12,7 +12,7 @@ export async function gameSystemSpawnFood(
   gameInfo: ActiveGame,
   foodX: number,
   foodY: number,
-  foodType: boolean,
+  //foodType: boolean,
   foodListLen: number[],
   entityMatch: PublicKey,
   foodEntities: PublicKey[],

@@ -5,17 +5,16 @@ import FooterLink from "@components/Footer";
 
 import "./Home.scss";
 
-import { ActiveGame } from "@utils/types";
+import { ActiveGame, Food } from "@utils/types";
 import { cachedTokenMetadata, NETWORK, options } from "@utils/constants";
 
 import { fetchTokenMetadata, getMyPlayerStatus, formatBuyIn } from "@utils/helper";
-import { FindEntityPda, FindComponentPda, FindWorldPda, createDelegateInstruction, createUndelegateInstruction } from "@magicblock-labs/bolt-sdk";
-import { PublicKey, Transaction } from "@solana/web3.js";
+import { FindEntityPda, FindComponentPda, FindWorldPda, createDelegateInstruction, createUndelegateInstruction, BN } from "@magicblock-labs/bolt-sdk";
+import { LAMPORTS_PER_SOL, PublicKey, Transaction } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import { Tooltip } from "react-tooltip";
 
 import { MenuBar } from "@components/menu/MenuBar";
-import BuyInModal from "@components/buyInModal";
 import { Spinner } from "@components/util/Spinner";
 import { gameExecuteJoin } from "@states/gameExecuteJoin";
 
@@ -30,6 +29,11 @@ import { gameSystemJoin } from "@states/gameSystemJoin";
 import { gameSystemCashOut } from "@states/gameSystemCashOut";
 import { MagicBlockEngine } from "@engine/MagicBlockEngine";
 import Alert from "@components/Alert";
+import GameComponent from "@components/Game";
+import NotificationContainer from "@components/NotificationContainer";
+import NotificationService from "@components/NotificationService";
+import { NATIVE_MINT } from "@solana/spl-token";
+import { getTokenBalance } from "buddy.link/dist/frontend/headless/onchain-utils/fungibleTokens";
 
 function getPingColor(ping: number) {
   if (ping < 0) return "red";
@@ -44,6 +48,7 @@ type homeProps = {
   setMyPlayerEntityPda: (pda: PublicKey | null) => void;
   activeGamesLoaded: FetchedGame[];
   setActiveGamesLoaded: (games: FetchedGame[]) => void;
+  randomFood: Food[];
 };
 
 const Home = ({
@@ -52,6 +57,7 @@ const Home = ({
   setMyPlayerEntityPda,
   activeGamesLoaded,
   setActiveGamesLoaded,
+  randomFood,
 }: homeProps) => {
   const navigate = useNavigate();
   const engine = useMagicBlockEngine();
@@ -72,13 +78,13 @@ const Home = ({
   const [selectedEndpoint, setSelectedEndpoint] = useState<string>("");
   const [isLoadingCurrentGames, setIsLoadingCurrentGames] = useState(true);
   const [loadingGameNum, setLoadingGameNum] = useState(-1);
-  const [cashoutTx, setCashoutTx] = useState<string>("");
   const checkActiveGamesLoadedCallCount = useRef(0);
   const checkActiveGamesLoadedWait = useRef(500);
   const [numberOfGamesInEndpoint, setNumberOfGamesInEndpoint] = useState<null | number>(null);
   const [hasInsufficientTokenBalance, setHasInsufficientTokenBalance] = useState(false);
   const [tokenBalance, setTokenBalance] = useState(-1);
   const [submittingBuyIn, setSubmittingBuyIn] = useState(false);
+  const [gemBalance, setGemBalance] = useState(0);
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(event.target.value);
@@ -135,7 +141,7 @@ const Home = ({
               newGameInfo.activeGame.decimals = anteParsedData.tokenDecimals;
               mint_of_token_being_sent = anteParsedData.token;
               try {
-                const { name, image } = await fetchTokenMetadata(mint_of_token_being_sent.toString());
+                const { name, image } = await fetchTokenMetadata(mint_of_token_being_sent.toString(), NETWORK);
                 newGameInfo.activeGame.image = image;
                 newGameInfo.activeGame.token = name;
                 newGameInfo.activeGame.tokenMint = mint_of_token_being_sent;
@@ -342,13 +348,34 @@ const Home = ({
     pingResultsRef.current = pingResultsRef.current.map((result) =>
       result.endpoint === server ? { ...result, pingTime: pingTime } : result
     );
-    
+    console.log("activeGamesLoaded", activeGamesLoaded);
+
     const gameCopy = [...activeGamesLoaded];
     let filteredGames = gameCopy.filter((game) => {
       return server === game.activeGame.endpoint;
     });
 
+    const serverIndex = endpoints[NETWORK].indexOf(server);
+
+    if (NETWORK === "mainnet") {
+      console.log(`Server index in mainnet endpoints: ${serverIndex}`);
+      const gameCopy = [...activeGamesLoaded];
+      filteredGames = gameCopy.filter((game) => {
+        return server === game.activeGame.endpoint || game.activeGame.endpoint === endpoints["devnet"][serverIndex];
+      });
+    }
+    console.log("filteredGames", filteredGames);
     for (let i = 0; i < filteredGames.length; i++) {
+      let isDevnet = filteredGames[i].activeGame.endpoint === endpoints["devnet"][serverIndex];
+      console.log("isDevnet", isDevnet);
+      if (isDevnet){
+        engine.setDevnet();
+        engine.setEndpointEphemRpc(endpoints["devnet"][serverIndex]);
+      } else {
+        engine.setChain();
+        engine.setEndpointEphemRpc(endpoints[NETWORK][serverIndex]);
+      }
+      console.log("engine", engine);
       try {
         const preNewGame: FetchedGame = {
           activeGame: {
@@ -399,7 +426,11 @@ const Home = ({
             mint_of_token_being_sent = anteParsedData.token;
             buy_in = anteParsedData.buyIn.toNumber();
             try {
-              const { name, image } = await fetchTokenMetadata(mint_of_token_being_sent.toString());
+              let network = NETWORK;
+              if (isDevnet){
+                network = "devnet";
+              }
+              const { name, image } = await fetchTokenMetadata(mint_of_token_being_sent.toString(), network);
               token_image = image;
               token_name = name;
               token_mint = mint_of_token_being_sent;
@@ -472,6 +503,7 @@ const Home = ({
             const mergedGames = [...filteredGames];
             mergedGames[i] = newgame;
             filteredGames = mergedGames;
+            console.log("filteredGames", filteredGames);
             activeGamesRef.current.forEach((game, index) => {
               if (game.activeGame.worldId.toString() === filteredGames[i].activeGame.worldId.toString()) {
                 if (
@@ -493,27 +525,40 @@ const Home = ({
     }
   };
 
-  const fetchTokenBalance = async (activeGame: ActiveGame) => {
+  const fetchTokenBalance = async (activeGame: ActiveGame, isDevnet: boolean) => {
     if (!activeGame || !activeGame.tokenMint) return;
-    const connection = engine.getConnectionChain();
-    const wallet = engine.getWalletPayer();
+    let connection = engine.getConnectionChain();
+    let wallet = engine.getWalletPayer();
+
+    if (isDevnet){
+      connection = engine.getConnectionChainDevnet();
+      wallet = engine.getSessionPayer();
+    }
+    console.log("connection", connection, isDevnet);
     if (!wallet) return;
 
     try {
       if (!activeGame.tokenMint) return;
       const tokenMint = new PublicKey(activeGame.tokenMint);
-
-      const tokenAccounts = await connection.getTokenAccountsByOwner(wallet, {
-        mint: tokenMint,
-      });
       let balance = 0;
-      if (tokenAccounts.value.length > 0) {
-        const accountInfo = tokenAccounts.value[0].pubkey;
-        const balanceInfo = await connection.getTokenAccountBalance(accountInfo);
+      if (tokenMint.equals(NATIVE_MINT)) {
+        const balanceInfo = await connection.getBalance(wallet);
         console.log("balanceInfo", balanceInfo);
-        balance = parseInt(balanceInfo.value.amount) || 0;
-        setTokenBalance(balance);
+        balance = balanceInfo;
+        setTokenBalance(balance / LAMPORTS_PER_SOL);
+      } else {
+        const tokenAccounts = await connection.getTokenAccountsByOwner(wallet, {
+          mint: tokenMint,
+        });
+        if (tokenAccounts.value.length > 0) {
+          const accountInfo = tokenAccounts.value[0].pubkey;
+          const balanceInfo = await connection.getTokenAccountBalance(accountInfo);
+          console.log("balanceInfo", balanceInfo.value.amount, activeGame.buy_in);
+          balance = parseInt(balanceInfo.value.amount) || 0;
+          setTokenBalance(balance / 10 ** activeGame.decimals);
+        }
       }
+
       if (balance < activeGame.buy_in) {
         setHasInsufficientTokenBalance(true);
       } else {
@@ -573,11 +618,27 @@ const Home = ({
   };
 
   const handlePlayButtonClick = async (game: FetchedGame) => {
-    engine.setEndpointEphemRpc(game.activeGame.endpoint);
+    let serverIndex = endpoints["devnet"].indexOf(game.activeGame.endpoint);
+    let isDevnet = serverIndex >= 0;
+    console.log("serverIndex", serverIndex);
+    if (serverIndex >= 0){
+      engine.setDevnet();
+      engine.setEndpointEphemRpc(game.activeGame.endpoint);
+    } else {
+      engine.setChain();
+      engine.setEndpointEphemRpc(game.activeGame.endpoint);
+    }
+    //engine.setEndpointEphemRpc(game.activeGame.endpoint);
     setSelectedGame(game.activeGame);
     setSelectedGamePlayerInfo(game.playerInfo);
 
     if (game.playerInfo.playerStatus === "new_player") {
+        const alertId = NotificationService.addAlert({
+          type: "success",
+          message: "submitting buy in...",
+          shouldExit: false,
+        });
+    
       setSubmittingBuyIn(true);
       const statusCheck = await getMyPlayerStatus(
         engine,
@@ -596,6 +657,14 @@ const Home = ({
           activeplayers = statusCheck.activeplayers;
           if (activeplayers == game.activeGame.max_players) {
             playerStatus = "Game Full";
+            const exitAlertId = NotificationService.addAlert({
+              type: "error",
+              message: "Game Full",
+              shouldExit: false,
+            });
+            setTimeout(() => {
+              NotificationService.updateAlert(exitAlertId, { shouldExit: true });
+            }, 3000);
           } else {
             playerStatus = statusCheck.playerStatus;
           }
@@ -612,7 +681,7 @@ const Home = ({
           newplayerEntityPda: newplayerEntityPda,
         };
       }
-      fetchTokenBalance(game.activeGame);
+      fetchTokenBalance(game.activeGame, isDevnet);
       const retrievedUser = localStorage.getItem("user");
       let myusername = "unnamed";
       if (retrievedUser) {
@@ -624,12 +693,24 @@ const Home = ({
         game.activeGame.buy_in,
         myusername,
         game.playerInfo,
+        isDevnet,
         setMyPlayerEntityPda,
       );
       setSubmittingBuyIn(false);
       if (result.success) { 
         navigate("/game"); 
       }
+      else{
+        const exitAlertId = NotificationService.addAlert({
+          type: "error",
+          message: result.error || "Error submitting buy in",
+          shouldExit: false,
+        });
+        setTimeout(() => {
+          NotificationService.updateAlert(exitAlertId, { shouldExit: true });
+        }, 3000);
+      }
+      NotificationService.updateAlert(alertId, { shouldExit: true });
     }
     if (game.playerInfo.playerStatus === "cashing_out") {
       try {
@@ -638,17 +719,47 @@ const Home = ({
           entityId: new anchor.BN(0),
           seed: stringToUint8Array("ante"),
         });
+        const cashoutAlertId = NotificationService.addAlert({
+          type: "success",
+          message: "Cashing out...",
+          shouldExit: false,
+        });
         const cashoutFeedback = await gameSystemCashOut(
           engine,
           game.activeGame,
           anteEntityPda,
           game.playerInfo.newplayerEntityPda,
+          isDevnet,
         );
-        if (cashoutFeedback) {
-          setCashoutTx("cashout success");
+        NotificationService.updateAlert(cashoutAlertId, { shouldExit: true });
+        if (cashoutFeedback.success) {
+          const cashoutSuccessAlertId = NotificationService.addAlert({
+            type: "success",
+            message: "Cashing out successful",
+            shouldExit: false,
+          });
+          setTimeout(() => {
+            NotificationService.updateAlert(cashoutSuccessAlertId, { shouldExit: true });
+          }, 3000);
+        }else{
+          const cashoutFailedAlertId = NotificationService.addAlert({
+            type: "error",
+            message: cashoutFeedback.error || "Error cashing out",
+            shouldExit: false,
+          });
+          setTimeout(() => {
+            NotificationService.updateAlert(cashoutFailedAlertId, { shouldExit: true });
+          }, 3000);
         }
       } catch (cashoutError) {
-        setCashoutTx("cashout failed");
+        const cashoutFailedAlertId = NotificationService.addAlert({
+          type: "error",
+          message: "Error cashing out",
+          shouldExit: false,
+        });
+        setTimeout(() => {
+          NotificationService.updateAlert(cashoutFailedAlertId, { shouldExit: true });
+        }, 3000);
         console.log("error", cashoutError);
       }
     }
@@ -731,6 +842,31 @@ const Home = ({
   };
 
   useEffect(() => {
+    const fetchUserTokenBalance = async () => {
+      let connection = engine.getConnectionChainDevnet();
+      const tokenMint = new PublicKey("AsoX43Q5Y87RPRGFkkYUvu8CSksD9JXNEqWVGVsr8UEp");
+      let balance = 0;
+        const tokenAccounts = await connection.getTokenAccountsByOwner(engine.getSessionPayer(), {
+          mint: tokenMint,
+        });
+        console.log("tokenAccounts", tokenAccounts);
+        if (tokenAccounts.value.length > 0) {
+          const accountInfo = tokenAccounts.value[0].pubkey;
+          const balanceInfo = await connection.getTokenAccountBalance(accountInfo);
+          console.log("balanceInfo", balanceInfo.value.amount);
+          balance = parseInt(balanceInfo.value.amount) || 0;
+          setGemBalance(balance / 10 ** 9);
+        }
+        else{
+          setGemBalance(0);
+        }
+    }
+
+    fetchUserTokenBalance();
+  }, [engine.getSessionPayer()]);
+
+  useEffect(() => {
+
     const fetchPingData = async () => {
       setIsLoadingCurrentGames(true);
       try {
@@ -783,106 +919,165 @@ const Home = ({
   }, [selectedEndpoint]);
 
   const renderRegionButtons = () => {
+    const selected = pingResultsRef.current.find(
+      (item) => item.region === selectedServer.current
+    );
+    const others = pingResultsRef.current.filter(
+      (item) => item.region !== selectedServer.current
+    );
+  
     return (
-      <div className="region-buttons flex flex-row flex-start w-[fit-content] h-[100%] items-center justify-center">
-        {pingResultsRef.current.map((item) => (
+      // Fixed container in bottom-left corner.
+      <div>
+        {/* Hover zone wrapper includes selected and hover items plus extra bottom padding */}
+        <div className="relative flex flex-col items-center group/hoverzone pb-8">
+          {/* Hover panel (above selected button) */}
+          <div className="flex flex-col-reverse gap-2 mb-2 z-10">
+            {others.map((item, index) => (
+              <button
+                key={`region-${item.region}`}
+                className={`
+                  region-button text-white px-4 py-2 rounded-md border border-white/20
+                  bg-[#444] hover:bg-[#555] transition-all duration-300 ease-out
+                  transform translate-y-5 opacity-0
+                  group-hover/hoverzone:translate-y-0 group-hover/hoverzone:opacity-100
+                  ${isLoadingCurrentGames ? "cursor-not-allowed" : "cursor-pointer"}
+                `}
+                style={{ transitionDelay: `${index * 50}ms` }}
+                onClick={async () => {
+                  if (selectedServer.current === item.region) {
+                    let pingResults = await pingEndpoints();
+                    pingResultsRef.current = pingResults.pingResults;
+                    refreshAllGames();
+                    return;
+                  }
+  
+                  selectedServer.current = item.region;
+  
+                  const clearPingGames = [...activeGamesRef.current];
+                  for (let i = 0; i < clearPingGames.length; i++) {
+                    clearPingGames[i] = {
+                      ...clearPingGames[i],
+                      activeGame: {
+                        ...clearPingGames[i].activeGame,
+                        active_players: -1,
+                        ping: 0,
+                      },
+                    };
+                  }
+  
+                  activeGamesRef.current = clearPingGames;
+                  setActiveGamesLoaded(clearPingGames);
+                  setSelectedEndpoint(item.endpoint);
+                }}
+                disabled={isLoadingCurrentGames}
+              >
+                <div className="flex flex-row items-center gap-1">
+                  <span>{item.region}</span>
+                  <span
+                    style={{
+                      fontSize: "10px",
+                      color: getPingColor(item.pingTime),
+                    }}
+                  >
+                    ({item.pingTime}ms)
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+  
+          {/* Selected Region (Always Visible) */}
           <button
-            key={`region-${item.region}`}
-            className={`region-button mr-1 ml-1 text-white pl-2 pr-2 py-1 rounded-md ${
+            className={`region-button text-white px-4 py-2 rounded-md border border-white/20 bg-[#666] hover:bg-[#555] transition-colors ${
               isLoadingCurrentGames ? "cursor-not-allowed" : "cursor-pointer"
-            } transition-colors ${
-              selectedServer.current === item.region ? "bg-[#666] hover:bg-[#555]" : "bg-[#444] hover:bg-[#555]"
             }`}
-            onClick={async () => {
-              if (selectedServer.current === item.region) {
-                let pingResults = await pingEndpoints();
-                pingResultsRef.current = pingResults.pingResults;
-                refreshAllGames();
-                return;
-              }
-              selectedServer.current = item.region;
-
-              const clearPingGames = [...activeGamesRef.current];
-              for (let i = 0; i < clearPingGames.length; i++) {
-                const prewnewgame: FetchedGame = {
-                  activeGame: {
-                    ...clearPingGames[i].activeGame,
-                    active_players: -1,
-                    ping: 0,
-                  } as ActiveGame,
-                  playerInfo: {
-                    ...clearPingGames[i].playerInfo,
-                  } as PlayerInfo,
-                };
-                clearPingGames[i] = prewnewgame;
-              }
-              activeGamesRef.current = clearPingGames;
-              setActiveGamesLoaded(clearPingGames);
-              const thisEndpoint = item.endpoint;
-              setSelectedEndpoint(thisEndpoint);
-            }}
             disabled={isLoadingCurrentGames}
           >
-            <div>
-              <span>{item.region} </span>{" "}
-              <span style={{ fontSize: "10px", color: getPingColor(item.pingTime) }}>({item.pingTime}ms)</span>
+            <div className="flex flex-row items-center gap-1">
+              <span>{selected?.region}</span>
+              <span
+                style={{
+                  fontSize: "10px",
+                  color: getPingColor(selected?.pingTime || 0),
+                }}
+              >
+                ({selected?.pingTime}ms)
+              </span>
             </div>
           </button>
-        ))}
+        </div>
       </div>
     );
   };
-
+  
   return (
     <div className="main-container">
-      <MenuBar />
-
-      <div className="banner">
-        <img
-          src="https://d23exngyjlavgo.cloudfront.net/solana_DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263"
-          alt="BONK Logo"
-          className="banner-logo"
+      <div
+        className="game"
+        style={{
+          display: "block",
+          position: "absolute",
+          top: "0",
+          left: "0",
+          height: "100%",
+          width: "100%",
+          zIndex: "0",
+        }}
+      >
+        <GameComponent
+          players={[]}
+          visibleFood={randomFood}
+          currentPlayer={{
+            name: "unnamed",
+            authority: null,
+            x: 2000,
+            y: 2000,
+            radius: 0,
+            mass: 0,
+            score: 0,
+            speed: 0,
+            removal: new BN(0),
+            target_x: 0,
+            target_y: 0,
+          }}
+          screenSize={{width: window.innerWidth, height: window.innerHeight }}
+          newTarget={{ x: 0, y: 0, boost: false }}
+          gameSize={4000}
         />
+      </div>
+      <MenuBar />
+      <div style={{ position: "fixed", top: "3.5em", right: "3em", display: gemBalance > 0 ? "flex" : "none", flexDirection: "row" }}>
+          <img  style={{ width: "20px", height: "20px", marginRight: "5px", marginTop: "1px" }} src={cachedTokenMetadata["AsoX43Q5Y87RPRGFkkYUvu8CSksD9JXNEqWVGVsr8UEp"].image} alt="Token Image" /> {gemBalance.toFixed(2)}
+      </div>
+
+      <div className="banner" style={{ position: "relative" }}>
+      <svg width="160" height="160" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="64" cy="64" r="64" fill="#1f67e0" />
+      <circle cx="38.4" cy="51.2" r="12.8" fill="white" stroke="black" strokeWidth="2" />
+      <circle cx="46.08" cy="51.2" r="5.12" fill="black" />
+      <circle cx="89.6" cy="51.2" r="12.8" fill="white" stroke="black" strokeWidth="2" />
+      <circle cx="97.28" cy="51.2" r="5.12" fill="black" />
+      <path d="M 32 83.2 Q 64 89.6, 96 83.2" fill="none" stroke="black" strokeWidth="2" />
+      </svg>
+
         <div className="banner-text">
-          <h1 className="banner-title">BONK Pre‑season is live!</h1>
+          <h1 className="banner-title">Play Supersize, win <span style={{ color: "#00d37d" }}>SOL</span> and more!</h1>
           <p className="banner-description">
-            The top 10 players will share a <span className="highlight">150,000,000 BONK</span> prize pool. The
-            leaderboard snapshot will be taken at 00:00 UTC on March 5.{" "}
-            <a
-              href="https://x.com/supersizegg/status/1894802350646403538"
-              style={{ textDecoration: "underline", color: "#ffa500" }}
-              target="_blank"
-              rel="noopener noreferrer"
+            Eat tokens and grow your blob. Eat other players to steal their tokens. Cash out your tokens anytime with a 5 second delay.
+            Win SOL, BONK, AGLD, and more!{" "}
+            <button
+              onClick={() => navigate("/about")}
+              style={{ textDecoration: "underline", color: "#00d37d" }}
             >
-              Read more
-            </a>
+               <span className="desktop-only">Learn more</span>
+               <span className="mobile-only">Learn more</span>            
+              </button>
           </p>
         </div>
       </div>
-
-      {isBuyInModalOpen && selectedGame && (
-        <BuyInModal
-          setIsBuyInModalOpen={setIsBuyInModalOpen}
-          activeGame={selectedGame}
-          setMyPlayerEntityPda={setMyPlayerEntityPda}
-          selectedGamePlayerInfo={selectedGamePlayerInfo}
-        />
-      )}
-      <div className="home-container">
+      <div className="home-container" style={{ position: "relative" }}> 
         <div className="mobile-only mobile-alert">For the best experience, use a desktop or laptop.</div>
-        <div className="home-header">
-          <div>{renderRegionButtons()}</div>
-          <div className="header-buttons desktop-only">
-            <button className="btn-outlined btn-orange" onClick={() => navigate("/about")}>
-              <span className="desktop-only">How to Play</span>
-              <span className="mobile-only">About</span>
-            </button>
-            <button className="btn-outlined btn-green" onClick={() => navigate("/create-game")}>
-              + Create Game
-            </button>
-          </div>
-        </div>
-
         <div className="table-container">
           <div className="filters-header">
             <input
@@ -950,7 +1145,7 @@ const Home = ({
                 </tr>
               )}
               {activeGamesLoaded
-                .filter((row) => row.activeGame.endpoint === selectedEndpoint)
+                .filter((row) => row.activeGame.endpoint === selectedEndpoint || row.activeGame.endpoint === endpoints["devnet"][endpoints[NETWORK].indexOf(selectedEndpoint)])
                 .map((row, idx) => (
                   <tr key={idx} style={{ display: row.activeGame.ping <= 0 ? "none" : "table-row" }}>
                     <td>{row.activeGame.worldId.toString()}</td>
@@ -964,7 +1159,7 @@ const Home = ({
                     <td>
                       {row.activeGame.isLoaded ? (
                         <>
-                          <img src={row.activeGame.image} alt={row.activeGame.name} className="token-image" />
+                          <img src={row.activeGame.image} alt={row.activeGame.name} className="token-image" style={{ marginRight: "5px" }} />
                           <span>{row.activeGame.token}</span>
                         </>
                       ) : (
@@ -1018,10 +1213,11 @@ const Home = ({
                         onClick={async () => {
                           try {
                             setLoadingGameNum(idx);
+                            const serverIndex = endpoints[NETWORK].indexOf(selectedEndpoint);
                             await handleRefresh(
                               engine,
                               //activeGamesRef.current.filter((row) => row.activeGame.ping > 0),
-                              activeGamesLoaded.filter((row) => row.activeGame.endpoint === selectedEndpoint),
+                              activeGamesLoaded.filter((row) => row.activeGame.endpoint === selectedEndpoint || row.activeGame.endpoint === endpoints["devnet"][serverIndex]),
                               idx,
                             );
                             setLoadingGameNum(-1);
@@ -1045,23 +1241,18 @@ const Home = ({
           </table>
         </div>
       </div>
-      {cashoutTx != "" && (
-        <Alert
-          type={cashoutTx.includes("failed") ? "error" : "success"}
-          message={cashoutTx}
-          onClose={() => {
-            setCashoutTx("");
-          }}
-        />
-      )}
-      {(selectedGame && selectedGame.buy_in && (hasInsufficientTokenBalance || (tokenBalance !== -1 && tokenBalance < selectedGame.buy_in))) 
+      {(selectedGame && hasInsufficientTokenBalance) 
       && 
       <BalanceWarning 
         activeGame={selectedGame} />}
-      {(submittingBuyIn && selectedGame && selectedGame.buy_in && (!hasInsufficientTokenBalance || tokenBalance >= selectedGame.buy_in)) 
-      && 
-      <><div className={`text-[#FFD700] fixed bottom-10 left-1/2 transform -translate-x-1/2 z-[900]`}>Submitting buy in...</div> </>}
-      <FooterLink />
+      <NotificationContainer />
+
+      <div className="footerContainer" style={{ bottom: "5rem"}}>
+        <div className="desktop-only" style={{ position: "fixed", right: "20px", width: "fit-content", height: "fit-content" }}>
+          {renderRegionButtons()}
+        </div>
+        <FooterLink />
+      </div>
     </div>
   );
 };

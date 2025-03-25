@@ -6,6 +6,7 @@
 
 .home-container {
   margin: 5rem auto;
+  margin-top: 0;
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
   max-width: 1000px;
@@ -79,8 +80,10 @@
   }
 
   &.btn-green {
+    border: 0px solid currentColor;
     color: #00d37d;
-    background: #70ca6d17;
+    padding: 0rem 0rem;
+    background: transparent; //#70ca6d17;
   }
 }
 
@@ -227,11 +230,11 @@ img.token-image {
 .banner {
   background: linear-gradient(90deg, #141516, #26282e);
   border-radius: 8px;
-  padding: 1.5rem 2rem;
+  padding: 0rem 1rem;
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  margin: 1rem auto 2rem;
+  margin: 1rem auto 1rem;
   width: 70vw;
   max-width: 732px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
@@ -239,8 +242,8 @@ img.token-image {
 }
 
 .banner-logo {
-  width: 60px;
-  height: 60px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid #fff;
@@ -265,7 +268,7 @@ img.token-image {
 }
 
 .banner-description .highlight {
-  color: #ffa500;
+  color: #00d37d;
   font-weight: bold;
 }
 

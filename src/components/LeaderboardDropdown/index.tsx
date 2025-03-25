@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { fetchTokenMetadata } from "@utils/helper";
-import { API_URL } from "@utils/constants";
+import { API_URL, NETWORK } from "@utils/constants";
 import "./LeaderboardDropdown.scss";
 
 interface Tokens {
@@ -29,7 +29,7 @@ const LeaderboardDropdown = ({ season, setSeason }: LeaderboardDropdownProps) =>
 
         const metadataPromises = tokensFromAPI.map(async (t: Tokens) => {
           try {
-            const metadata = await fetchTokenMetadata(t.token_mint);
+            const metadata = await fetchTokenMetadata(t.token_mint, NETWORK);
             return {
               icon: metadata.image || `${process.env.PUBLIC_URL}/default-token.png`,
               name: metadata.name || t.token_mint,

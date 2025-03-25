@@ -14,16 +14,43 @@ export type Movement = {
   },
   "instructions": [
     {
-      "name": "execute3",
+      "name": "boltExecute",
       "discriminator": [
-        110,
-        111,
-        120,
-        86,
-        172,
-        152,
-        117,
-        173
+        75,
+        206,
+        62,
+        210,
+        52,
+        215,
+        104,
+        109
+      ],
+      "accounts": [
+        {
+          "name": "authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": "bytes"
+        }
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
+    },
+    {
+      "name": "execute",
+      "discriminator": [
+        130,
+        221,
+        242,
+        154,
+        13,
+        193,
+        189,
+        29
       ],
       "accounts": [
         {
@@ -36,8 +63,7 @@ export type Movement = {
           "name": "map"
         },
         {
-          "name": "authority",
-          "signer": true
+          "name": "authority"
         }
       ],
       "args": [
@@ -45,7 +71,10 @@ export type Movement = {
           "name": "args",
           "type": "bytes"
         }
-      ]
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
     }
   ],
   "accounts": [

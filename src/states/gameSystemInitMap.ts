@@ -27,11 +27,12 @@ export async function gameSystemInitMap(
     args: {
       name: game_name,
       size: game_size,
-      buy_in: buy_in,
+      buy_in: buy_in * 10 ** decimals,
       token_string: token_string,
       token_decimals: decimals,
     },
   });
 
+  console.log("initGame", buy_in, decimals, token_string);
   return await engine.processSessionChainTransaction("initmap:" + newmapentityPda, initGame.transaction);
 }

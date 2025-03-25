@@ -6,7 +6,7 @@ import * as anchor from "@coral-xyz/anchor";
 
 import GameComponent from "@components/Game";
 import GameLeaderboard from "@components/GameLeaderboard";
-import { MAP_COMPONENT } from "@utils/constants";
+import { endpoints, MAP_COMPONENT } from "@utils/constants";
 import { ActiveGame, Blob, Food } from "@utils/types";
 import { createUndelegateInstruction, FindComponentPda, FindEntityPda } from "@magicblock-labs/bolt-sdk";
 import { COMPONENT_PLAYER_ID } from "../states/gamePrograms";
@@ -185,7 +185,7 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
         entity: entityMatch.current,
       });
 
-      let newFood = { x: 0, y: 0, size: 0, food_type: false };
+      let newFood = { x: 0, y: 0, food_value: 0, food_multiple: 0 };
       const mapParsedData = await mapFetchOnEphem(engine, mapComponent);
       if (mapParsedData) {
         console.log("mapParsedData", mapParsedData.walletBalance.toNumber());
@@ -194,7 +194,7 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
         const foodDataArray = new Uint8Array(mapParsedData.nextFood.data);
         const decodedFood = decodeFood(foodDataArray);
         console.log("decodedFood", decodedFood);
-        newFood = { x: decodedFood.x, y: decodedFood.y, size: decodedFood.size, food_type: decodedFood.food_type };
+        newFood = { x: decodedFood.x, y: decodedFood.y, food_value: decodedFood.food_value, food_multiple: decodedFood.food_multiple };
       } 
 
       await gameSystemSpawnFood(
@@ -202,7 +202,7 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
         gameInfo,
         newFood.x,
         newFood.y,
-        newFood.food_type,
+        //newFood.food_type,
         foodListLen,
         entityMatch.current,
         foodEntities.current,
@@ -315,15 +315,20 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
         setAllFood([]);
         setFoodListLen([]);
         try {
+          let isDevnet = endpoints["devnet"].indexOf(gameInfo.endpoint) >= 0;
           const cashoutTx = await gameSystemCashOut(
             engine,
             gameInfo,
             anteroomEntity.current,
             currentPlayerEntity.current,
+            isDevnet,
           );
           console.log("cashoutTx", cashoutTx);
-          if (cashoutTx) {
-            setCashoutTx(cashoutTx);
+          if (cashoutTx.success) {
+            let cashoutTxSignature = cashoutTx.transactionSignature;
+            if (cashoutTxSignature) {
+              setCashoutTx(cashoutTxSignature);
+            }
             currentPlayerEntity.current = null;
           } else {
             setCashoutTx("error");
@@ -382,8 +387,8 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
             innerAcc.push({
               x: foodItem.x,
               y: foodItem.y,
-              size: foodItem.size,
-              food_type: foodItem.food_type,
+              food_value: foodItem.food_value,
+              food_multiple: foodItem.food_multiple,
             });
           }
           return innerAcc;
@@ -478,7 +483,7 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
                 authority: playerx.authority,
                 x: playerx.x,
                 y: playerx.y,
-                radius: 4 + Math.sqrt(playerx.mass / 10) * 6,
+                radius: 4 + Math.sqrt(playerx.mass) * 6,
                 mass: playerx.mass,
                 score: playerx.score,
                 payoutTokenAccount: playerx.payoutTokenAccount,
@@ -610,7 +615,7 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
         <div>
           <span className="opacity-50">Your size: </span>
           <span className="opacity-100">
-            {currentPlayer ? getRoundedAmount(currentPlayer.score, gameInfo.buy_in / 1000) : null}
+            {currentPlayer ? currentPlayer.score / 10 ** gameInfo.decimals : null}
           </span>
         </div>
       </div>
@@ -652,18 +657,18 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
             <div className="bg-black flex flex-col items-center justify-center select-text">
               <p className=" p-0 m-1 text-center text-white text-xl inline">
                 Final score:{" "}
-                {currentPlayer ? getRoundedAmount(currentPlayer.score, gameInfo.buy_in / 1000) : ""}
+                {currentPlayer ? currentPlayer.score / 10 ** gameInfo.decimals: ""}
               </p>
               <p className=" p-0 m-1 text-center text-white text-xl inline">
                 Exit tax:{" "}
                 {currentPlayer
-                  ? getRoundedAmount(currentPlayer.score * 0.05, gameInfo.buy_in / 1000)
+                  ? currentPlayer.score * 0.03 / 10 ** gameInfo.decimals 
                   : ""}
               </p>
               <p className=" p-0 m-1 text-center text-white text-xl inline">
                 <b>
                   Payout:{" "}
-                  {currentPlayer ? getRoundedAmount(currentPlayer.score * 0.95, gameInfo.buy_in / 1000) : ""}
+                  {currentPlayer ? currentPlayer.score * 0.97 / 10 ** gameInfo.decimals : ""}
                 </b>
               </p>
               <div className="flex items-center justify-center" style={{ flexDirection: "column" }}>
@@ -693,14 +698,21 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
                         if (anteroomEntity.current && currentPlayerEntity.current && currentPlayer) {
                           setCashoutTx(null);
                           try {
+                            let isDevnet = endpoints["devnet"].indexOf(gameInfo.endpoint) >= 0;
                             let cashouttx = await gameSystemCashOut(
                               engine,
                               gameInfo,
                               anteroomEntity.current,
                               currentPlayerEntity.current,
+                              isDevnet,
                             );
-                            if (cashouttx) {
-                              setCashoutTx(cashouttx);
+                            if (cashouttx.success) {
+                              let cashoutTxSignature = cashouttx.transactionSignature;
+                              if (cashoutTxSignature) {
+                                setCashoutTx(cashoutTxSignature);
+                              } else {
+                                setCashoutTx("error");
+                              }
                             } else {
                               setCashoutTx("error");
                             }

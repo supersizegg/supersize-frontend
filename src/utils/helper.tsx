@@ -13,6 +13,9 @@ import { COMPONENT_PLAYER_ID } from "@states/gamePrograms";
 import { FindComponentPda } from "@magicblock-labs/bolt-sdk";
 import { BN } from "@coral-xyz/anchor";
 import { HELIUS_API_KEY } from "@utils/constants";
+import { createSyncNativeInstruction } from "@solana/spl-token";
+import { getAssociatedTokenAddress } from "@solana/spl-token";
+import { NATIVE_MINT } from "@solana/spl-token";
 
 export function getCustomErrorCode(error: any): number | undefined {
   let parsed: any = error;
@@ -237,13 +240,13 @@ export async function getPriorityFeeEstimate(priorityLevel: string, publicKeys: 
   return data.result;
 }
 
-export async function fetchTokenMetadata(tokenAddress: string) {
+export async function fetchTokenMetadata(tokenAddress: string, network: string) {
   if (cachedTokenMetadata[tokenAddress]) {
     return { name: cachedTokenMetadata[tokenAddress].symbol, image: cachedTokenMetadata[tokenAddress].image };
   }
 
   try {
-    const response = await fetch(`https://${NETWORK || "devnet"}.helius-rpc.com/?api-key=${HELIUS_API_KEY}`, {
+    const response = await fetch(`https://${network || "devnet"}.helius-rpc.com/?api-key=${HELIUS_API_KEY}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -377,6 +380,7 @@ export const findListIndex = (pubkey: PublicKey, players: Blob[]): number | null
   return index !== -1 ? index : null;
 };
 
+/*
 export const decodeFood = (data: Uint8Array) => {
   if (!(data instanceof Uint8Array) || data.length !== 4) {
     throw new Error("Invalid food data format. Expected a Uint8Array of length 4.");
@@ -388,6 +392,25 @@ export const decodeFood = (data: Uint8Array) => {
   const size = (packed >> 28) & 0x07;
   const food_type = ((packed >> 31) & 0x01) != 0;
   return { x, y, size, food_type };
+};
+*/
+export const decodeFood = (data: Uint8Array) => {
+  if (!(data instanceof Uint8Array) || data.length !== 4) {
+    throw new Error("Invalid food data format. Expected a Uint8Array of length 4.");
+  }
+  const buffer = data.buffer;
+  const packed = new DataView(buffer).getUint32(data.byteOffset, true); // Little-endian
+
+  const x = packed & 0x1FFF;          // 13 bits
+  const y = (packed >> 13) & 0x1FFF;  // 13 bits
+  const food_value = (packed >> 26) & 0x07;  // 3 bits
+  const food_multiple_encoded = (packed >> 29) & 0x07;  // 3 bits
+
+  // Decode food_multiple values
+  const food_multiple_map = [0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
+  const food_multiple = food_multiple_map[food_multiple_encoded];
+
+  return { x, y, food_value, food_multiple };
 };
 
 export const getMyPlayerStatus = async (

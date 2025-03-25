@@ -49,7 +49,7 @@ export function MenuSession() {
     <div className="menu-session">
       <div className="session-bottom">
         <div className="session-top row-inline">
-          <span className="session-label">Session Wallet</span>
+          <span className="session-label">Supersize Wallet</span>
           <span className="session-balance">{solBalance} SOL</span>
         </div>
 

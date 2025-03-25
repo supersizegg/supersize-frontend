@@ -1,10 +1,28 @@
+@font-face {
+  font-family: 'AzoSuper';
+  src: url('../fonts/AzoSuperTest.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'AzoMono';
+  src: url('../fonts/AzoMonoTest-Bold.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'AzoSans';
+  src: url('../fonts/AzoSansTest-Bold.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 .menu-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 1.5rem;
   position: relative;
-
   &-left {
     .logo {
       display: flex;

@@ -73,6 +73,48 @@ export type Map = {
       ]
     },
     {
+      "name": "destroy",
+      "discriminator": [
+        157,
+        40,
+        96,
+        3,
+        135,
+        203,
+        143,
+        74
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "receiver",
+          "writable": true
+        },
+        {
+          "name": "entity"
+        },
+        {
+          "name": "component",
+          "writable": true
+        },
+        {
+          "name": "componentProgramData"
+        },
+        {
+          "name": "instructionSysvarAccount",
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "initialize",
       "discriminator": [
         175,
@@ -200,11 +242,48 @@ export type Map = {
           "writable": true
         },
         {
-          "name": "authority"
+          "name": "authority",
+          "signer": true
         },
         {
           "name": "instructionSysvarAccount",
           "address": "Sysvar1nstructions1111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "data",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
+      "name": "updateWithSession",
+      "discriminator": [
+        221,
+        55,
+        212,
+        141,
+        57,
+        85,
+        61,
+        182
+      ],
+      "accounts": [
+        {
+          "name": "boltComponent",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "instructionSysvarAccount",
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        },
+        {
+          "name": "sessionToken"
         }
       ],
       "args": [
@@ -240,6 +319,19 @@ export type Map = {
         241,
         180,
         244
+      ]
+    },
+    {
+      "name": "sessionToken",
+      "discriminator": [
+        233,
+        4,
+        115,
+        14,
+        46,
+        21,
+        1,
+        15
       ]
     }
   ],
@@ -350,6 +442,30 @@ export type Map = {
                 "name": "boltMetadata"
               }
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "sessionToken",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "targetProgram",
+            "type": "pubkey"
+          },
+          {
+            "name": "sessionSigner",
+            "type": "pubkey"
+          },
+          {
+            "name": "validUntil",
+            "type": "i64"
           }
         ]
       }

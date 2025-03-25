@@ -66,8 +66,8 @@ interface Blob {
 interface Food {
   x: number;
   y: number;
-  size: number;
-  food_type: boolean;
+  food_value: number;
+  food_multiple: number;
 }
 
 interface GameComponentProps {
@@ -476,14 +476,15 @@ const GameComponent: React.FC<GameComponentProps> = ({
   };
 
   const drawFood = (ctx: CanvasRenderingContext2D, food: Food) => {
-    const diameter = 20;
+    let diameter = 20;
     let color;
-    if (food.food_type) {
+    if (food.food_multiple == 7.0) {
       color = "#FFD700";
       ctx.shadowBlur = 30;
       ctx.shadowColor = "rgba(255, 215, 0, 1.0)";
+      diameter = 20 + 3 * food.food_value;
     } else {
-      const index = Math.max(0, Math.min(FOOD_COLORS.length - 1, food.size - 1));
+      const index = Math.max(0, Math.min(FOOD_COLORS.length - 1, food.food_value - 1));
       color = FOOD_COLORS[index];
       ctx.shadowBlur = 0;
       ctx.shadowColor = "transparent";

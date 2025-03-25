@@ -1,40 +1,56 @@
+// Alert.tsx
 import React, { useEffect, useState } from "react";
 
 type AlertProps = {
   type: "success" | "error";
   message: string;
+  // Called when the alert should be removed.
   onClose: () => void;
+  // When provided, this triggers an immediate exit.
+  shouldExit?: boolean;
 };
 
-const Alert: React.FC<AlertProps> = ({ type, message, onClose }) => {
-  const [opacity, setOpacity] = useState(0); // Start with 0 opacity for fade-in effect
+const Alert: React.FC<AlertProps> = ({ type, message, onClose, shouldExit }) => {
+  // Start off-screen with an extra 3em offset.
+  const [slideClass, setSlideClass] = useState("-translate-x-[calc(100%+3em)]");
+
+  // Slide in on mount.
   useEffect(() => {
-    setOpacity(100);
-    const fadeOutTimer = setTimeout(() => {
-      setOpacity(0);
-    }, 3000);
+    setSlideClass("translate-x-0");
+  }, []);
 
-    const removeTimer = setTimeout(() => {
-      onClose();
-    }, 3500);
+  // If an external exit condition is set, trigger the slide-out.
+  useEffect(() => {
+    if (shouldExit) {
+      setSlideClass("-translate-x-[calc(100%+3em)]");
+      const timer = setTimeout(() => onClose(), 350);
+      return () => clearTimeout(timer);
+    }
+  }, [shouldExit, onClose]);
 
-    return () => {
-      clearTimeout(fadeOutTimer);
-      clearTimeout(removeTimer);
-    };
-  }, [onClose]);
+  // Otherwise, use an auto-timeout to slide out.
+  useEffect(() => {
+    if (shouldExit === undefined) {
+      const slideOutTimer = setTimeout(
+        () => setSlideClass("-translate-x-[calc(100%+3em)]"),
+        3000
+      );
+      const removeTimer = setTimeout(() => onClose(), 3500);
+      return () => {
+        clearTimeout(slideOutTimer);
+        clearTimeout(removeTimer);
+      };
+    }
+  }, [shouldExit, onClose]);
 
   return (
     <div
-      className={`fixed bottom-10 left-1/2 transform -translate-x-1/2 
-            p-5 mb-2.5 rounded-lg text-center text-sm 
-            transition-opacity duration-1000 ease-in-out 
-            flex justify-center items-center max-w-[90%] 
-            break-words min-h-[50px] box-border z-[1000]`}
+      className={`p-5 rounded-lg text-center text-sm transition-transform duration-300 ease-in-out 
+                  flex justify-center items-center w-[200px] break-words min-h-[50px] box-border z-[1000]
+                  ${slideClass}`}
       style={{
-        backgroundColor: type == "success" ? "lightgreen" : "pink",
-        color: type == "success" ? "green" : "red",
-        opacity: opacity,
+        backgroundColor: type === "success" ? "lightgreen" : "pink",
+        color: type === "success" ? "green" : "red",
       }}
     >
       {message}

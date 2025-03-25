@@ -16,8 +16,10 @@ import {
   FindComponentPda,
   FindWorldPda,
   InitializeComponent,
+  DestroyComponent,
+  BN,
 } from "@magicblock-labs/bolt-sdk";
-import { ActiveGame } from "@utils/types";
+import { ActiveGame, Food } from "@utils/types";
 import { FindEntityPda } from "@magicblock-labs/bolt-sdk";
 import {
   COMPONENT_ANTEROOM_ID,
@@ -42,24 +44,62 @@ import { fetchTokenMetadata, getRoundedAmount, pingEndpoint, stringToUint8Array 
 import { AccountMeta, ComputeBudgetProgram, Connection, SystemProgram, SYSVAR_RENT_PUBKEY, Transaction } from "@solana/web3.js";
 import { PublicKey } from "@solana/web3.js";
 import { getAccount, getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { endpoints, NETWORK, RPC_CONNECTION } from "@utils/constants";
+import { cachedTokenMetadata, endpoints, NETWORK, RPC_CONNECTION } from "@utils/constants";
 import { Spinner } from "@components/util/Spinner";
 import Graph from "../components/Graph";
 import { Chart, LineElement, PointElement, LinearScale, Title, Tooltip, Legend } from "chart.js";
 import { getTopLeftCorner, getRegion } from "@utils/helper";
 import { createTransferInstruction } from "@solana/spl-token";
 import { gameSystemInitSection } from "@states/gameSystemInitSection";
+import GameComponent from "@components/Game";
 
 // Register the components
 Chart.register(LineElement, PointElement, LinearScale, Title, Tooltip, Legend);
 
-export default function Profile() {
+type profileProps = {
+  randomFood: Food[];
+};
+
+export default function Profile({ randomFood }: profileProps ) {
   const engine = useMagicBlockEngine();
   const [activeTab, setActiveTab] = useState<"general" | "quests" | "admin">("general");
   return (
     <div className="profile-page main-container">
+        <div
+        className="game"
+        style={{
+          display: "block",
+          position: "absolute",
+          top: "0",
+          left: "0",
+          height: "100%",
+          width: "100%",
+          zIndex: "0",
+        }}
+      >
+        <GameComponent
+          players={[]}
+          visibleFood={randomFood}
+          currentPlayer={{
+            name: "unnamed",
+            authority: null,
+            x: 2000,
+            y: 2000,
+            radius: 0,
+            mass: 0,
+            score: 0,
+            speed: 0,
+            removal: new BN(0),
+            target_x: 0,
+            target_y: 0,
+          }}
+          screenSize={{width: window.innerWidth, height: window.innerHeight }}
+          newTarget={{ x: 0, y: 0, boost: false }}
+          gameSize={4000}
+        />
+      </div>
       <MenuBar />
-      <div className="profile-container">
+      <div className="profile-container" style={{ position: "relative", zIndex: 1 }}>
         <div className="profile-tabs">
           <button className={activeTab === "general" ? "active" : ""} onClick={() => setActiveTab("general")}>
             General
@@ -86,6 +126,8 @@ export default function Profile() {
 
 function GeneralTab() {
   const { publicKey } = useWallet();
+  const engine = useMagicBlockEngine();
+  const [gemBalance, setGemBalance] = useState(0);
   const [username, setUsername] = useState<string>("");
   const [referrerInput, setReferrerInput] = useState<string>("");
   const { referrer, member } = useBuddyLink();
@@ -155,10 +197,38 @@ function GeneralTab() {
     }
   }, [member]);
 
+  useEffect(() => {
+    const fetchUserTokenBalance = async () => {
+      let connection = engine.getConnectionChainDevnet();
+      const tokenMint = new PublicKey("AsoX43Q5Y87RPRGFkkYUvu8CSksD9JXNEqWVGVsr8UEp");
+      let balance = 0;
+        const tokenAccounts = await connection.getTokenAccountsByOwner(engine.getSessionPayer(), {
+          mint: tokenMint,
+        });
+        console.log("tokenAccounts", tokenAccounts);
+        if (tokenAccounts.value.length > 0) {
+          const accountInfo = tokenAccounts.value[0].pubkey;
+          const balanceInfo = await connection.getTokenAccountBalance(accountInfo);
+          console.log("balanceInfo", balanceInfo.value.amount);
+          balance = parseInt(balanceInfo.value.amount) || 0;
+          setGemBalance(balance / 10 ** 9);
+        }
+        else{
+          setGemBalance(0);
+        }
+    }
+
+    fetchUserTokenBalance();
+  }, [engine.getSessionPayer()]);
+
+
   return (
     <div className="general-tab">
       <MenuSession />
-
+      <div style={{ display: "flex" , flexDirection: "row" }}>
+          Supersize Gems: <img  style={{ width: "20px", height: "20px", marginRight: "5px",marginTop: "1px", marginLeft: "5px"   }} src={cachedTokenMetadata["AsoX43Q5Y87RPRGFkkYUvu8CSksD9JXNEqWVGVsr8UEp"].image} alt="Token Image" /> {gemBalance.toFixed(2)}
+      </div>
+      
       <hr className="divider" />
 
       <label className="input-label">Username</label>
@@ -330,7 +400,7 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
           delegated = true;
         } 
         const playersParsedDataEphem = await playerFetchOnEphem(engine, playersComponentPda);
-        console.log("playersParsedDataEphem", playersParsedDataEphem);
+        console.log("playersParsedDataEphem", playersParsedDataEphem?.score.toNumber());
         const parsedData = await playerFetchOnChain(engine, playersComponentPda);
         let playerWallet = "";
         if(parsedData && parsedData.payoutTokenAccount) {
@@ -582,22 +652,22 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
             const mapParsedData = await mapFetchOnChain(engine, mapComponentPda);
             if (mapParsedData?.authority && 
                 mapParsedData.authority.toString() === engine.getSessionPayer().toString()) {
-              const newGameInfo: ActiveGame = {
-                worldId: worldId.worldId,
-                worldPda,
-                name: mapParsedData.name,
-                active_players: 0,
-                max_players: mapParsedData.maxPlayers,
-                size: mapParsedData.width,
-                image: "",
-                token: "",
-                buy_in: mapParsedData.buyIn.toNumber(),
-                decimals: 0,
-                endpoint: "",
-                ping: 0,
-                isLoaded: true,
-                permissionless: false,
-              };
+                const newGameInfo: ActiveGame = {
+                  worldId: worldId.worldId,
+                  worldPda,
+                  name: mapParsedData.name,
+                  active_players: 0,
+                  max_players: mapParsedData.maxPlayers,
+                  size: mapParsedData.width,
+                  image: "",
+                  token: "",
+                  buy_in: mapParsedData.buyIn.toNumber(),
+                  decimals: 0,
+                  endpoint: "",
+                  ping: 0,
+                  isLoaded: true,
+                  permissionless: false,
+                };
   
               setMyGames((prevGames) => {
                 const updatedGames = prevGames.some((game) => game.worldId === newGameInfo.worldId)
@@ -694,8 +764,10 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
           componentId: COMPONENT_MAP_ID,
           entity: mapEntityPda,
         });
+        console.log("mapComponentPda", endpoint, mapComponentPda.toString());
         try {
           const mapParsedData = await mapFetchOnSpecificEphem(engine, mapComponentPda, endpoint);
+          console.log("mapParsedData", mapParsedData);
           return { endpoint, mapParsedData, mapComponentPda };
         } catch (error) {
           console.log("error", error);
@@ -805,7 +877,7 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
           newGameInfo.token = "AGLD";
         } else {
           try {
-            const { name, image } = await fetchTokenMetadata(mintOfToken.toString());
+            const { name, image } = await fetchTokenMetadata(mintOfToken.toString(), NETWORK);
             newGameInfo.image = image;
             newGameInfo.token = name;
           } catch (error) {
@@ -896,6 +968,156 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
 
     } catch (error) {
       console.error("Error in handlePanelOpen:", error);
+    }
+  };
+
+  const handleDeleteGame = async (gameInfo: ActiveGame) => {
+    console.log("delete game", gameInfo.worldId.toString());
+    let maxplayer = 10;
+    let foodcomponents = 32;
+
+    const anteEntityPda = FindEntityPda({
+      worldId: gameInfo.worldId,
+      entityId: new anchor.BN(0),
+      seed: stringToUint8Array("ante"),
+    });
+
+    const mapEntityPda = FindEntityPda({
+      worldId: gameInfo.worldId,
+      entityId: new anchor.BN(0),
+      seed: stringToUint8Array("origin"),
+    });
+
+    const anteComponentPda = FindComponentPda({
+      componentId: COMPONENT_ANTEROOM_ID,
+      entity: anteEntityPda,
+    });
+
+    const mapComponentPda = FindComponentPda({
+      componentId: COMPONENT_MAP_ID,
+      entity: mapEntityPda,
+    });
+
+    let destroyAnteComponentSig = await DestroyComponent({authority: engine.getSessionPayer(), entity: anteEntityPda, componentId: COMPONENT_ANTEROOM_ID, receiver: engine.getSessionPayer(), seed: "ante"});
+    let destroyAnteComponentTx = await engine.processSessionChainTransaction("destroy:ante", destroyAnteComponentSig.transaction).catch((error) => {
+      console.log("Error destroying:", error);
+    });
+    console.log("destroyAnteComponentTx", destroyAnteComponentTx);
+
+    const undelegateIx = createUndelegateInstruction({
+      payer: engine.getSessionPayer(),
+      delegatedAccount: mapComponentPda,
+      componentPda: COMPONENT_MAP_ID,
+    });
+    const tx = new anchor.web3.Transaction().add(undelegateIx);
+    tx.recentBlockhash = (await engine.getConnectionEphem().getLatestBlockhash()).blockhash;
+    tx.feePayer = engine.getSessionPayer();
+    try {
+      const undelsignature = await engine.processSessionEphemTransaction(
+        "undelmap:" + mapComponentPda.toString(),
+        tx,
+      );
+      console.log("undelegate", undelsignature);
+    } catch (error) {
+        console.log("Error undelegating:", error);
+    }
+    let destroyMapComponentSig = await DestroyComponent({authority: engine.getSessionPayer(), entity: mapEntityPda, componentId: COMPONENT_MAP_ID, receiver: engine.getSessionPayer(), seed: "origin"});
+    let destroyMapComponentTx = await engine.processSessionChainTransaction("destroy:origin", destroyMapComponentSig.transaction).catch((error) => {
+      console.log("Error destroying:", error);
+    });
+    console.log("destroyMapComponentTx", destroyMapComponentTx);
+
+    if (gameInfo.size == 4000) {
+      maxplayer = 10;
+      foodcomponents = 16 * 2;
+    } else if (gameInfo.size == 6000) {
+      maxplayer = 20;
+      foodcomponents = 36 * 2;
+    } else if (gameInfo.size == 8000) {
+      maxplayer = 40;
+      foodcomponents = 64 * 2;
+    }
+
+    for (let i = 1; i < foodcomponents + 1; i++) {
+      const foodseed = "food" + i.toString();
+      const foodEntityPda = FindEntityPda({
+        worldId: gameInfo.worldId,
+        entityId: new anchor.BN(0),
+        seed: stringToUint8Array(foodseed),
+      });
+      const foodComponenti = FindComponentPda({
+        componentId: COMPONENT_SECTION_ID,
+        entity: foodEntityPda,
+      });
+
+      const undelegateIx = createUndelegateInstruction({
+        payer: engine.getSessionPayer(),
+        delegatedAccount: foodComponenti,
+        componentPda: COMPONENT_SECTION_ID,
+      });
+      const tx = new anchor.web3.Transaction().add(undelegateIx);
+      tx.recentBlockhash = (await engine.getConnectionEphem().getLatestBlockhash()).blockhash;
+      tx.feePayer = engine.getSessionPayer();
+      try {
+        const undelsignature = await engine.processSessionEphemTransaction(
+          "undelfood:" + foodComponenti.toString(),
+          tx,
+        );
+        console.log("undelegate", undelsignature);
+      } catch (error) {
+          console.log("Error undelegating:", error);
+      }
+
+      let destroyFoodComponentSig = await DestroyComponent({authority: engine.getSessionPayer(), entity: foodEntityPda, componentId: COMPONENT_SECTION_ID, receiver: engine.getSessionPayer(), seed: foodseed});
+      let destroyFoodComponentTx = await engine.processSessionChainTransaction("destroy:" + foodseed, destroyFoodComponentSig.transaction).catch((error) => {
+        console.log("Error destroying:", error);
+      });
+      console.log("destroyFoodComponentTx", destroyFoodComponentTx);
+    }
+    /*
+      (alias) function DestroyComponent({ authority, entity, componentId, receiver, seed, }: {
+        authority: anchor.web3.PublicKey;
+        entity: anchor.web3.PublicKey;
+        componentId: anchor.web3.PublicKey;
+        receiver: anchor.web3.PublicKey;
+        seed?: string;
+    } */
+
+    for (let i = 1; i < maxplayer + 1; i++) {
+      const playerentityseed = "player" + i.toString();
+      const playerEntityPda = FindEntityPda({
+        worldId: gameInfo.worldId,
+        entityId: new anchor.BN(0),
+        seed: stringToUint8Array(playerentityseed),
+      });
+      const playersComponentPda = FindComponentPda({
+        componentId: COMPONENT_PLAYER_ID,
+        entity: playerEntityPda,
+      });
+
+      const undelegateIx = createUndelegateInstruction({
+        payer: engine.getSessionPayer(),
+        delegatedAccount: playersComponentPda,
+        componentPda: COMPONENT_PLAYER_ID,
+      });
+      const tx = new anchor.web3.Transaction().add(undelegateIx);
+      tx.recentBlockhash = (await engine.getConnectionEphem().getLatestBlockhash()).blockhash;
+      tx.feePayer = engine.getSessionPayer();
+      try {
+        const undelsignature = await engine.processSessionEphemTransaction(
+          "undelPlayer:" + playersComponentPda.toString(),
+          tx,
+        );
+        console.log("undelegate", undelsignature);
+      } catch (error) {
+          console.log("Error undelegating:", error);
+      }
+
+      let destroyPlayerComponentSig = await DestroyComponent({authority: engine.getSessionPayer(), entity: playerEntityPda, componentId: COMPONENT_PLAYER_ID, receiver: engine.getSessionPayer(), seed: playerentityseed});
+      let destroyPlayerComponentTx = await engine.processSessionChainTransaction("destroy:" + playerentityseed, destroyPlayerComponentSig.transaction).catch((error) => {
+        console.log("Error destroying:", error);
+      });
+      console.log("destroyPlayerComponentTx", destroyPlayerComponentTx);
     }
   };
 
@@ -1127,9 +1349,6 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
               <p style={{ margin: "10px"}}>
                 Green - Purple food value: {row.buy_in / (200000 * 10 ** decimals)} - {(row.buy_in * 7) / (200000 * 10 ** decimals)}
               </p>              
-              <p style={{ margin: "10px"}}>
-                Gold food spawn chance: {currentFoodToAdd}%
-              </p>
               <Graph
                 maxPlayers={row.max_players}
                 foodInWallet={Math.floor(tokenBalance / row.buy_in) * 1000}
@@ -1422,7 +1641,8 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                 <p style={{ flex: "1 1 10%", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   Close game accounts, reclaim SOL
                 </p>
-                <button className="btn-copy" style={{ flex: "1 1 10%", margin: "10px" }}>
+                <button className="btn-copy" style={{ flex: "1 1 10%", margin: "10px" }}
+                    onClick={() => handleDeleteGame(row)}>
                   Delete Game
                 </button>
               </div>

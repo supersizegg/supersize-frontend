@@ -14,6 +14,7 @@ import { anteroomFetchOnChain } from "./gameFetch";
 import axios from "axios";
 
 import { stringToUint8Array } from "@utils/helper";
+import { NETWORK } from "@utils/constants";
 
 type GameExecuteJoinResult = {
   success: boolean;
@@ -35,6 +36,7 @@ export async function gameExecuteJoin(
   buyIn: number,
   playerName: string,
   selectedGamePlayerInfo: PlayerInfo,
+  isDevnet: boolean,
   setMyPlayerEntityPda: (pda: PublicKey | null) => void,
 ): Promise<GameExecuteJoinResult> {
   if (!selectGameId || selectGameId.name === "loading") {
@@ -108,7 +110,7 @@ export async function gameExecuteJoin(
 
   mint_of_token_being_sent = anteParsedData.token;
 
-  const { name } = await fetchTokenMetadata(mint_of_token_being_sent.toString());
+  const { name } = await fetchTokenMetadata(mint_of_token_being_sent.toString(), NETWORK);
 
   try {
     const response = await axios.post("https://supersize.lewisarnsten.workers.dev/create-contest", {
@@ -134,7 +136,7 @@ export async function gameExecuteJoin(
   }
 
   try {
-    let buyInResult = await gameSystemBuyIn(engine, selectGameId, newplayerEntityPda, anteEntityPda, buyIn, playerName);
+    let buyInResult = await gameSystemBuyIn(engine, selectGameId, newplayerEntityPda, anteEntityPda, buyIn, playerName, isDevnet);
     if (!buyInResult.success) {
       return { success: false, error: buyInResult.error, message: "buyin_failed" };
     }
@@ -207,14 +209,14 @@ export async function gameExecuteJoin(
       setMyPlayerEntityPda(newplayerEntityPda);
       return { success: true, transactionSignature: moveSig };
     } else {
-      return { success: false, error: `Error joining the game`, message: "join_failed" };
+      return { success: false, error: `Error joining the game, please refresh and try again`, message: "join_failed" };
     }
   }
   catch(error){
     console.log("error", error);
     return {
       success: false,
-      error: `Error joining the game: ${(error as Error)?.message}`,
+      error: `Error joining the game: ${(error as Error)?.message}, please refresh and try again`,
       message: "join_failed",
     };  }
   /*

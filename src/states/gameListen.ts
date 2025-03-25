@@ -26,8 +26,8 @@ export function updateFoodList(
     foodData.push({
       x: decodedFood.x,
       y: decodedFood.y,
-      size: decodedFood.size,
-      food_type: decodedFood.food_type,
+      food_value: decodedFood.food_value,
+      food_multiple: decodedFood.food_multiple,
     });
   });
   if (foodData.length > 0) {

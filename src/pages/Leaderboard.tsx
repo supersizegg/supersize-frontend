@@ -6,6 +6,9 @@ import LeaderboardDropdown from "@components/LeaderboardDropdown";
 import Footer from "@components/Footer";
 import { API_URL } from "@utils/constants";
 import "./Leaderboard.scss";
+import { Food } from "@utils/types";
+import GameComponent from "@components/Game";
+import { BN } from "@coral-xyz/anchor";
 
 interface Player {
   name: string;
@@ -50,7 +53,11 @@ const availableEvents: EventOption[] = [
   { id: "all", name: "All Time" },
 ];
 
-const Leaderboard: React.FC = () => {
+type LeaderboardProps = {
+  randomFood: Food[];
+};
+
+const Leaderboard: React.FC<LeaderboardProps>  = ({ randomFood }) => {
   const [season, setSeason] = useState<Season>({
     icon: `${process.env.PUBLIC_URL}/token.png`,
     name: "BONK",
@@ -185,9 +192,42 @@ const Leaderboard: React.FC = () => {
 
   return (
     <div className="main-container">
+       <div
+        className="game"
+        style={{
+          display: "block",
+          position: "absolute",
+          top: "0",
+          left: "0",
+          height: "100%",
+          width: "100%",
+          zIndex: "0",
+        }}
+      >
+        <GameComponent
+          players={[]}
+          visibleFood={randomFood}
+          currentPlayer={{
+            name: "unnamed",
+            authority: null,
+            x: 2000,
+            y: 2000,
+            radius: 0,
+            mass: 0,
+            score: 0,
+            speed: 0,
+            removal: new BN(0),
+            target_x: 0,
+            target_y: 0,
+          }}
+          screenSize={{width: window.innerWidth, height: window.innerHeight }}
+          newTarget={{ x: 0, y: 0, boost: false }}
+          gameSize={4000}
+        />
+      </div>
       <MenuBar />
 
-      <div className="leaderboard-container">
+      <div className="leaderboard-container" style={{ position: "relative", zIndex: 1 }}>
         <div className="top-stats-row">
           <div className="stat-box rank-box desktop-only">
             <p className="stat-label">Your Rank</p>

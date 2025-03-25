@@ -14,6 +14,33 @@ export type InitMap = {
   },
   "instructions": [
     {
+      "name": "boltExecute",
+      "discriminator": [
+        75,
+        206,
+        62,
+        210,
+        52,
+        215,
+        104,
+        109
+      ],
+      "accounts": [
+        {
+          "name": "authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": "bytes"
+        }
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
+    },
+    {
       "name": "execute",
       "discriminator": [
         130,
@@ -30,8 +57,7 @@ export type InitMap = {
           "name": "map"
         },
         {
-          "name": "authority",
-          "signer": true
+          "name": "authority"
         }
       ],
       "args": [
@@ -39,7 +65,10 @@ export type InitMap = {
           "name": "args",
           "type": "bytes"
         }
-      ]
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
     }
   ],
   "accounts": [

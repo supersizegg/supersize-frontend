@@ -14,16 +14,43 @@ export type SpawnPlayer = {
   },
   "instructions": [
     {
-      "name": "execute2",
+      "name": "boltExecute",
       "discriminator": [
-        105,
-        108,
-        50,
-        190,
-        253,
-        180,
-        77,
-        227
+        75,
+        206,
+        62,
+        210,
+        52,
+        215,
+        104,
+        109
+      ],
+      "accounts": [
+        {
+          "name": "authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": "bytes"
+        }
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
+    },
+    {
+      "name": "execute",
+      "discriminator": [
+        130,
+        221,
+        242,
+        154,
+        13,
+        193,
+        189,
+        29
       ],
       "accounts": [
         {
@@ -33,8 +60,7 @@ export type SpawnPlayer = {
           "name": "map"
         },
         {
-          "name": "authority",
-          "signer": true
+          "name": "authority"
         }
       ],
       "args": [
@@ -42,7 +68,10 @@ export type SpawnPlayer = {
           "name": "args",
           "type": "bytes"
         }
-      ]
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
     }
   ],
   "accounts": [

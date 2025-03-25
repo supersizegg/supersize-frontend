@@ -126,7 +126,7 @@ export async function gameExecuteNewGame(
   await stepReclaimSOL(context, gameOwnerWallet, setTransactions, showPrompt);
 
   // Finalize: update active games.
-  const tokenMetadata = await fetchTokenMetadata(mint_of_token.toString());
+  const tokenMetadata = await fetchTokenMetadata(mint_of_token.toString(), NETWORK);
   const newGame: FetchedGame = {
     activeGame: {
       isLoaded: true,

@@ -6,18 +6,26 @@ import { MagicBlockEngine } from "../engine/MagicBlockEngine";
 import { COMPONENT_PLAYER_ID, COMPONENT_ANTEROOM_ID, SYSTEM_CASH_OUT_ID, COMPONENT_MAP_ID } from "./gamePrograms";
 
 import { ActiveGame } from "@utils/types";
-import { getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { createCloseAccountInstruction, getAssociatedTokenAddress, NATIVE_MINT, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { anteroomFetchOnChain } from "./gameFetch";
 
 // import axios from "axios";
 // const { name } = await fetchTokenMetadata(mint_of_token_being_sent.toString());
+
+type GameExecuteCashOutResult = {
+  success: boolean;
+  message?: string;
+  transactionSignature?: string;
+  error?: string;
+};
 
 export async function gameSystemCashOut(
   engine: MagicBlockEngine,
   gameInfo: ActiveGame,
   anteroomEntity: PublicKey,
   currentPlayerEntity: PublicKey,
-) {
+  isDevnet: boolean,
+): Promise<GameExecuteCashOutResult> {
   const mapseed = "origin";
   const mapEntityPda = FindEntityPda({
     worldId: gameInfo.worldId,
@@ -86,9 +94,15 @@ export async function gameSystemCashOut(
         } catch (error) {
             console.log('error', error);
         } */
-
-    const usertokenAccountInfo = await getAssociatedTokenAddress(mint_of_token_being_sent, engine.getWalletPayer());
-
+       
+    let payer = engine.getWalletPayer();
+    if(!isDevnet){
+      payer = engine.getWalletPayer();
+    }else{
+      payer = engine.getSessionPayer();
+    }
+    let usertokenAccountInfo = await getAssociatedTokenAddress(mint_of_token_being_sent, payer);
+    console.log("usertokenAccountInfo", usertokenAccountInfo.toString() , payer.toString(), mint_of_token_being_sent.toString());
     let vault_program_id = new PublicKey("BAP315i1xoAXqbJcTT1LrUS45N3tAQnNnPuNQkCcvbAr");
 
     let [tokenAccountOwnerPda] = PublicKey.findProgramAddressSync(
@@ -123,7 +137,7 @@ export async function gameSystemCashOut(
         isSigner: false,
       },
       {
-        pubkey: engine.getWalletPayer(),
+        pubkey: payer,
         isWritable: true,
         isSigner: false,
       },
@@ -145,7 +159,7 @@ export async function gameSystemCashOut(
     ];
 
     const applyCashOutSystem = await ApplySystem({
-      authority: engine.getWalletPayer(),
+      authority: payer,
       world: gameInfo.worldPda,
       entities: [
         {
@@ -165,10 +179,27 @@ export async function gameSystemCashOut(
     });
 
     const cashouttx = new anchor.web3.Transaction().add(applyCashOutSystem.transaction);
+    
+    if (mint_of_token_being_sent.equals(NATIVE_MINT)) {
+      cashouttx.add(
+        createCloseAccountInstruction(
+          usertokenAccountInfo,
+          payer,
+          payer
+        )
+      )
+    } 
 
-    let cashoutsig = await engine.processWalletTransaction("playercashout", cashouttx);
-    if (!cashoutsig) {
-      throw new Error("Cash out failed");
+    try {
+      let cashoutsig = isDevnet ? await engine.processSessionChainTransaction("playercashout", cashouttx) : await engine.processWalletTransaction("playercashout", cashouttx);
+      if (!cashoutsig) {
+        return { success: false, error: `Error cashing out`, message: "error" };
+      }else{
+        return { success: true, transactionSignature: cashoutsig };
+      }
+    } catch (error) {
+      console.log("Error cashing out:", error);
+      return { success: false, error: `Error cashing out: ${(error as Error)?.message}`, message: "error" };
     }
     /*
         const retrievedMyPlayers = localStorage.getItem('myplayers');
@@ -177,6 +208,7 @@ export async function gameSystemCashOut(
             localStorage.setItem('myplayers', JSON.stringify(myplayers));
         }
     */
-    return cashoutsig;
+  }else{
+    return { success: false, error: `Error cashing out`, message: "error" };
   }
 }
