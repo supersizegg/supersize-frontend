@@ -6,15 +6,14 @@ import React from "react";
 const Invite = ({ textContent = "Sign Up" }: { textContent?: string }) => {
   const [isCreating, setIsCreating] = useState(false); //Control loading state, prevent duplicate clicks
   const wallet = useWallet();
-
-  const retrievedUser = localStorage.getItem("user");
+  /*const retrievedUser = localStorage.getItem("user");
   const myUsername = wallet.toString().slice(0, 12);
 
   const username = useRef(myUsername);
 
   if (retrievedUser) {
     username.current = JSON.parse(retrievedUser).name;
-  }
+  }*/
   //console.log(username.current);
   const { create, member, status } = useBuddyLink();
 
@@ -28,8 +27,9 @@ const Invite = ({ textContent = "Sign Up" }: { textContent?: string }) => {
 
     setIsCreating(true);
     try {
-      console.log("created with", username.current);
-      await create({ overrideMemberName: username.current });
+       //console.log("created with", username.current);
+      //await create({ overrideMemberName: username.current });
+      await create();
       //console.log(`buddy.init results`, results);
       return true;
     } catch (e) {
@@ -37,7 +37,7 @@ const Invite = ({ textContent = "Sign Up" }: { textContent?: string }) => {
     } finally {
       setIsCreating(false);
     }
-  }, [status, create, username]);
+  }, [status, create]); //, username]);
 
   if (!wallet.connected) {
     // Can make this a wallet connect button in this state

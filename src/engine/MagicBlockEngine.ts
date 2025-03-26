@@ -223,7 +223,7 @@ export class MagicBlockEngine {
   }
 
   async getSessionFundingMissingLamports() {
-    const accountInfo = await connectionChain.getAccountInfo(this.getSessionPayer());
+    const accountInfo = await this.provider.connection.getAccountInfo(this.getSessionPayer());
     const currentLamports = accountInfo?.lamports ?? 0;
     if (currentLamports < this.sessionConfig.minLamports) {
       return this.sessionConfig.maxLamports - currentLamports;
@@ -234,7 +234,7 @@ export class MagicBlockEngine {
   async fundSessionFromAirdrop() {
     const missingLamports = await this.getSessionFundingMissingLamports();
     if (missingLamports > 0) {
-      await connectionChain.requestAirdrop(this.sessionKey.publicKey, missingLamports);
+      await this.provider.connection.requestAirdrop(this.sessionKey.publicKey, missingLamports);
     }
   }
 
@@ -255,7 +255,7 @@ export class MagicBlockEngine {
   }
 
   async defundSessionBackToWallet() {
-    const accountInfo = await connectionChain.getAccountInfo(this.getSessionPayer());
+    const accountInfo = await this.provider.connection.getAccountInfo(this.getSessionPayer());
     if (accountInfo && accountInfo.lamports > 0) {
       const transferableLamports = accountInfo.lamports - TRANSACTION_COST_LAMPORTS;
       await this.processSessionChainTransaction(
@@ -285,7 +285,7 @@ export class MagicBlockEngine {
   }
 
   subscribeToChainAccountInfo(address: PublicKey, onAccountChange: (accountInfo?: AccountInfo<Buffer>) => void) {
-    return this.subscribeToAccountInfo(connectionChain, address, onAccountChange);
+    return this.subscribeToAccountInfo(this.provider.connection, address, onAccountChange);
   }
 
   subscribeToEphemAccountInfo(address: PublicKey, onAccountChange: (accountInfo?: AccountInfo<Buffer>) => void) {

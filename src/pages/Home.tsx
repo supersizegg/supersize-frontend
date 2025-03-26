@@ -91,6 +91,11 @@ const Home = ({
   };
   const handleEnterKeyPress = async (inputValue: string) => {
     console.log("Searching game", inputValue);
+    if (NETWORK === "mainnet"){
+      engine.setChain();
+    } else {
+      engine.setDevnet();
+    }
     if (inputValue.trim() !== "") {
       isSearchingGame.current = true;
       try {
@@ -576,7 +581,7 @@ const Home = ({
     let swapLink = "";
     let swapText = "";
 
-    if (tokenMint) {
+    if (tokenMint !== "AsoX43Q5Y87RPRGFkkYUvu8CSksD9JXNEqWVGVsr8UEp") {
       if (tokenMetadata?.raydium) {
         swapLink = `https://raydium.io/swap/?inputMint=sol&outputMint=${tokenMint}`;
         swapText = "Buy some on Raydium.";
@@ -584,6 +589,9 @@ const Home = ({
         swapLink = `https://jup.ag/swap/SOL-${tokenMint}`;
         swapText = "Buy some on Jupiter.";
       }
+    }else{
+      swapLink = `https://supersize.gg/faucet`;
+      swapText = "Go find some gems.";
     }
 
     const [opacity, setOpacity] = React.useState(100);
@@ -1062,10 +1070,9 @@ const Home = ({
       </svg>
 
         <div className="banner-text">
-          <h1 className="banner-title">Play Supersize, win <span style={{ color: "#00d37d" }}>SOL</span> and more!</h1>
+          <h1 className="banner-title">Play Supersize, win <span style={{ color: "#00d37d" }}>SOL</span></h1>
           <p className="banner-description">
-            Eat tokens and grow your blob. Eat other players to steal their tokens. Cash out your tokens anytime with a 5 second delay.
-            Win SOL, BONK, AGLD, and more!{" "}
+            Eat tokens and grow your blob. Eat other players to steal their tokens. Cash out your tokens anytime.{" "}
             <button
               onClick={() => navigate("/about")}
               style={{ textDecoration: "underline", color: "#00d37d" }}
