@@ -609,6 +609,11 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
             Disconnecting in {countdown.current} seconds
           </div>
         )}
+        {currentPlayer && currentPlayer.mass > 3700 && (
+          <div className="text-[#ffa500] font-[Terminus] text-xl text-right ml-2.5 font-bold animate-pulse animate-glow">
+            Approaching max size!!
+          </div>
+        )}
       </div>
 
       <div className={`fixed bottom-0 left-0 m-2 z-[9999] text-white text-base font-[terminus] flex flex-col`}>

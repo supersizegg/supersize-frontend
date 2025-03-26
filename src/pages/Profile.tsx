@@ -125,13 +125,10 @@ export default function Profile({ randomFood }: profileProps ) {
 }
 
 function GeneralTab() {
-  const { publicKey } = useWallet();
   const engine = useMagicBlockEngine();
   const [gemBalance, setGemBalance] = useState(0);
   const [username, setUsername] = useState<string>("");
-  const [referrerInput, setReferrerInput] = useState<string>("");
-  const { referrer, member } = useBuddyLink();
-  const [joinedOrg, setJoinedOrg] = useState<boolean>(false);
+  const { referrer } = useBuddyLink();
   const [usernameSaved, setUsernameSaved] = useState(false);
 
   const setInputUsername = (inputUsername: React.SetStateAction<string>) => {
@@ -149,53 +146,6 @@ function GeneralTab() {
       setUsername(myusername);
     }
   }, []);
-
-  useEffect(() => {
-    if (publicKey) {
-      const retrievedUser = localStorage.getItem("user");
-      const retrievedRefferal = localStorage.getItem("referrer");
-      //console.log('retrieved', member[0], retrievedRefferal, retrievedUser);
-      if (member) {
-        if (member[0]) {
-          const retrievedUser = localStorage.getItem("user");
-          let user = { name: member[0].account.name, referrer: referrer, referral_done: true };
-          if (retrievedUser) {
-            let myusername = JSON.parse(retrievedUser).name;
-            user = { name: myusername, referrer: referrer, referral_done: true };
-            setUsername(myusername);
-          } else {
-            user = { name: member[0].account.name, referrer: referrer, referral_done: true };
-            setUsername(member[0].account.name);
-          }
-          setReferrerInput(member[0].account.name);
-          localStorage.setItem("user", JSON.stringify(user));
-          setJoinedOrg(true);
-        } else {
-          if (!retrievedUser || retrievedRefferal !== null) {
-            if (retrievedUser && JSON.parse(retrievedUser).name !== null && JSON.parse(retrievedUser).name !== "") {
-              const user = { name: JSON.parse(retrievedUser).name, referrer: referrer, referral_done: false };
-              localStorage.setItem("user", JSON.stringify(user));
-            } else {
-              const user = { name: publicKey.toString().slice(0, 12), referrer: referrer, referral_done: false };
-              localStorage.setItem("user", JSON.stringify(user));
-            }
-            setJoinedOrg(false);
-          }
-        }
-      } else {
-        if (!retrievedUser || retrievedRefferal !== null) {
-          if (retrievedUser && JSON.parse(retrievedUser).name !== null && JSON.parse(retrievedUser).name !== "") {
-            const user = { name: JSON.parse(retrievedUser).name, referrer: referrer, referral_done: false };
-            localStorage.setItem("user", JSON.stringify(user));
-          } else {
-            const user = { name: publicKey.toString().slice(0, 12), referrer: referrer, referral_done: false };
-            localStorage.setItem("user", JSON.stringify(user));
-          }
-          setJoinedOrg(false);
-        }
-      }
-    }
-  }, [member]);
 
   useEffect(() => {
     const fetchUserTokenBalance = async () => {
@@ -225,7 +175,7 @@ function GeneralTab() {
   return (
     <div className="general-tab">
       <MenuSession />
-      <div style={{ display: "flex" , flexDirection: "row" }}>
+      <div style={{ display: "flex" , flexDirection: "row", marginLeft: "1em" }}>
           Supersize Gems: <img  style={{ width: "20px", height: "20px", marginRight: "5px",marginTop: "1px", marginLeft: "5px"   }} src={cachedTokenMetadata["AsoX43Q5Y87RPRGFkkYUvu8CSksD9JXNEqWVGVsr8UEp"].image} alt="Token Image" /> {gemBalance.toFixed(2)}
       </div>
       
@@ -243,34 +193,6 @@ function GeneralTab() {
           <button className="btn-save" onClick={() => setInputUsername(username)}>
             Save
           </button>
-        )}
-      </div>
-
-      <label className="input-label">Referral link</label>
-      <div className="row-inline referral-row input-group">
-        <input type="text" readOnly value={joinedOrg ? `https://supersize.gg/?r=${referrerInput}` : referrer} />
-        {joinedOrg ? (
-          <>
-            <button className="btn-copy">
-              <CopyLink handleCreateClick={() => {}} />
-            </button>
-          </>
-        ) : (
-          <button className="btn-create-referral">
-            <Invite />
-          </button>
-        )}
-      </div>
-      <div className="info-box">
-        <span>Receive a 0.2% fee from your referrals earnings in the game. </span>
-        {joinedOrg && (
-          <a
-            href={`https://x.com/intent/tweet?text=Try out on-chain gaming with me on Supersize. https://supersize.gg/?r=${referrerInput}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Share ref link on X
-          </a>
         )}
       </div>
     </div>
@@ -333,16 +255,15 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
   const [gameWallet, setGameWallet] = useState<string>("");
   const [tokenBalance, setTokenBalance] = useState<number>(0);
   const [gameTokenAccount, setGameTokenAccount] = useState<string>("");
-  const [currentFoodToAdd, setCurrentFoodToAdd] = useState<number>(0);
   const [inspectAnteParsedData, setAnteParsedData] = useState("");
   const [inspectMapParsedData, setMapParsedData] = useState("");
   const [foodComponentCheck, setFoodComponentCheck] = useState<string>("");
-  const [playerComponentCheck, setPlayerComponentCheck] = useState<string>("");
   const [tokenAddress, setTokenAddress] = useState<string>("");
-  const [referralProgramAccount, setReferralProgramAccount] = useState<string>("");
   const [depositValue, setDepositValue] = useState<string>("");
   const [decimals, setDecimals] = useState<number>(0);
+  const [currentFoodToAdd, setCurrentFoodToAdd] = useState<number>(0);
   const [gameEndpoint, setGameEndpoint] = useState<string>("");
+  const decimalsRef = useRef<number>(0);
   const [cashoutStats, setCashoutStats] = useState<{
     cashOutSum: number | null,
     buyInSum: number | null,
@@ -404,13 +325,23 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
         const parsedData = await playerFetchOnChain(engine, playersComponentPda);
         let playerWallet = "";
         if(parsedData && parsedData.payoutTokenAccount) {
-          const tokenAccount = await getAccount(engine.getConnectionChain(), new PublicKey(parsedData.payoutTokenAccount.toString()));
-          playerWallet = tokenAccount.owner.toString();
+          playerWallet = parsedData.payoutTokenAccount.toString();
+          try {
+            const tokenAccount = await getAccount(engine.getConnectionChain(), new PublicKey(parsedData.payoutTokenAccount.toString()));
+            playerWallet = tokenAccount.owner.toString();
+          } catch (error) {
+            console.log("Error getting token account:", error);
+          }
         }
         let playerWalletEphem = "";
         if(playersParsedDataEphem && playersParsedDataEphem.payoutTokenAccount) {
-          const tokenAccount = await getAccount(engine.getConnectionChain(), new PublicKey(playersParsedDataEphem.payoutTokenAccount.toString()));
-          playerWalletEphem = tokenAccount.owner.toString();
+          playerWalletEphem = playersParsedDataEphem.payoutTokenAccount.toString();
+          try {
+            const tokenAccount = await getAccount(engine.getConnectionChain(), new PublicKey(playersParsedDataEphem.payoutTokenAccount.toString()));
+            playerWalletEphem = tokenAccount.owner.toString();
+          } catch (error) {
+            console.log("Error getting token account:", error);
+          }
         }
 
         return {
@@ -447,10 +378,18 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
         seed: stringToUint8Array("origin"),
       });
       
+      let seed = "player1";
+      let sender_token_account = new PublicKey(0);
+
+      console.log("playerData.seed", playerData);
+      if (playerData){
+        seed = playerData.seed;
+        sender_token_account = playerData.parsedData.payoutTokenAccount;
+      }
       const playerEntityPda = FindEntityPda({
         worldId: gameInfo.worldId,
         entityId: new anchor.BN(0),
-        seed: stringToUint8Array(playerData.seed),
+        seed: stringToUint8Array(seed),
       });
 
       const mapComponentPda = FindComponentPda({
@@ -506,7 +445,6 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
           mint_of_token_being_sent,
           new PublicKey("DdGB1EpmshJvCq48W1LvB1csrDnC4uataLnQbUVhp6XB"),
         );
-        let sender_token_account = playerData.parsedData.payoutTokenAccount;
         let [tokenAccountOwnerPda] = PublicKey.findProgramAddressSync(
           [Buffer.from("token_account_owner_pda"), mapComponentPda.toBuffer()],
           vault_program_id,
@@ -616,7 +554,7 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
         console.log("cashoutsignature", cashoutsignature);
     } 
     }catch (error) {
-      console.error(`Error unclogging player ${playerData.seed}:`, error);
+      console.error(`Error unclogging player:`, error);
     }
   };
 
@@ -743,13 +681,13 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
 
   const handlePanelOpen = async (engine: MagicBlockEngine, newGameInfo: ActiveGame) => {
     setTokenBalance(0);
-    setCurrentFoodToAdd(0);
+    setPlayers([]);
+    setAnteParsedData("");
+    setMapParsedData("");
     setFoodComponentCheck("");
-    setPlayerComponentCheck("");
     setGameOwner("");
     setGameWallet("");
     setGameTokenAccount("");
-    setReferralProgramAccount("");
     setGameEndpoint("");
     setCashoutStats({ cashOutSum: null, buyInSum: null, buyInCount: null });
   
@@ -832,7 +770,11 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
       `;
       console.log("readableAnteParsedData", readableAnteParsedData);
       setAnteParsedData(readableAnteParsedData);
-      if (anteParsedData?.tokenDecimals) setDecimals(anteParsedData.tokenDecimals);
+      if (anteParsedData?.tokenDecimals) {
+        setDecimals(anteParsedData.tokenDecimals);
+        decimalsRef.current = anteParsedData.tokenDecimals;
+      }
+      
       if (anteParsedData?.token) setTokenAddress(anteParsedData.token.toString());
   
       if (
@@ -862,15 +804,7 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
         } catch (error) {
           console.error("Error fetching token account balance:", error);
         }
-  
-        // Referral program PDA calculation
-        const referralVaultProgramId = new PublicKey("CLC46PuyXnSuZGmUrqkFbAh7WwzQm8aBPjSQ3HMP56kp");
-        const [referralTokenAccountOwnerPda] = PublicKey.findProgramAddressSync(
-          [Buffer.from("token_account_owner_pda"), mintOfToken.toBuffer()],
-          referralVaultProgramId
-        );
-        setReferralProgramAccount(referralTokenAccountOwnerPda.toString());
-  
+
         // Fetch token metadata if needed
         if (mintOfToken.toString() === "7dnMwS2yE6NE1PX81B9Xpm7zUhFXmQABqUiHHzWXiEBn") {
           newGameInfo.image = `${process.env.PUBLIC_URL}/agld.jpg`;
@@ -1226,6 +1160,7 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
         new PublicKey(mint_of_token_being_sent),
         engine.getWalletPayer(),
       );
+      console.log("usertokenAccountInfo", usertokenAccountInfo.toString(), gameWallet.toString(), engine.getWalletPayer().toString(), amount * 10 ** decimals);
       const transferIx = createTransferInstruction(
         usertokenAccountInfo,
         gameWallet,
@@ -1349,14 +1284,13 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
               <p style={{ margin: "10px"}}>
                 Green - Purple food value: {row.buy_in / (200000 * 10 ** decimals)} - {(row.buy_in * 7) / (200000 * 10 ** decimals)}
               </p>              
-              <Graph
+              <Graph 
                 maxPlayers={row.max_players}
                 foodInWallet={Math.floor(tokenBalance / row.buy_in) * 1000}
                 setCurrentFoodToAdd={setCurrentFoodToAdd}
+                buyIn={row.buy_in}
+                decimals={decimals}
               />
-              <p style={{ margin: "10px" }}>
-                *Green and purple food are fully accounted for by 5% exit tax, 3% goes to the game treasury
-              </p>
               <div
                 style={{
                   display: "flex",

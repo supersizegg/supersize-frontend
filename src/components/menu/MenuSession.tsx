@@ -10,12 +10,19 @@ export function MenuSession() {
   const [sessionLamports, setSessionLamports] = React.useState<number | undefined>(undefined);
   const [isFunding, setIsFunding] = React.useState(false);
   const [isWithdrawing, setIsWithdrawing] = React.useState(false);
-
+  const [network, setNetwork] = React.useState("mainnet");
+  
   React.useEffect(() => {
+    if (network === "mainnet") {
+      engine.setChain();
+    }
+    else{
+      engine.setDevnet();
+    }
     return engine.subscribeToChainAccountInfo(sessionPayer, (accountInfo) => {
       setSessionLamports(accountInfo?.lamports);
     });
-  }, [engine, sessionPayer]);
+  }, [engine, sessionPayer, network]);
 
   const solBalance = sessionLamports !== undefined ? (sessionLamports / 1_000_000_000).toFixed(3) : "0";
 
@@ -23,6 +30,12 @@ export function MenuSession() {
 
   const onFund = async () => {
     try {
+      if (network === "mainnet") {
+        engine.setChain();
+      }
+      else{
+        engine.setDevnet();
+      }
       setIsFunding(true);
       await engine.fundSessionFromWallet();
       console.log("Session funded from wallet");
@@ -35,6 +48,12 @@ export function MenuSession() {
 
   const onWithdraw = async () => {
     try {
+      if (network === "mainnet") {
+        engine.setChain();
+      }
+      else{
+        engine.setDevnet();
+      }
       setIsWithdrawing(true);
       await engine.defundSessionBackToWallet();
       console.log("Session funds withdrawn");
@@ -49,7 +68,7 @@ export function MenuSession() {
     <div className="menu-session">
       <div className="session-bottom">
         <div className="session-top row-inline">
-          <span className="session-label">Supersize Wallet</span>
+          <span className="session-label">Session Wallet</span>
           <span className="session-balance">{solBalance} SOL</span>
         </div>
 
@@ -65,6 +84,18 @@ export function MenuSession() {
           <button className="btn-withdraw" onClick={onWithdraw} disabled={isWithdrawing}>
             {isWithdrawing ? <Spinner /> : "Withdraw"}
           </button>
+
+          <div className="network-switch" style={{ display: "flex", alignItems: "center" }}>
+          <label className="switch" style={{ marginRight: "10px" }}>
+            <input
+              type="checkbox"
+              checked={network === "mainnet"}
+              onChange={(e) => setNetwork(e.target.checked ? "mainnet" : "devnet")}
+            />
+            <span className="slider round"></span>
+          </label>
+          <span className="network-label">{network}</span>
+        </div>
         </div>
       </div>
     </div>

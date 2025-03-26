@@ -3,7 +3,6 @@ import axios from "axios";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { MenuBar } from "@components/menu/MenuBar";
 import LeaderboardDropdown from "@components/LeaderboardDropdown";
-import Footer from "@components/Footer";
 import { API_URL } from "@utils/constants";
 import "./Leaderboard.scss";
 import { Food } from "@utils/types";
@@ -293,7 +292,6 @@ const Leaderboard: React.FC<LeaderboardProps>  = ({ randomFood }) => {
         </div>
         {totalRows > limit && <div className="pagination">{renderPagination()}</div>}
       </div>
-      <Footer />
     </div>
   );
 };
