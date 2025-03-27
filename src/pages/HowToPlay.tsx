@@ -147,7 +147,7 @@ const HowToPlay: React.FC<HowToPlayProps> = ({ randomFood }) => {
           </div>
 
           <div className="block block2">
-            <h2>Moving</h2>
+            <h2>Boost</h2>
             <p>
               Your blob follows your mouse. You can spend tokens (gold food) to
               boost forward. Use the <b>left click to boost</b>.
@@ -159,7 +159,7 @@ const HowToPlay: React.FC<HowToPlayProps> = ({ randomFood }) => {
           <div className="block block1">
             <h2>Eat food</h2>
             <p>
-              Food = tokens. Eat food to grow in size and earn tokens. Purple food is 7x the value of green food.
+              Food = tokens. Eat food to grow in size and earn tokens. Purple food is 7x thegreen food.
             </p>
           </div>
           <div className="block block2">
@@ -169,7 +169,7 @@ const HowToPlay: React.FC<HowToPlayProps> = ({ randomFood }) => {
         </div>
         <div className="top-blocks-row">
           <div className="block block2">
-            <h2>Cash Out</h2>
+            <h2>Cash out</h2>
             <p>
               Exit the game anytime to cash out your tokens. There is a 5 second delay on exit and a 3% fee on cash out.
             </p>
