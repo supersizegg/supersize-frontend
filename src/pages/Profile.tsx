@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { MenuBar } from "@components/menu/MenuBar";
 import { MenuSession } from "@components/menu/MenuSession";
 import FooterLink from "@components/Footer";
@@ -721,7 +721,8 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
       engine.setEndpointEphemRpc(validEndpointResult.endpoint);
       setGameEndpoint(validEndpointResult.endpoint);
       console.log("Using endpoint:", validEndpointResult.endpoint);
-      
+
+      // Compute PDAs for map and ante data
       const mapEntityPda = FindEntityPda({
         worldId: newGameInfo.worldId,
         entityId: new anchor.BN(0),
@@ -731,20 +732,6 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
         componentId: COMPONENT_MAP_ID,
         entity: mapEntityPda,
       });
-
-      const mapParsedData = await mapFetchOnSpecificEphem(engine, mapComponentPda, validEndpointResult.endpoint);
-      const readableMapParsedData = `
-        Name: ${mapParsedData?.name} |
-        Authority: ${mapParsedData?.authority?.toString()} |
-        Width: ${mapParsedData?.width} |
-        Height: ${mapParsedData?.height} |
-        Buy in: ${mapParsedData?.buyIn} |
-        Max Players: ${mapParsedData?.maxPlayers} |
-        Wallet Balance: ${mapParsedData?.walletBalance.toNumber()} |
-      `;
-      console.log("readableMapParsedData", readableMapParsedData);
-      setMapParsedData(readableMapParsedData);
-
 
       const anteseed = "ante";
       const anteEntityPda = FindEntityPda({
@@ -757,8 +744,8 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
         entity: anteEntityPda,
       });
 
+      // Fetch ante room data first (needed for token operations)
       const anteParsedData = await anteroomFetchOnChain(engine, anteComponentPda);
-  
       const readableAnteParsedData = `
         Map: ${anteParsedData?.map?.toString()} |
         Buy in: ${anteParsedData?.buyIn} |
@@ -774,9 +761,9 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
         setDecimals(anteParsedData.tokenDecimals);
         decimalsRef.current = anteParsedData.tokenDecimals;
       }
-      
       if (anteParsedData?.token) setTokenAddress(anteParsedData.token.toString());
-  
+
+      // If valid ante data exists, proceed with concurrent operations:
       if (
         anteParsedData &&
         anteParsedData.token &&
@@ -784,41 +771,45 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
         anteParsedData.tokenDecimals
       ) {
         const mintOfToken = anteParsedData.token;
-        const tokenAccount = await getAccount(engine.getConnectionChain(), new PublicKey(anteParsedData.gamemasterTokenAccount.toString()));
-        console.log("Token Account Owner:", tokenAccount.owner.toString());
-        setGameOwner(tokenAccount.owner.toString());
-  
+
+        // Prepare token account and vault related promises...
+        const tokenAccountPromise = getAccount(
+          engine.getConnectionChain(),
+          new PublicKey(anteParsedData.gamemasterTokenAccount.toString())
+        );
+
         const [tokenAccountOwnerPda] = PublicKey.findProgramAddressSync(
           [Buffer.from("token_account_owner_pda"), validEndpointResult.mapComponentPda.toBuffer()],
           new PublicKey("BAP315i1xoAXqbJcTT1LrUS45N3tAQnNnPuNQkCcvbAr")
         );
-        const tokenVault = await getAssociatedTokenAddress(mintOfToken, tokenAccountOwnerPda, true);
-        setGameWallet(tokenAccountOwnerPda.toString());
-        setGameTokenAccount(tokenVault.toString());
-  
-        try {
-          const tokenAccount = await getAccount(engine.getConnectionChain(), new PublicKey(tokenVault.toString()));
-          console.log("Balance:", tokenAccount.amount.toString());
-          const readableBalance = Number(tokenAccount.amount) - anteParsedData.totalActiveBuyins.toNumber() * anteParsedData.buyIn.toNumber(); // / 10 ** anteParsedData.tokenDecimals;
-          setTokenBalance(readableBalance);
-        } catch (error) {
-          console.error("Error fetching token account balance:", error);
-        }
+        const tokenVaultPromise = getAssociatedTokenAddress(mintOfToken, tokenAccountOwnerPda, true);
 
-        // Fetch token metadata if needed
-        if (mintOfToken.toString() === "7dnMwS2yE6NE1PX81B9Xpm7zUhFXmQABqUiHHzWXiEBn") {
+        const tokenMetadataPromise =
+          mintOfToken.toString() !== "7dnMwS2yE6NE1PX81B9Xpm7zUhFXmQABqUiHHzWXiEBn"
+            ? fetchTokenMetadata(mintOfToken.toString(), NETWORK)
+            : Promise.resolve(null);
+
+        // Also run mapFetchOnSpecificEphem concurrently
+        const mapFetchPromise = mapFetchOnSpecificEphem(engine, mapComponentPda, validEndpointResult.endpoint);
+
+        // Execute all concurrently:
+        const [tokenAccount, tokenVault, tokenMetadata, mapParsedData] = await Promise.all([
+          tokenAccountPromise,
+          tokenVaultPromise,
+          tokenMetadataPromise,
+          mapFetchPromise,
+        ]);
+
+        if (tokenMetadata) {
+          const { name, image } = tokenMetadata;
+          newGameInfo.image = image;
+          newGameInfo.token = name;
+        } else {
+          // Special case for the known token
           newGameInfo.image = `${process.env.PUBLIC_URL}/agld.jpg`;
           newGameInfo.token = "AGLD";
-        } else {
-          try {
-            const { name, image } = await fetchTokenMetadata(mintOfToken.toString(), NETWORK);
-            newGameInfo.image = image;
-            newGameInfo.token = name;
-          } catch (error) {
-            console.error("Error fetching token data:", error);
-          }
         }
-  
+
         // Update the game list, ensuring no duplicates
         setMyGames((prevMyGames) => {
           if (prevMyGames.some((game) => game.worldId === newGameInfo.worldId)) {
@@ -826,7 +817,35 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
           }
           return [newGameInfo, ...prevMyGames];
         });
+
+        // Process and set map data
+        const readableMapParsedData = `
+          Name: ${mapParsedData?.name} |
+          Authority: ${mapParsedData?.authority?.toString()} |
+          Width: ${mapParsedData?.width} |
+          Height: ${mapParsedData?.height} |
+          Buy in: ${mapParsedData?.buyIn} |
+          Max Players: ${mapParsedData?.maxPlayers} |
+          Wallet Balance: ${mapParsedData?.walletBalance.toNumber()} |
+        `;
+        console.log("readableMapParsedData", readableMapParsedData);
+        setMapParsedData(readableMapParsedData);
+
+        // Process token account info
+        console.log("Token Account Owner:", tokenAccount.owner.toString());
+        setGameOwner(tokenAccount.owner.toString());
+        setGameWallet(tokenAccountOwnerPda.toString());
+        setGameTokenAccount(tokenVault.toString());
+
+        // Now fetch the vault account (dependent on tokenVault)
+        const vaultAccount = await getAccount(engine.getConnectionChain(), new PublicKey(tokenVault.toString()));
+        console.log("Balance:", vaultAccount.amount.toString());
+        const readableBalance =
+          Number(vaultAccount.amount) -
+          anteParsedData.totalActiveBuyins.toNumber() * anteParsedData.buyIn.toNumber();
+        setTokenBalance(readableBalance);
       }
+
   
       let foodcomponents = 32;
       const mapSize = newGameInfo.size;
@@ -886,11 +905,6 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
       setFoodComponentCheck(sectionMessage);
   
       await fetchPlayers(newGameInfo);
-      //const checkPlayers = await handleCleanupClick(newGameInfo, false);
-      //console.log("checkPlayers", checkPlayers);
-      //if (checkPlayers !== undefined) {
-      //  setPlayerComponentCheck(checkPlayers);
-      //}
 
       const account = anteComponentPda.toString();
       const balanceData = await calculateTokenBalances(account);
@@ -1176,6 +1190,15 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
       console.error("Error during deposit:", error);
     }
   };
+  
+  const DepositInput = React.memo(UncontrolledDepositInput);
+  const handleDepositChange = useCallback(
+    (e: any) => {
+      setDepositValue(e.target.value);
+    },
+    [setDepositValue]
+  );
+  
   return (
     <div className="admin-tab">
       {isLoading.current === true ? (
@@ -1227,12 +1250,12 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                   justifyContent: "center",
                 }}
               >
-                <input
-                  type="text"
-                  placeholder="# of tokens"
-                  value={depositValue}
-                  onChange={(e) => setDepositValue(e.target.value)}
-                  style={{ color: "black", marginLeft: "10px" }}
+                <UncontrolledDepositInput
+                  defaultValue={depositValue}
+                  onCommit={(value) => {
+                    setDepositValue(value);
+                    // Optionally perform additional actions when the value is committed.
+                  }}
                 />
                 <button
                   className="btn-copy"
@@ -1587,6 +1610,31 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
     </div>
   );
 }
+
+interface UncontrolledDepositInputProps {
+  defaultValue?: string;
+  onCommit: (value: string) => void;
+}
+
+const UncontrolledDepositInput: React.FC<UncontrolledDepositInputProps> = React.memo(
+  ({ defaultValue = "", onCommit }) => {
+    const inputRef = useRef<HTMLInputElement>(null);
+    return (
+      <input
+        type="text"
+        defaultValue={defaultValue}
+        placeholder="tokens to deposit"
+        style={{ color: "black", marginLeft: "10px" }}
+        ref={inputRef}
+        onBlur={() => {
+          if (inputRef.current) {
+            onCommit(inputRef.current.value);
+          }
+        }}
+      />
+    );
+  }
+);
 
 function CollapsiblePanel({
   title,
