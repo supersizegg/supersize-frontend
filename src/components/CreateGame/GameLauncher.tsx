@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from "react";
-import CreateGame from "@components/CreateGame";
+import CreateGameForm from "@components/CreateGame/CreateGameForm";
 import { FetchedGame } from "@utils/types";
-import Dropdown from "@components/Dropdown";
+import SelectRegion from "@components/CreateGame/SelectRegion";
 import { endpoints, NETWORK } from "@utils/constants";
-import "./LaunchGame.scss";
+import "./GameLauncher.scss";
 
 type launchProps = {
   activeGamesLoaded: FetchedGame[];
   setActiveGamesLoaded: React.Dispatch<React.SetStateAction<FetchedGame[]>>;
 };
 
-const LanchGame: React.FC<launchProps> = ({ activeGamesLoaded, setActiveGamesLoaded }) => {
+const GameLauncher: React.FC<launchProps> = ({ activeGamesLoaded, setActiveGamesLoaded }) => {
   const options = [
     { id: 0, size: 4000, players: 10, cost: "0.4 SOL" },
     { id: 1, size: 6000, players: 20, cost: "1.0 SOL" },
@@ -51,7 +51,7 @@ const LanchGame: React.FC<launchProps> = ({ activeGamesLoaded, setActiveGamesLoa
           ))}
         </div>
         <p className="launch-game-description">Select server:</p>
-        <Dropdown items={["Europe", "America", "Asia"]} onSelect={setSelectedServer} selectedItem={selectedServer} />
+        <SelectRegion items={["Europe", "America", "Asia"]} onSelect={setSelectedServer} selectedItem={selectedServer} />
         <p className="info-text">
           Deploying a game creates a new Supersize world that lasts forever and is owned by you. The deployment cost is
           refundable if you decide to close the game accounts in your profile.{" "}
@@ -59,7 +59,7 @@ const LanchGame: React.FC<launchProps> = ({ activeGamesLoaded, setActiveGamesLoa
         </p>
       </div>
       <div className="create-game-form-container">
-        <CreateGame
+        <CreateGameForm
           game_size={options[selectedOption].size}
           activeGamesLoaded={activeGamesLoaded}
           setActiveGamesLoaded={setActiveGamesLoaded}
@@ -70,4 +70,4 @@ const LanchGame: React.FC<launchProps> = ({ activeGamesLoaded, setActiveGamesLoa
   );
 };
 
-export default LanchGame;
+export default GameLauncher;

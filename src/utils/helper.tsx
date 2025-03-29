@@ -1,15 +1,15 @@
 import React from "react";
-import { API_BASE_URL, cachedTokenMetadata, endpoints, NETWORK } from "@utils/constants";
-import { Blob } from "@utils/types";
+import { API_BASE_URL, cachedTokenMetadata, endpoints, NETWORK, options } from "@utils/constants";
+import { ActiveGame, Blob } from "@utils/types";
 
-import { PublicKey, Keypair } from "@solana/web3.js";
+import { PublicKey, Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import * as crypto from "crypto-js";
 import * as anchor from "@coral-xyz/anchor";
 import { MagicBlockEngine } from "@engine/MagicBlockEngine";
-import { playerFetchOnChain, playerFetchOnChainProcessed, playerFetchOnSpecificEphemProcessed, playerFetchOnSpecificEphem } from "@states/gameFetch";
+import { playerFetchOnChain, playerFetchOnChainProcessed, playerFetchOnSpecificEphemProcessed, playerFetchOnSpecificEphem, mapFetchOnSpecificEphem, anteroomFetchOnChain } from "@states/gameFetch";
 import { playerFetchOnEphem } from "@states/gameFetch";
 import { FindEntityPda } from "@magicblock-labs/bolt-sdk";
-import { COMPONENT_PLAYER_ID } from "@states/gamePrograms";
+import { COMPONENT_ANTEROOM_ID, COMPONENT_MAP_ID, COMPONENT_PLAYER_ID } from "@states/gamePrograms";
 import { FindComponentPda } from "@magicblock-labs/bolt-sdk";
 import { BN } from "@coral-xyz/anchor";
 import { HELIUS_API_KEY } from "@utils/constants";
@@ -125,6 +125,13 @@ export const getRoundedAmount = (amount: number, foodUnitValue: number): string 
   });
 };
 
+export const getMaxPlayers = (size: number): number => {
+  if (size === 4000) return 10;
+  if (size === 6000) return 20;
+  if (size === 8000) return 40;
+  return 0;
+}
+
 export const deriveSeedFromPublicKey = (userPublicKey: PublicKey): Uint8Array => {
   const salt = "supersizeSalt";
   const hash = crypto.SHA256(userPublicKey.toBuffer().toString() + salt);
@@ -164,16 +171,43 @@ export const getTopLeftCorner = (index: number, mapSize: number): { x: number; y
   return { x, y };
 };
 
+export function getPingColor(ping: number) {
+  if (ping < 0) return "red";
+  if (ping <= 100) return "#00d37d"; // green
+  if (ping <= 800) return "yellow";
+  return "red";
+}
+
 export const pingEndpoint = async (url: string): Promise<number> => {
   const startTime = performance.now();
   try {
     await fetch(url, { method: "OPTIONS" });
   } catch (error) {
     console.error(`Failed to ping ${url}:`, error);
+    return -1;
   }
   const endTime = performance.now();
-  return endTime - startTime;
+  return Math.round(endTime - startTime);
 };
+
+export const pingEndpoints = async () => {
+  const pingResults = await Promise.all(
+    endpoints[NETWORK].map(async (endpoint) => {
+      const pingTimes = await Promise.all([pingEndpoint(endpoint), pingEndpoint(endpoint), pingEndpoint(endpoint)]);
+      const bestPingTime = Math.min(...pingTimes);
+      return { endpoint: endpoint, pingTime: bestPingTime, region: options[endpoints[NETWORK].indexOf(endpoint)] };
+    }),
+  );
+  const lowestPingEndpoint = pingResults.reduce((a, b) => (a.pingTime < b.pingTime ? a : b));
+  return { pingResults: pingResults, lowestPingEndpoint: lowestPingEndpoint };
+};
+
+export const pingSpecificEndpoint = async (endpoint: string) => {
+  const pingTimes = await Promise.all([pingEndpoint(endpoint), pingEndpoint(endpoint), pingEndpoint(endpoint)]);
+  const bestPingTime = Math.min(...pingTimes);
+  return { endpoint: endpoint, pingTime: bestPingTime, region: options[endpoints[NETWORK].indexOf(endpoint)] };
+};
+
 
 export const checkTransactionStatus = async (
   connection: anchor.web3.Connection,
@@ -238,6 +272,53 @@ export async function getPriorityFeeEstimate(priorityLevel: string, publicKeys: 
   const data = await response.json();
   console.log("Fee in function for", priorityLevel, " :", data.result.priorityFeeEstimate);
   return data.result;
+}
+
+export async function fetchTokenBalance(engine: MagicBlockEngine, activeGame: ActiveGame, isDevnet: boolean) : Promise<{
+  tokenBalance: number,
+  hasInsufficientTokenBalance: boolean,
+}> {
+  if (!activeGame || !activeGame.tokenMint) return { tokenBalance: 0, hasInsufficientTokenBalance: true };
+  let connection = engine.getConnectionChain();
+  let wallet = engine.getWalletPayer();
+
+  if (isDevnet){
+    connection = engine.getConnectionChainDevnet();
+    wallet = engine.getSessionPayer();
+  }
+  console.log("connection", connection, isDevnet);
+  if (!wallet) return { tokenBalance: 0, hasInsufficientTokenBalance: true };
+
+  try {
+    if (!activeGame.tokenMint) return { tokenBalance: 0, hasInsufficientTokenBalance: true };
+    const tokenMint = new PublicKey(activeGame.tokenMint);
+    let balance = 0;
+    let denominator = 0;
+    if (tokenMint.equals(NATIVE_MINT)) {
+      const balanceInfo = await connection.getBalance(wallet);
+      balance = balanceInfo;
+      denominator = LAMPORTS_PER_SOL;
+    } else {
+      const tokenAccounts = await connection.getTokenAccountsByOwner(wallet, {
+        mint: tokenMint,
+      });
+      if (tokenAccounts.value.length > 0) {
+        const accountInfo = tokenAccounts.value[0].pubkey;
+        const balanceInfo = await connection.getTokenAccountBalance(accountInfo);
+        balance = parseInt(balanceInfo.value.amount) || 0;
+        denominator = 10 ** activeGame.decimals
+      }
+    }
+
+    if (balance < activeGame.buy_in) {
+      return { tokenBalance: balance / denominator, hasInsufficientTokenBalance: true };
+    } else {
+      return { tokenBalance: balance / denominator, hasInsufficientTokenBalance: false };
+    }
+  } catch (error) {
+    console.log("Error fetching token balance:", error);
+    return { tokenBalance: 0, hasInsufficientTokenBalance: true };
+  }
 }
 
 export async function fetchTokenMetadata(tokenAddress: string, network: string) {
@@ -380,20 +461,6 @@ export const findListIndex = (pubkey: PublicKey, players: Blob[]): number | null
   return index !== -1 ? index : null;
 };
 
-/*
-export const decodeFood = (data: Uint8Array) => {
-  if (!(data instanceof Uint8Array) || data.length !== 4) {
-    throw new Error("Invalid food data format. Expected a Uint8Array of length 4.");
-  }
-  const buffer = data.buffer; // Get the ArrayBuffer from Uint8Array
-  const packed = new DataView(buffer).getUint32(data.byteOffset, true); // Little-endian
-  const x = packed & 0x3fff;
-  const y = (packed >> 14) & 0x3fff;
-  const size = (packed >> 28) & 0x07;
-  const food_type = ((packed >> 31) & 0x01) != 0;
-  return { x, y, size, food_type };
-};
-*/
 export const decodeFood = (data: Uint8Array) => {
   if (!(data instanceof Uint8Array) || data.length !== 4) {
     throw new Error("Invalid food data format. Expected a Uint8Array of length 4.");
@@ -412,6 +479,127 @@ export const decodeFood = (data: Uint8Array) => {
 
   return { x, y, food_value, food_multiple };
 };
+
+export function isPlayerStatus(
+  result:
+    | {
+        playerStatus: string;
+        need_to_delegate: boolean;
+        need_to_undelegate: boolean;
+        newplayerEntityPda: PublicKey;
+        activeplayers: number;
+        max_players: number;
+      }
+    | "error",
+) {
+  return typeof result === "object" && "activeplayers" in result;
+}
+
+export const updatePlayerInfo = async (
+  engine: MagicBlockEngine,
+  worldId: BN,
+  max_players: number,
+  playerStatus: string,
+  newPlayerEntityPda: PublicKey,
+  activeplayers: number,
+  need_to_delegate: boolean,
+  need_to_undelegate: boolean,
+  thisEndpoint: string,
+): Promise<{
+  playerStatus: string,
+  activeplayers: number,
+  need_to_delegate: boolean,
+  need_to_undelegate: boolean,
+  newPlayerEntityPda: PublicKey,
+  max_players: number,
+}> => {
+  const result = await getMyPlayerStatus(
+    engine,
+    worldId,
+    max_players,
+    thisEndpoint,
+  );
+  if (isPlayerStatus(result)) {
+    if (result.playerStatus == "error") {
+      console.log("Error fetching player status");
+      activeplayers = result.activeplayers;
+      if (activeplayers == max_players && max_players !== 0) {
+        playerStatus = "Game Full";
+      } else {
+        playerStatus = result.playerStatus;
+      }
+    } else {
+      activeplayers = result.activeplayers;
+      need_to_delegate = result.need_to_delegate;
+      need_to_undelegate = result.need_to_undelegate;
+      newPlayerEntityPda = result.newplayerEntityPda;
+      playerStatus = result.playerStatus;
+      max_players = result.max_players;
+    }
+  } else {
+    console.error("Error fetching player status");
+  }
+  return {
+    playerStatus: playerStatus,
+    activeplayers: activeplayers,
+    need_to_delegate: need_to_delegate,
+    need_to_undelegate: need_to_undelegate,
+    newPlayerEntityPda: newPlayerEntityPda,
+    max_players: max_players,
+  }
+}
+
+export const getGameData = async (
+  engine: MagicBlockEngine,
+  worldId: BN,
+  thisEndpoint: string,
+  gameInfo: ActiveGame,
+): Promise<ActiveGame> => {
+  const mapEntityPda = FindEntityPda({
+    worldId: worldId,
+    entityId: new anchor.BN(0),
+    seed: stringToUint8Array("origin"),
+  });
+  const mapComponentPda = FindComponentPda({
+    componentId: COMPONENT_MAP_ID,
+    entity: mapEntityPda,
+  });
+  const mapParsedData = await mapFetchOnSpecificEphem(engine, mapComponentPda, thisEndpoint);
+  if (mapParsedData) {
+    gameInfo.endpoint = thisEndpoint;
+    gameInfo.name = mapParsedData.name;
+    gameInfo.max_players = mapParsedData.maxPlayers;
+    gameInfo.size = mapParsedData.width;
+    gameInfo.buy_in = mapParsedData.buyIn.toNumber();
+    gameInfo.isLoaded = true;
+
+    const anteseed = "ante";
+    const anteEntityPda = FindEntityPda({
+      worldId: worldId,
+      entityId: new anchor.BN(0),
+      seed: stringToUint8Array(anteseed),
+    });
+    const anteComponentPda = FindComponentPda({
+      componentId: COMPONENT_ANTEROOM_ID,
+      entity: anteEntityPda,
+    });
+    const anteParsedData = await anteroomFetchOnChain(engine, anteComponentPda);
+    let mint_of_token_being_sent = new PublicKey(0);
+    if (anteParsedData && anteParsedData.token) {
+      gameInfo.decimals = anteParsedData.tokenDecimals;
+      mint_of_token_being_sent = anteParsedData.token;
+      try {
+        const { name, image } = await fetchTokenMetadata(mint_of_token_being_sent.toString(), NETWORK);
+        gameInfo.image = image;
+        gameInfo.token = name;
+        gameInfo.tokenMint = mint_of_token_being_sent;
+      } catch (error) {
+        console.error("Error fetching token data:", error);
+      }
+    }
+  }
+  return gameInfo;
+}
 
 export const getMyPlayerStatus = async (
   engine: MagicBlockEngine,

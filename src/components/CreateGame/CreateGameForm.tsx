@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useMagicBlockEngine } from "../../engine/MagicBlockEngineProvider";
 import { FetchedGame } from "@utils/types";
-import TxnModal from "@components/txnModal";
+import TxnModal from "@components/TxnModal/TxnModal";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { gameExecuteNewGame } from "../../states/gameExecuteNewGame";
 import "./CreateGameForm.scss";
@@ -16,7 +16,7 @@ type gameProps = {
 
 type FormData = [number, number, string, string, string];
 
-const CreateGame: React.FC<gameProps> = ({ game_size, activeGamesLoaded, setActiveGamesLoaded, selectedServer }) => {
+const CreateGameForm: React.FC<gameProps> = ({ game_size, activeGamesLoaded, setActiveGamesLoaded, selectedServer }) => {
   const engine = useMagicBlockEngine();
   const { publicKey } = useWallet();
   const userKey = publicKey?.toString() || "Connect Wallet";
@@ -158,4 +158,4 @@ const CreateGame: React.FC<gameProps> = ({ game_size, activeGamesLoaded, setActi
   );
 };
 
-export default CreateGame;
+export default CreateGameForm;

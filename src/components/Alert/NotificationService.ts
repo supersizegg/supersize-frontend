@@ -1,11 +1,9 @@
-// notificationService.ts
 export type AlertType = "success" | "error";
 
 export interface AlertData {
   id: number;
   type: AlertType;
   message: string;
-  // External code can set this flag to trigger the exit animation.
   shouldExit?: boolean;
 }
 
@@ -17,9 +15,7 @@ class NotificationService {
 
   subscribe(listener: Listener) {
     this.listeners.push(listener);
-    // Immediately notify the subscriber with the current alerts.
     listener(this.alerts);
-    // Return an unsubscribe function.
     return () => {
       this.listeners = this.listeners.filter((l) => l !== listener);
     };
@@ -32,7 +28,7 @@ class NotificationService {
   }
 
   addAlert(alert: Omit<AlertData, "id">): number {
-    const id = Date.now(); // A simple unique ID generator.
+    const id = Date.now(); 
     const newAlert: AlertData = { ...alert, id };
     this.alerts.push(newAlert);
     this.emit();

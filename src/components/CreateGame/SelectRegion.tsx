@@ -1,23 +1,23 @@
 import React from "react";
-import "./Dropdown.scss";
+import "./SelectRegion.scss";
 
-type DropdownProps = {
+type SelectRegionProps = {
   items: string[];
   onSelect: (selectedItems: string) => void;
   selectedItem: string;
 };
 
-const Dropdown: React.FC<DropdownProps> = ({ items, onSelect, selectedItem }) => {
+const SelectRegion: React.FC<SelectRegionProps> = ({ items, onSelect, selectedItem }) => {
   const handleClick = (item: string) => {
     onSelect(item);
   };
 
   return (
-    <div className="dropdown-container">
+    <div className="selector-container">
       {items.map((item) => (
         <div
           key={item}
-          className={`dropdown-item ${selectedItem === item ? "selected" : ""}`}
+          className={`selector-item ${selectedItem === item ? "selected" : ""}`}
           onClick={() => handleClick(item)}
         >
           <span className={`indicator ${selectedItem === item ? "green" : "red"}`}></span>
@@ -28,4 +28,4 @@ const Dropdown: React.FC<DropdownProps> = ({ items, onSelect, selectedItem }) =>
   );
 };
 
-export default Dropdown;
+export default SelectRegion;
