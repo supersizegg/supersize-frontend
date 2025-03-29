@@ -1,11 +1,11 @@
-.dropdown-container {
+.selector-container {
     display: flex;
     flex-direction: row;
     gap: 30px;
     height: fit-content;
 }
 
-.dropdown-item {
+.selector-item {
     border: 1px solid #ccc;
     border-radius: 5px;
     cursor: pointer;
@@ -15,9 +15,12 @@
     background-color: black;
     color: white;
     opacity: 0.5;
+    width: 120px;
+    padding: 10px;
+    text-align: left;
 }
 
-.dropdown-item.selected {
+.selector-item.selected {
     opacity: 1.0;
 }
 

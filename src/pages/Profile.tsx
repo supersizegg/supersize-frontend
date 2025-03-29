@@ -1,12 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { MenuBar } from "@components/menu/MenuBar";
-import { MenuSession } from "@components/menu/MenuSession";
-import FooterLink from "@components/Footer";
+import { MenuBar } from "@components/Menu/MenuBar";
+import { MenuSession } from "@components/Menu/MenuSession";
+import FooterLink from "@components/Footer/Footer";
 import "./Profile.scss";
-import { getMemberPDA, useBuddyLink } from "buddy.link";
 import { useWallet } from "@solana/wallet-adapter-react";
-import Invite from "../components/buddyInvite";
-import CopyLink from "../components/buddyReferral";
 import {
   anchor,
   ApplySystem,
@@ -46,12 +43,12 @@ import { PublicKey } from "@solana/web3.js";
 import { getAccount, getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { cachedTokenMetadata, endpoints, NETWORK, RPC_CONNECTION } from "@utils/constants";
 import { Spinner } from "@components/util/Spinner";
-import Graph from "../components/Graph";
+import Graph from "../components/util/Graph";
 import { Chart, LineElement, PointElement, LinearScale, Title, Tooltip, Legend } from "chart.js";
 import { getTopLeftCorner, getRegion } from "@utils/helper";
 import { createTransferInstruction } from "@solana/spl-token";
 import { gameSystemInitSection } from "@states/gameSystemInitSection";
-import GameComponent from "@components/Game";
+import GameComponent from "@components/Game/Game";
 
 // Register the components
 Chart.register(LineElement, PointElement, LinearScale, Title, Tooltip, Legend);
@@ -128,11 +125,10 @@ function GeneralTab() {
   const engine = useMagicBlockEngine();
   const [gemBalance, setGemBalance] = useState(0);
   const [username, setUsername] = useState<string>("");
-  const { referrer } = useBuddyLink();
   const [usernameSaved, setUsernameSaved] = useState(false);
 
   const setInputUsername = (inputUsername: React.SetStateAction<string>) => {
-    const user = { name: inputUsername, referrer: referrer, referral_done: false };
+    const user = { name: inputUsername, referrer: "", referral_done: false };
     localStorage.setItem("user", JSON.stringify(user));
     setUsername(inputUsername);
     setUsernameSaved(true);
@@ -200,48 +196,12 @@ function GeneralTab() {
 }
 
 function QuestsTab() {
-  const { member } = useBuddyLink();
-
-  const [joinedOrg, setJoinedOrg] = useState<boolean>(false);
-  const BUDDY_LINK_PROGRAM_ID = new PublicKey("BUDDYtQp7Di1xfojiCSVDksiYLQx511DPdj2nbtG9Yu5");
-  let referral_vault_program_id = new PublicKey("CLC46PuyXnSuZGmUrqkFbAh7WwzQm8aBPjSQ3HMP56kp");
-  const mainnet_connection = new Connection(RPC_CONNECTION["mainnet"]);
-
-  useEffect(() => {
-    const checkMembership = async () => {
-      if (member) {
-        if (member[0]) {
-          const buddyMemberPdaAccount = getMemberPDA(BUDDY_LINK_PROGRAM_ID, "supersize", member[0].account.name);
-          let [refferalPdaAccount] = PublicKey.findProgramAddressSync(
-            [
-              Buffer.from("subsidize"),
-              buddyMemberPdaAccount.toBuffer(),
-              new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v").toBuffer(),
-            ],
-            referral_vault_program_id,
-          );
-          console.log("refferalPdaAccount", refferalPdaAccount.toString());
-          const accountInfo = await mainnet_connection.getAccountInfo(refferalPdaAccount);
-          console.log("accountInfo", accountInfo);
-          if (accountInfo && accountInfo.lamports > 0) {
-            setJoinedOrg(true);
-          }
-        } else {
-          setJoinedOrg(false);
-        }
-      } else {
-        setJoinedOrg(false);
-      }
-    };
-
-    checkMembership();
-  }, [member]);
 
   return (
     <div className="quests-tab">
       <div className="quest-item">
-        <span>Join referral program + play free USDC game</span>
-        <button>{joinedOrg ? "Completed" : "Pending"}</button>
+        <span>Join referral program</span>
+        <button>{"Pending"}</button>
       </div>
     </div>
   );
@@ -602,7 +562,6 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                   buy_in: mapParsedData.buyIn.toNumber(),
                   decimals: 0,
                   endpoint: "",
-                  ping: 0,
                   isLoaded: true,
                   permissionless: false,
                 };

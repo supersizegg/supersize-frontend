@@ -1,6 +1,6 @@
 import React from "react";
-import { Spinner } from "./util/Spinner";
-import "./txnModal.scss";
+import { Spinner } from "../util/Spinner";
+import "./TxnModal.scss";
 
 type TxnModalProps = {
   isOpen: boolean;

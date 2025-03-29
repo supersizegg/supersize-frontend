@@ -1,7 +1,6 @@
 import React from "react";
 import { PublicKey } from "@solana/web3.js";
 import "./GameLeaderboard.css";
-import { getRoundedAmount } from "@utils/helper";
 interface LeaderboardItem {
   name?: string;
   authority: PublicKey | null;

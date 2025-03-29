@@ -22,7 +22,6 @@ export function createUnloadedGame(
       buy_in: 0,
       decimals: 0,
       endpoint,
-      ping: 0,
       permissionless,
     },
     playerInfo: {

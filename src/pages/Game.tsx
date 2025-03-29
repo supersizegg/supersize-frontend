@@ -4,8 +4,8 @@ import { PublicKey } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
 import * as anchor from "@coral-xyz/anchor";
 
-import GameComponent from "@components/Game";
-import GameLeaderboard from "@components/GameLeaderboard";
+import GameComponent from "@components/Game/Game";
+import GameLeaderboard from "@components/Game/GameLeaderboard";
 import { endpoints, MAP_COMPONENT } from "@utils/constants";
 import { ActiveGame, Blob, Food } from "@utils/types";
 import { createUndelegateInstruction, FindComponentPda, FindEntityPda } from "@magicblock-labs/bolt-sdk";
@@ -18,7 +18,7 @@ import { subscribeToGame, updateLeaderboard, updateMyPlayer } from "../states/ga
 import { gameSystemCashOut } from "../states/gameSystemCashOut";
 import { gameSystemMove } from "../states/gameSystemMove";
 import { gameSystemSpawnFood } from "../states/gameSystemSpawnFood";
-import { decodeFood, stringToUint8Array, getRoundedAmount } from "@utils/helper";
+import { decodeFood, stringToUint8Array } from "@utils/helper";
 import { useSoundManager } from "../hooks/useSoundManager";
 
 import "./game.scss";
@@ -55,7 +55,6 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
 
   const [leaderboard, setLeaderboard] = useState<Blob[]>([]);
   const [allplayers, setAllPlayers] = useState<Blob[]>([]);
-  //const [players, setPlayers] = useState<Blob[]>([]);
   const [allFood, setAllFood] = useState<Food[][]>([]);
   const [visibleFood, setVisibleFood] = useState<Food[][]>([]);
   const [foodListLen, setFoodListLen] = useState<number[]>([]);

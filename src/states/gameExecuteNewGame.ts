@@ -140,7 +140,6 @@ export async function gameExecuteNewGame(
       token: tokenMetadata.name || "TOKEN",
       buy_in: buy_in,
       endpoint: engine.getEndpointEphemRpc(),
-      ping: 1000,
     } as ActiveGame,
     playerInfo: {
       playerStatus: "new_player",

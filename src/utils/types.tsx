@@ -39,7 +39,6 @@ export type ActiveGame = {
   buy_in: number;
   decimals: number;
   endpoint: string;
-  ping: number;
 };
 
 export type PlayerInfo = {

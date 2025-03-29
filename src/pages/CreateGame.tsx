@@ -1,12 +1,12 @@
 import React, { useState } from "react";
-import LanchGame from "@components/LaunchGame";
-import EarnFees from "@components/EarnFees";
-import ModGame from "@components/ModGame";
-import { MenuBar } from "@components/menu/MenuBar";
-import FooterLink from "@components/Footer";
+import GameLauncher from "@components/CreateGame/GameLauncher";
+import EarnFees from "@components/InfoPanel/EarnFees";
+import ModGame from "@components/InfoPanel/ModGame";
+import { MenuBar } from "@components/Menu/MenuBar";
+import FooterLink from "@components/Footer/Footer";
 import { FetchedGame, Food } from "@utils/types";
 import "./CreateGame.scss";
-import GameComponent from "@components/Game";
+import GameComponent from "@components/Game/Game";
 import { BN } from "@coral-xyz/anchor";
 
 type CreateGameProps = {
@@ -58,7 +58,7 @@ const CreateGame: React.FC<CreateGameProps> = ({ activeGamesLoaded, setActiveGam
       <div className="create-game-wrapper" style={{ position: "relative", zIndex: 1 }}>
         <div className="create-game-card">
           {tab === 0 ? (
-            <LanchGame activeGamesLoaded={activeGamesLoaded} setActiveGamesLoaded={setActiveGamesLoaded} />
+            <GameLauncher activeGamesLoaded={activeGamesLoaded} setActiveGamesLoaded={setActiveGamesLoaded} />
           ) : tab === 1 ? (
             <EarnFees />
           ) : (
