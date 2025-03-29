@@ -14,7 +14,7 @@ import { LAMPORTS_PER_SOL, PublicKey, Transaction } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import { Tooltip } from "react-tooltip";
 
-import { MenuBar } from "@components/Menu/MenuBar";
+import { MenuBar } from "@components/menu/MenuBar";
 import { Spinner } from "@components/util/Spinner";
 import { gameExecuteJoin } from "@states/gameExecuteJoin";
 

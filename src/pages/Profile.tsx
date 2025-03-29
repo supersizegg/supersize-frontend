@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { MenuBar } from "@components/Menu/MenuBar";
-import { MenuSession } from "@components/Menu/MenuSession";
+import { MenuBar } from "@components/menu/MenuBar";
+import { MenuSession } from "@components/menu/MenuSession";
 import FooterLink from "@components/Footer/Footer";
 import "./Profile.scss";
 import { useWallet } from "@solana/wallet-adapter-react";

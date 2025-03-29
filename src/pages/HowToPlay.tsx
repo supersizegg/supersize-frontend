@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { MenuBar } from "@components/Menu/MenuBar";
+import { MenuBar } from "@components/menu/MenuBar";
 import Footer from "@components/Footer/Footer";
 import "./HowToPlay.scss";
 import { Food } from "@utils/types";
