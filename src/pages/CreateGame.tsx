@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import GameLauncher from "@components/CreateGame/GameLauncher";
 import EarnFees from "@components/InfoPanel/EarnFees";
 import ModGame from "@components/InfoPanel/ModGame";
-import { MenuBar } from "@components/Menu/MenuBar";
+import { MenuBar } from "@components/menu/MenuBar";
 import FooterLink from "@components/Footer/Footer";
 import { FetchedGame, Food } from "@utils/types";
 import "./CreateGame.scss";

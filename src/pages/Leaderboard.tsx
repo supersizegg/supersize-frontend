@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { MenuBar } from "@components/Menu/MenuBar";
+import { MenuBar } from "@components/menu/MenuBar";
 import LeaderboardDropdown from "@components/LeaderboardDropdown/LeaderboardDropdown";
 import { API_URL } from "@utils/constants";
 import "./Leaderboard.scss";
