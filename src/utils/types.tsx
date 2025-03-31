@@ -41,6 +41,15 @@ export type ActiveGame = {
   endpoint: string;
 };
 
+export type Anteroom = {
+  buyIn: number;
+  token: PublicKey;
+  tokenDecimals: number;
+  vaultTokenAccount: PublicKey;
+  gamemasterTokenAccount: PublicKey;
+  totalActiveBuyins: number;
+}
+
 export type PlayerInfo = {
   playerStatus: string;
   need_to_delegate: boolean;

@@ -1,11 +1,14 @@
-import { LAMPORTS_PER_SOL, PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY, Transaction } from "@solana/web3.js";
+import { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY, Transaction } from "@solana/web3.js";
 import { ApplySystem, createDelegateInstruction, FindComponentPda } from "@magicblock-labs/bolt-sdk";
-
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
 import { COMPONENT_PLAYER_ID, SYSTEM_BUY_IN_ID, COMPONENT_ANTEROOM_ID } from "./gamePrograms";
-
 import { ActiveGame } from "@utils/types";
-import { createWrappedNativeAccount, getAssociatedTokenAddress, NATIVE_MINT, TOKEN_PROGRAM_ID, createAssociatedTokenAccountInstruction, createSyncNativeInstruction } from "@solana/spl-token";
+import { getAssociatedTokenAddress, 
+  NATIVE_MINT, 
+  TOKEN_PROGRAM_ID, 
+  createAssociatedTokenAccountInstruction, 
+  createSyncNativeInstruction } 
+  from "@solana/spl-token";
 import { anteroomFetchOnChain } from "./gameFetch";
 
 type GameExecuteBuyInResult = {
@@ -42,7 +45,6 @@ export async function gameSystemBuyIn(
   let mint_of_token_being_sent = new PublicKey(0);
   let payout_token_account = new PublicKey(0);
   const combinedTx = new Transaction();
-  console.log("anteParsedData", anteParsedData);
   if (anteParsedData && anteParsedData.vaultTokenAccount && anteParsedData.token) {
     vault_token_account = anteParsedData.vaultTokenAccount;
     mint_of_token_being_sent = anteParsedData.token;

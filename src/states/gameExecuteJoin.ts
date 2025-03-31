@@ -1,20 +1,12 @@
 import { PublicKey } from "@solana/web3.js";
 import { ApplySystem, createUndelegateInstruction, FindComponentPda, FindEntityPda } from "@magicblock-labs/bolt-sdk";
-
 import { ActiveGame } from "@utils/types";
-import { fetchTokenMetadata } from "@utils/helper";
-
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
-import { gameSystemJoin } from "./gameSystemJoin";
 import { gameSystemBuyIn } from "./gameSystemBuyIn";
 import { COMPONENT_PLAYER_ID, COMPONENT_ANTEROOM_ID, SYSTEM_MOVEMENT_ID, COMPONENT_MAP_ID, COMPONENT_SECTION_ID } from "./gamePrograms";
-
 import * as anchor from "@coral-xyz/anchor";
 import { anteroomFetchOnChain } from "./gameFetch";
-import axios from "axios";
-
 import { stringToUint8Array } from "@utils/helper";
-import { NETWORK } from "@utils/constants";
 
 type GameExecuteJoinResult = {
   success: boolean;
@@ -102,37 +94,9 @@ export async function gameExecuteJoin(
   });
 
   const anteParsedData = await anteroomFetchOnChain(engine, anteComponentPda);
-  let mint_of_token_being_sent = new PublicKey(0);
 
   if (!anteParsedData || !anteParsedData.vaultTokenAccount || !anteParsedData.token) {
     return { success: false, error: "Missing or invalid ante data", message: "error" };
-  }
-
-  mint_of_token_being_sent = anteParsedData.token;
-
-  const { name } = await fetchTokenMetadata(mint_of_token_being_sent.toString(), NETWORK);
-
-  try {
-    const response = await axios.post("https://supersize.lewisarnsten.workers.dev/create-contest", {
-      name: name,
-      tokenAddress: mint_of_token_being_sent.toString(),
-    });
-  } catch (error) {
-    console.log("error", error);
-  }
-
-  try {
-    let username = engine.getWalletPayer().toString();
-    if (mint_of_token_being_sent.toString() != "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v") {
-      username = engine.getWalletPayer().toString() + "_" + name;
-    }
-    const response = await axios.post("https://supersize.lewisarnsten.workers.dev/create-user", {
-      walletAddress: engine.getWalletPayer().toString(),
-      name: username,
-      contestId: name,
-    });
-  } catch (error) {
-    console.log("error", error);
   }
 
   try {
@@ -140,30 +104,6 @@ export async function gameExecuteJoin(
     if (!buyInResult.success) {
       return { success: false, error: buyInResult.error, message: "buyin_failed" };
     }
-    /*
-    else{
-        const retrievedMyPlayers = localStorage.getItem('myplayers');
-        let myplayers = [{ playerEntityPda: newplayerEntityPda.toString(), worldId: gameInfo.worldId.toNumber().toString()}];
-        if (retrievedMyPlayers) {
-            let index = -1;
-            const players = JSON.parse(retrievedMyPlayers);
-            for (let i = 0; i < players.length; i++) {
-                if (players[i].worldId == gameInfo.worldId.toNumber().toString()) {
-                    index = i;
-                    break;
-                }
-            }
-            if (index !== -1) {
-                myplayers = JSON.parse(retrievedMyPlayers);
-                myplayers[index] = { playerEntityPda: newplayerEntityPda.toString(), worldId: gameInfo.worldId.toNumber().toString()};
-            }
-            else{
-                myplayers = [...JSON.parse(retrievedMyPlayers), { playerEntityPda: newplayerEntityPda.toString(), worldId: gameInfo.worldId.toNumber().toString()}];
-            }
-        }
-        console.log('myplayers', myplayers)
-        localStorage.setItem('myplayers', JSON.stringify(myplayers));
-    }*/
   } catch (buyInError) {
     console.error("Buy-in error:", buyInError);
     return {
@@ -218,23 +158,6 @@ export async function gameExecuteJoin(
       success: false,
       error: `Error joining the game: ${(error as Error)?.message}, please refresh and try again`,
       message: "join_failed",
-    };  }
-  /*
-  try {
-    const joinsig = await gameSystemJoin(engine, selectGameId, newplayerEntityPda, mapEntityPda, playerName);
-    if (joinsig) {
-      setMyPlayerEntityPda(newplayerEntityPda);
-      return { success: true, transactionSignature: joinsig };
-    } else {
-      return { success: false, error: `Error joining the game`, message: "join_failed" };
-    }
-  } catch (joinError) {
-    console.log("error", joinError);
-    return {
-      success: false,
-      error: `Error joining the game: ${(joinError as Error)?.message}`,
-      message: "join_failed",
-    };
+    };  
   }
-  */
 }

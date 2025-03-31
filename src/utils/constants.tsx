@@ -108,7 +108,6 @@ export const activeGamesList: {
       endpoint: "https://supersize-mainnet-sin.magicblock.app",
       permissionless: true,
     },
-    /*
     {
       worldId: new anchor.BN(1),
       worldPda: new PublicKey("9LKNh9Ma4WjGUHvohbAAdGpZFNUWmgEQRRgvYwRL25ma"),

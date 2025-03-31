@@ -1,26 +1,19 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
 import FooterLink from "@components/Footer/Footer";
-
 import "./Home.scss";
-
 import { ActiveGame, Food } from "@utils/types";
 import { cachedTokenMetadata, NETWORK, options } from "@utils/constants";
-
-import { fetchTokenMetadata, getMyPlayerStatus, formatBuyIn, isPlayerStatus, pingEndpoint, fetchTokenBalance, pingEndpoints, pingSpecificEndpoint, getMaxPlayers } from "@utils/helper";
+import { formatBuyIn, fetchTokenBalance, pingEndpoints, pingSpecificEndpoint, getMaxPlayers } from "@utils/helper";
 import { FindEntityPda, FindComponentPda, FindWorldPda, createDelegateInstruction, BN } from "@magicblock-labs/bolt-sdk";
-import { LAMPORTS_PER_SOL, PublicKey, Transaction } from "@solana/web3.js";
+import { PublicKey, Transaction } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import { Tooltip } from "react-tooltip";
-
 import { MenuBar } from "@components/menu/MenuBar";
 import { Spinner } from "@components/util/Spinner";
 import { gameExecuteJoin } from "@states/gameExecuteJoin";
-
-import { COMPONENT_MAP_ID, COMPONENT_ANTEROOM_ID, COMPONENT_PLAYER_ID } from "../states/gamePrograms";
+import { COMPONENT_PLAYER_ID } from "../states/gamePrograms";
 import { FetchedGame, PlayerInfo } from "@utils/types";
-import { anteroomFetchOnChain, mapFetchOnChain, mapFetchOnSpecificEphem } from "../states/gameFetch";
 import { useMagicBlockEngine } from "../engine/MagicBlockEngineProvider";
 import { endpoints } from "@utils/constants";
 import { createUnloadedGame } from "@utils/game";
@@ -28,10 +21,9 @@ import { stringToUint8Array, getRegion, getGameData, updatePlayerInfo, getPingCo
 import { gameSystemCashOut } from "@states/gameSystemCashOut";
 import { MagicBlockEngine } from "@engine/MagicBlockEngine";
 import GameComponent from "@components/Game/Game";
-import NotificationContainer from "@components/Alert/NotificationContainer";
-import NotificationService from "@components/Alert/NotificationService";
-import { NATIVE_MINT } from "@solana/spl-token";
-import BalanceWarning from "@components/Alert/BalanceWarning";
+import NotificationContainer from "@components/notification/NotificationContainer";
+import NotificationService from "@components/notification/NotificationService";
+import BalanceWarning from "@components/notification/BalanceWarning";
 
 type homeProps = {
   selectedGame: ActiveGame | null;
@@ -101,7 +93,8 @@ const Home = ({
         const worldPda = await FindWorldPda(worldId);
         const newGameInfo = createUnloadedGame(worldId.worldId, worldPda, "", true);
         try {
-          newGameInfo.activeGame = await getGameData(engine, worldId.worldId, thisEndpoint, newGameInfo.activeGame);
+          const { gameInfo: updateGameInfo, anteroomData } = await getGameData(engine, worldId.worldId, thisEndpoint, newGameInfo.activeGame);
+          newGameInfo.activeGame = updateGameInfo;
           if (newGameInfo.activeGame.max_players > 0){
             console.log("new game info", newGameInfo.activeGame.worldId, newGameInfo.activeGame.worldPda.toString());
             setSelectedGame(newGameInfo.activeGame);
@@ -259,7 +252,8 @@ const Home = ({
         setActiveGamesLoaded(preMergedGames);
 
         let activeGameCopy = filteredGames[i].activeGame;
-        activeGameCopy = await getGameData(engine, activeGameCopy.worldId, activeGameCopy.endpoint, activeGameCopy);
+        const { gameInfo: updateGameInfo, anteroomData } = await getGameData(engine, activeGameCopy.worldId, activeGameCopy.endpoint, activeGameCopy);
+        activeGameCopy = updateGameInfo;
         let max_players = getMaxPlayers(activeGameCopy.size);
         let updatedPlayerInfo = await updatePlayerInfo(engine, activeGameCopy.worldId, max_players, 
           filteredGames[i].playerInfo.playerStatus, filteredGames[i].playerInfo.newplayerEntityPda, activeGameCopy.active_players,  

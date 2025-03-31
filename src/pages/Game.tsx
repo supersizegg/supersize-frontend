@@ -3,14 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { PublicKey } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
 import * as anchor from "@coral-xyz/anchor";
-
 import GameComponent from "@components/Game/Game";
 import GameLeaderboard from "@components/Game/GameLeaderboard";
 import { endpoints, MAP_COMPONENT } from "@utils/constants";
 import { ActiveGame, Blob, Food } from "@utils/types";
 import { createUndelegateInstruction, FindComponentPda, FindEntityPda } from "@magicblock-labs/bolt-sdk";
 import { COMPONENT_PLAYER_ID } from "../states/gamePrograms";
-
 import { gameSystemExit } from "../states/gameSystemExit";
 import { useMagicBlockEngine } from "../engine/MagicBlockEngineProvider";
 import { mapFetchOnEphem, playerFetchOnEphem } from "../states/gameFetch";
