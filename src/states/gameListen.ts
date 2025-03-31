@@ -15,10 +15,8 @@ export function updateFoodList(
   food_index: number,
   setAllFood: (callback: (prevAllFood: any[][]) => any[][]) => void,
   setFoodListLen: (callback: (prevFoodListLen: number[]) => number[]) => void,
-  // currentPlayer: Blob,
 ) {
   const foodArray = section.food;
-  // const visibleFood: Food[] = [];
   const foodData: Food[] = [];
   foodArray.forEach((foodItem: { data: Uint8Array }) => {
     const foodDataArray = new Uint8Array(foodItem.data);
@@ -45,7 +43,6 @@ export function updateFoodList(
 export function updateLeaderboard(
   players: any[],
   setLeaderboard: (leaderboard: any[]) => void,
-  // currentPlayer: Blob,
 ) {
   const top10Players = players
     .sort((a, b) => b.score - a.score)
@@ -195,7 +192,6 @@ export function subscribeToGame(
           if (!accountInfo) {
             return;
           }
-          //const coder = getComponentSectionOnEphem(engine).coder;
           handleFoodComponentChange(accountInfo, i, engine, setAllFood, setFoodListLen);
         }),
       ];
@@ -206,7 +202,6 @@ export function subscribeToGame(
           if (!accountInfo) {
             return;
           }
-          //const coder = getComponentSectionOnEphem(engine).coder;
           handleFoodComponentChange(accountInfo, i, engine, setAllFood, setFoodListLen);
         }),
       ];
@@ -223,7 +218,6 @@ export function subscribeToGame(
           if (!accountInfo) {
             return;
           }
-          //const coder = getComponentPlayerOnEphem(engine).coder;
           handlePlayersComponentChange(accountInfo, i, engine, setAllPlayers);
         }),
       ];
@@ -234,7 +228,6 @@ export function subscribeToGame(
           if (!accountInfo) {
             return;
           }
-          //const coder = getComponentPlayerOnEphem(engine).coder;
           handlePlayersComponentChange(accountInfo, i, engine, setAllPlayers);
         }),
       ];
@@ -249,7 +242,6 @@ export function subscribeToGame(
     if (!accountInfo) {
       return;
     }
-    //const coder = getComponentPlayerOnEphem(engine).coder;
     handleMyPlayerComponentChange(accountInfo, engine, setCurrentPlayer, gameEnded, setGameEnded);
   });
 }

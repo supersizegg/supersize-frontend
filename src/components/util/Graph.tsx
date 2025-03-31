@@ -8,6 +8,8 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import { calculateK } from "@utils/helper";
+import { calculateY } from "@utils/helper";
 
 ChartJS.register(LineElement, CategoryScale, LinearScale, Tooltip, Legend);
 
@@ -16,28 +18,13 @@ interface GraphProps {
   foodInWallet: number;
   buyIn: number;
   decimals: number;
-  setCurrentFoodToAdd: (currentFoodToAdd: number) => void;
 }
 
-const Graph: React.FC<GraphProps> = ({ maxPlayers, foodInWallet, buyIn, decimals, setCurrentFoodToAdd }) => {
+const Graph: React.FC<GraphProps> = ({ maxPlayers, foodInWallet, buyIn, decimals }) => {
   const [chartData, setChartData] = useState<any>(null);
   const [chartReady, setChartReady] = useState(false);
   const epsilon = 0.01;
 
-  // Calculation helper functions
-  const calculateK = (z: number, epsilon: number): number => {
-    const numerator = epsilon / (100.0 - 0.6);
-    const logValue = Math.log(numerator);
-    return -logValue / (z * 1000.0);
-  };
-
-  const calculateY = (x: number, k: number): number => {
-    const exponent = -(k / 25.0) * x;
-    const y = 100.0 - (100.0 - 0.6) * Math.exp(exponent);
-    return y * (0.6 / 1000.0);
-  };
-
-  // Offload heavy computation to a setTimeout callback
   useEffect(() => {
     setTimeout(() => {
       console.log("buyIn", buyIn);
@@ -45,7 +32,6 @@ const Graph: React.FC<GraphProps> = ({ maxPlayers, foodInWallet, buyIn, decimals
       const values = Array.from({ length: 100000 }, (_, i) => i);
       const foodToAddValues = values.map((x) => calculateY(x, k) * 100);
       const currentFoodToAdd = Math.max(0.5, Math.floor(calculateY(foodInWallet, k) * 100));
-      setCurrentFoodToAdd(currentFoodToAdd);
       const roundedFoodInWallet = Math.round(foodInWallet);
       
       const data = {
@@ -75,9 +61,8 @@ const Graph: React.FC<GraphProps> = ({ maxPlayers, foodInWallet, buyIn, decimals
 
       setChartData(data);
     }, 0);
-  }, [maxPlayers, buyIn, decimals, foodInWallet, setCurrentFoodToAdd]);
+  }, [maxPlayers, buyIn, decimals, foodInWallet]);
 
-  // Chart options with decimation and an animation callback
   const options = {
     responsive: true,
     animation: {
@@ -89,7 +74,7 @@ const Graph: React.FC<GraphProps> = ({ maxPlayers, foodInWallet, buyIn, decimals
       tooltip: { enabled: true },
       decimation: {
         enabled: true,
-        algorithm: "lttb" as const, // specify the literal "lttb"
+        algorithm: "lttb" as const, 
         samples: 500,
       },
     },

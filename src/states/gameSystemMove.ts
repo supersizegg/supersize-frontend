@@ -1,7 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 import { ApplySystem } from "@magicblock-labs/bolt-sdk";
 import * as anchor from "@coral-xyz/anchor";
-
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
 import {
   COMPONENT_PLAYER_ID,
@@ -11,7 +10,6 @@ import {
   COMPONENT_SECTION_ID,
   SYSTEM_MOVEMENT_ID,
 } from "./gamePrograms";
-
 import { ActiveGame, Blob } from "@utils/types";
 import { getSectionIndex, checkPlayerDistances, findListIndex, getClampedFoodPosition } from "@utils/helper";
 
@@ -114,13 +112,7 @@ export async function gameSystemMove(
       gameInfo.size,
       gameInfo.size,
     );
-
     const targetSectionBoosting = getSectionIndex(food_x, food_y, gameInfo.size, 2);
-    /* const selectedSection = targetSectionBoosting.reduce(
-      (minIndex: number, currentIndex: number) =>
-        foodListLen[currentIndex] < foodListLen[minIndex] ? currentIndex : minIndex,
-      targetSectionBoosting[0],
-    ); */
     const makeMove = await ApplySystem({
       authority: engine.getSessionPayer(),
       world: gameInfo.worldPda,

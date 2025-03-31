@@ -25,7 +25,6 @@ import { gameSystemInitSection } from "./gameSystemInitSection";
 import { gameSystemInitMap } from "./gameSystemInitMap";
 import { gameSystemInitPlayer } from "./gameSystemInitPlayer";
 import { gameSystemInitAnteroom } from "./gameSystemInitAnteroom";
-import { endpoints } from "@utils/constants";
 
 export const CONFIG = {
   computeUnitLimit: 200_000,
@@ -57,8 +56,6 @@ export async function stepTransferSOL(
   setTransactions: React.Dispatch<React.SetStateAction<{ id: string; status: string }[]>>,
   showPrompt: (errorMessage: string) => Promise<boolean>,
 ) {
-  //context.engine.setChain();
-
   const solTxnId = "transfer-sol";
   await executeStep(
     solTxnId,

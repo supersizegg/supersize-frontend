@@ -1,16 +1,11 @@
 import { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
 import { ApplySystem, createUndelegateInstruction, FindComponentPda, FindEntityPda } from "@magicblock-labs/bolt-sdk";
 import * as anchor from "@coral-xyz/anchor";
-
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
 import { COMPONENT_PLAYER_ID, COMPONENT_ANTEROOM_ID, SYSTEM_CASH_OUT_ID, COMPONENT_MAP_ID } from "./gamePrograms";
-
 import { ActiveGame } from "@utils/types";
 import { createCloseAccountInstruction, getAssociatedTokenAddress, NATIVE_MINT, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { anteroomFetchOnChain } from "./gameFetch";
-
-// import axios from "axios";
-// const { name } = await fetchTokenMetadata(mint_of_token_being_sent.toString());
 
 type GameExecuteCashOutResult = {
   success: boolean;
@@ -53,17 +48,13 @@ export async function gameSystemCashOut(
     const undeltx = new anchor.web3.Transaction().add(undelegateIx);
     undeltx.recentBlockhash = (await engine.getConnectionEphem().getLatestBlockhash()).blockhash;
     undeltx.feePayer = engine.getSessionPayer();
-    //undeltx.sign(engine.getSessionKey());
-    //const playerundelsignature = await engine.getProviderEphemeralRollup().sendAndConfirm(undeltx, [], { skipPreflight: false });
-    const playerundelsignature = await engine.processSessionEphemTransaction(
+    await engine.processSessionEphemTransaction(
       "undelPlayer:" + myplayerComponent.toString(),
       undeltx,
     );
   } catch (error) {
     console.log("error", error);
   }
-
-  //const myReferrer = currentPlayer?.referrerTokenAccount;
 
   const anteComponentPda = FindComponentPda({
     componentId: COMPONENT_ANTEROOM_ID,
@@ -82,18 +73,6 @@ export async function gameSystemCashOut(
       mint_of_token_being_sent,
       new PublicKey("DdGB1EpmshJvCq48W1LvB1csrDnC4uataLnQbUVhp6XB"),
     );
-
-    /*
-        try {
-            const { name } = await fetchTokenMetadata(mint_of_token_being_sent.toString());
-            await axios.post('https://supersize.lewisarnsten.workers.dev/update-wins', {
-                walletAddress: engine.getWalletPayer().toString(),
-                amount: (playerCashout * 0.98) - playerBuyIn,
-                contestId: name
-            });
-        } catch (error) {
-            console.log('error', error);
-        } */
        
     let payer = engine.getWalletPayer();
     if(!isDevnet){
@@ -201,13 +180,6 @@ export async function gameSystemCashOut(
       console.log("Error cashing out:", error);
       return { success: false, error: `Error cashing out: ${(error as Error)?.message}`, message: "error" };
     }
-    /*
-        const retrievedMyPlayers = localStorage.getItem('myplayers');
-        if (retrievedMyPlayers){
-            let myplayers = JSON.parse(retrievedMyPlayers).filter((player: any) => player.worldId !== gameInfo.worldId.toNumber().toString());
-            localStorage.setItem('myplayers', JSON.stringify(myplayers));
-        }
-    */
   }else{
     return { success: false, error: `Error cashing out`, message: "error" };
   }

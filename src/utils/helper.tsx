@@ -1,21 +1,24 @@
 import React from "react";
 import { API_BASE_URL, cachedTokenMetadata, endpoints, NETWORK, options } from "@utils/constants";
 import { ActiveGame, Blob } from "@utils/types";
-
 import { PublicKey, Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import * as crypto from "crypto-js";
 import * as anchor from "@coral-xyz/anchor";
 import { MagicBlockEngine } from "@engine/MagicBlockEngine";
-import { playerFetchOnChain, playerFetchOnChainProcessed, playerFetchOnSpecificEphemProcessed, playerFetchOnSpecificEphem, mapFetchOnSpecificEphem, anteroomFetchOnChain } from "@states/gameFetch";
+import { playerFetchOnChain, 
+  playerFetchOnChainProcessed, 
+  playerFetchOnSpecificEphemProcessed, 
+  mapFetchOnSpecificEphem, 
+  anteroomFetchOnChain, 
+  mapFetchOnChain } from "@states/gameFetch";
 import { playerFetchOnEphem } from "@states/gameFetch";
-import { FindEntityPda } from "@magicblock-labs/bolt-sdk";
+import { FindEntityPda, FindWorldPda } from "@magicblock-labs/bolt-sdk";
 import { COMPONENT_ANTEROOM_ID, COMPONENT_MAP_ID, COMPONENT_PLAYER_ID } from "@states/gamePrograms";
 import { FindComponentPda } from "@magicblock-labs/bolt-sdk";
 import { BN } from "@coral-xyz/anchor";
 import { HELIUS_API_KEY } from "@utils/constants";
-import { createSyncNativeInstruction } from "@solana/spl-token";
-import { getAssociatedTokenAddress } from "@solana/spl-token";
-import { NATIVE_MINT } from "@solana/spl-token";
+import { getAccount, NATIVE_MINT } from "@solana/spl-token";
+import { Anteroom } from "@utils/types";
 
 export function getCustomErrorCode(error: any): number | undefined {
   let parsed: any = error;
@@ -38,7 +41,6 @@ export function getCustomErrorCode(error: any): number | undefined {
   }
   return undefined;
 }
-
 
 // UI helpers
 export async function addTransaction(
@@ -125,6 +127,18 @@ export const getRoundedAmount = (amount: number, foodUnitValue: number): string 
   });
 };
 
+export const calculateK = (z: number, epsilon: number): number => {
+  const numerator = epsilon / (100.0 - 0.6);
+  const logValue = Math.log(numerator);
+  return -logValue / (z * 1000.0);
+};
+
+export const calculateY = (x: number, k: number): number => {
+  const exponent = -(k / 25.0) * x;
+  const y = 100.0 - (100.0 - 0.6) * Math.exp(exponent);
+  return y * (0.6 / 1000.0);
+};
+
 export const getMaxPlayers = (size: number): number => {
   if (size === 4000) return 10;
   if (size === 6000) return 20;
@@ -208,6 +222,17 @@ export const pingSpecificEndpoint = async (endpoint: string) => {
   return { endpoint: endpoint, pingTime: bestPingTime, region: options[endpoints[NETWORK].indexOf(endpoint)] };
 };
 
+export const getValidEndpoint = async (engine: MagicBlockEngine, mapComponentPda: PublicKey) => {
+  return Promise.any(
+    endpoints[NETWORK].map(async (endpoint) => {
+        const mapParsedData = await mapFetchOnSpecificEphem(engine, mapComponentPda, endpoint);
+        if (!mapParsedData) {
+          throw new Error("Invalid mapParsedData");
+        }
+        return endpoint;
+    })
+  );
+};
 
 export const checkTransactionStatus = async (
   connection: anchor.web3.Connection,
@@ -218,7 +243,6 @@ export const checkTransactionStatus = async (
       searchTransactionHistory: true,
     });
     if (status && status.value && status.value.confirmationStatus === "confirmed" && status.value.err === null) {
-      //console.log("Transaction succeeded:", signature);
       return true;
     } else {
       console.warn("Transaction still pending or failed:", signature);
@@ -240,7 +264,6 @@ export const waitSignatureConfirmation = async (
       signature,
       (result) => {
         if (result.err) {
-          //console.error(`Error with signature ${signature}`, result.err);
           reject(result.err);
         } else {
           setTimeout(() => resolve(), 1000);
@@ -250,29 +273,6 @@ export const waitSignatureConfirmation = async (
     );
   });
 };
-
-export async function getPriorityFeeEstimate(priorityLevel: string, publicKeys: string[]) {
-  const response = await fetch(`https://${NETWORK || "devnet"}.helius-rpc.com/?api-key=${HELIUS_API_KEY}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      id: "helius-example",
-      method: "getPriorityFeeEstimate",
-      params: [
-        {
-          accountKeys: publicKeys,
-          options: {
-            recommended: true,
-          },
-        },
-      ],
-    }),
-  });
-  const data = await response.json();
-  console.log("Fee in function for", priorityLevel, " :", data.result.priorityFeeEstimate);
-  return data.result;
-}
 
 export async function fetchTokenBalance(engine: MagicBlockEngine, activeGame: ActiveGame, isDevnet: boolean) : Promise<{
   tokenBalance: number,
@@ -286,7 +286,6 @@ export async function fetchTokenBalance(engine: MagicBlockEngine, activeGame: Ac
     connection = engine.getConnectionChainDevnet();
     wallet = engine.getSessionPayer();
   }
-  console.log("connection", connection, isDevnet);
   if (!wallet) return { tokenBalance: 0, hasInsufficientTokenBalance: true };
 
   try {
@@ -334,9 +333,9 @@ export async function fetchTokenMetadata(tokenAddress: string, network: string) 
       },
       body: JSON.stringify({
         jsonrpc: "2.0",
-        id: 1, // Unique identifier
+        id: 1, 
         method: "getAsset",
-        params: [tokenAddress], // Token address passed in an array
+        params: [tokenAddress], 
       }),
     });
 
@@ -356,8 +355,6 @@ export async function fetchTokenMetadata(tokenAddress: string, network: string) 
     if (!content) {
       throw new Error("Content not found in response");
     }
-
-    // Check if json_uri is present and not empty
     const jsonUri = content.json_uri;
     if (jsonUri) {
       const metadataResponse = await fetch(jsonUri);
@@ -372,8 +369,6 @@ export async function fetchTokenMetadata(tokenAddress: string, network: string) 
         image: metadataJson.image || "",
       };
     }
-
-    // Fallback to metadata from content if json_uri is empty
     const name = content.metadata?.symbol || "Unknown";
     const image = content.links?.image || content.files?.[0]?.uri || "https://supersize.gg/coin.png";
 
@@ -404,10 +399,6 @@ export const getSectionIndex = (x: number, y: number, mapSize: number, duplicate
   const row = Math.floor(adjustedY / sectionSize);
   const col = Math.floor(adjustedX / sectionSize);
   const baseIndex = row * sectionsPerRow + col;
-  //const food_indices: number[] = [];
-  //for (let i = 0; i < duplicateEncodings; i++) {
-  //  food_indices.push(baseIndex + i * mapSectionCount);
-  //}
   return baseIndex + (duplicateEncodings - 1) * mapSectionCount;
 };
 
@@ -439,7 +430,6 @@ export const getClampedFoodPosition = (
 export const checkPlayerDistances = (
   visiblePlayers: Blob[],
   currentPlayer: Blob,
-  // screenSize: { width: number; height: number },
 ) => {
   if (currentPlayer?.radius && currentPlayer?.authority) {
     const left = currentPlayer.x - currentPlayer.radius * 2;
@@ -467,13 +457,10 @@ export const decodeFood = (data: Uint8Array) => {
   }
   const buffer = data.buffer;
   const packed = new DataView(buffer).getUint32(data.byteOffset, true); // Little-endian
-
   const x = packed & 0x1FFF;          // 13 bits
   const y = (packed >> 13) & 0x1FFF;  // 13 bits
   const food_value = (packed >> 26) & 0x07;  // 3 bits
   const food_multiple_encoded = (packed >> 29) & 0x07;  // 3 bits
-
-  // Decode food_multiple values
   const food_multiple_map = [0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
   const food_multiple = food_multiple_map[food_multiple_encoded];
 
@@ -554,7 +541,7 @@ export const getGameData = async (
   worldId: BN,
   thisEndpoint: string,
   gameInfo: ActiveGame,
-): Promise<ActiveGame> => {
+): Promise<{gameInfo: ActiveGame, anteroomData: Anteroom | null}> => {
   const mapEntityPda = FindEntityPda({
     worldId: worldId,
     entityId: new anchor.BN(0),
@@ -564,41 +551,51 @@ export const getGameData = async (
     componentId: COMPONENT_MAP_ID,
     entity: mapEntityPda,
   });
-  const mapParsedData = await mapFetchOnSpecificEphem(engine, mapComponentPda, thisEndpoint);
-  if (mapParsedData) {
-    gameInfo.endpoint = thisEndpoint;
-    gameInfo.name = mapParsedData.name;
-    gameInfo.max_players = mapParsedData.maxPlayers;
-    gameInfo.size = mapParsedData.width;
-    gameInfo.buy_in = mapParsedData.buyIn.toNumber();
-    gameInfo.isLoaded = true;
+  const anteseed = "ante";
+  const anteEntityPda = FindEntityPda({
+    worldId: worldId,
+    entityId: new anchor.BN(0),
+    seed: stringToUint8Array(anteseed),
+  });
+  const anteComponentPda = FindComponentPda({
+    componentId: COMPONENT_ANTEROOM_ID,
+    entity: anteEntityPda,
+  });
+  //const mapParsedData = await mapFetchOnSpecificEphem(engine, mapComponentPda, thisEndpoint);
+  const [mapParsedData, anteParsedData] = await Promise.all([
+    mapFetchOnChain(engine, mapComponentPda),
+    anteroomFetchOnChain(engine, anteComponentPda)
+  ]);
 
-    const anteseed = "ante";
-    const anteEntityPda = FindEntityPda({
-      worldId: worldId,
-      entityId: new anchor.BN(0),
-      seed: stringToUint8Array(anteseed),
-    });
-    const anteComponentPda = FindComponentPda({
-      componentId: COMPONENT_ANTEROOM_ID,
-      entity: anteEntityPda,
-    });
-    const anteParsedData = await anteroomFetchOnChain(engine, anteComponentPda);
-    let mint_of_token_being_sent = new PublicKey(0);
-    if (anteParsedData && anteParsedData.token) {
-      gameInfo.decimals = anteParsedData.tokenDecimals;
-      mint_of_token_being_sent = anteParsedData.token;
-      try {
-        const { name, image } = await fetchTokenMetadata(mint_of_token_being_sent.toString(), NETWORK);
-        gameInfo.image = image;
-        gameInfo.token = name;
-        gameInfo.tokenMint = mint_of_token_being_sent;
-      } catch (error) {
-        console.error("Error fetching token data:", error);
-      }
+  if (! mapParsedData) { return {gameInfo, anteroomData: null}; }
+  gameInfo.endpoint = thisEndpoint;
+  gameInfo.name = mapParsedData.name;
+  gameInfo.max_players = mapParsedData.maxPlayers;
+  gameInfo.size = mapParsedData.width;
+  gameInfo.buy_in = mapParsedData.buyIn.toNumber();
+  gameInfo.isLoaded = true;
+  let anteroomData: Anteroom = {buyIn: 0, token: new PublicKey(0), tokenDecimals: 0, vaultTokenAccount: new PublicKey(0), gamemasterTokenAccount: new PublicKey(0), totalActiveBuyins: 0};
+  let mint_of_token_being_sent = new PublicKey(0);
+  if (anteParsedData && anteParsedData.token && anteParsedData.vaultTokenAccount && anteParsedData.gamemasterTokenAccount) {
+    anteroomData.buyIn = anteParsedData.buyIn.toNumber();
+    anteroomData.token = anteParsedData.token;
+    anteroomData.tokenDecimals = anteParsedData.tokenDecimals;
+    anteroomData.vaultTokenAccount = anteParsedData.vaultTokenAccount;
+    anteroomData.gamemasterTokenAccount = anteParsedData.gamemasterTokenAccount;
+    anteroomData.totalActiveBuyins = anteParsedData.totalActiveBuyins.toNumber();
+    gameInfo.decimals = anteParsedData.tokenDecimals;
+    mint_of_token_being_sent = anteParsedData.token;
+    try {
+      const { name, image } = await fetchTokenMetadata(mint_of_token_being_sent.toString(), NETWORK);
+      gameInfo.image = image;
+      gameInfo.token = name;
+      gameInfo.tokenMint = mint_of_token_being_sent;
+    } catch (error) {
+      console.error("Error fetching token data:", error);
     }
   }
-  return gameInfo;
+  
+  return {gameInfo, anteroomData};
 }
 
 export const getMyPlayerStatus = async (
@@ -624,7 +621,6 @@ export const getMyPlayerStatus = async (
   let need_to_delegate = false;
   let activeplayers = 0;
   let max_players = maxplayer;
-  // Prepare promises for fetching data
   const fetchPromises = [];
   for (let i = 1; i < maxplayer + 1; i++) {
     const playerentityseed = "player" + i.toString();
@@ -655,10 +651,7 @@ export const getMyPlayerStatus = async (
     );
   }
 
-  // Execute all fetches in parallel
   const results = await Promise.all(fetchPromises);
-
-  // Process the results
   for (const { playersComponentPda, playersacc, playersParsedData, playersParsedDataER, playerEntityPda } of results) {
     if (!playersacc || !playersParsedData) {
       continue;
@@ -677,8 +670,6 @@ export const getMyPlayerStatus = async (
           max_players = max_players - 1;
         }
       }
-
-      //on ER: if eaten then undelegate and play, if in_game then resume iff you, if exited then chashing out need to undelegate
       if(playersParsedDataER && playersParsedDataER.authority && (playersParsedDataER.authority.toString() == engine.getSessionPayer().toString())){
         newplayerEntityPda = playerEntityPda;
         if(playersParsedDataER.status == "in_game"){
@@ -712,7 +703,6 @@ export const getMyPlayerStatus = async (
           max_players = max_players - 1;
         }
       }
-
       if(playersParsedData && playersParsedData.authority && (playersParsedData.authority.toString() == engine.getSessionPayer().toString())){
         newplayerEntityPda = playerEntityPda;
         if(playersParsedData.status == "in_game"){
@@ -733,7 +723,6 @@ export const getMyPlayerStatus = async (
           newplayerEntityPda = playerEntityPda;
         }
       }
-      //on mainnet: if eaten then play, if in_game then delegate and resume iff you, if exited then chash out
     }
   }
 
@@ -754,4 +743,132 @@ export const getMyPlayerStatus = async (
     activeplayers: activeplayers,
     max_players: max_players,
   };
+};
+
+
+export const fetchPlayers = async (engine: MagicBlockEngine, gameInfo: ActiveGame) => {
+  const playersArr: {
+    seed: string;
+    playerEntityPda: PublicKey;
+    playersComponentPda: PublicKey;
+    parsedData: any;
+    playersParsedDataEphem: any;
+    delegated: boolean;
+    playerWallet: string;
+    playerWalletEphem: string;
+  }[] = [];
+
+  const maxPlayers = gameInfo.max_players || 20;
+  const playerPromises = Array.from({ length: maxPlayers }, async (_, i) => {
+    const playerSeed = "player" + (i + 1).toString();
+    const playerEntityPda = FindEntityPda({
+      worldId: gameInfo.worldId,
+      entityId: new anchor.BN(0),
+      seed: stringToUint8Array(playerSeed),
+    });
+    const playersComponentPda = FindComponentPda({
+      componentId: COMPONENT_PLAYER_ID,
+      entity: playerEntityPda,
+    });
+    const accountInfo = await engine.getChainAccountInfo(playersComponentPda);
+    if (accountInfo) {
+      let delegated = false;
+      if (accountInfo.owner.toString() === "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh") {
+        delegated = true;
+      } 
+      const playersParsedDataEphem = await playerFetchOnEphem(engine, playersComponentPda);
+      const parsedData = await playerFetchOnChain(engine, playersComponentPda);
+      let playerWallet = "";
+      if(parsedData && parsedData.payoutTokenAccount) {
+        playerWallet = parsedData.payoutTokenAccount.toString();
+        try {
+          const tokenAccount = await getAccount(engine.getConnectionChain(), new PublicKey(parsedData.payoutTokenAccount.toString()));
+          playerWallet = tokenAccount.owner.toString();
+        } catch (error) {
+          console.log("Error getting token account:", error);
+        }
+      }
+      let playerWalletEphem = "";
+      if(playersParsedDataEphem && playersParsedDataEphem.payoutTokenAccount) {
+        playerWalletEphem = playersParsedDataEphem.payoutTokenAccount.toString();
+        try {
+          const tokenAccount = await getAccount(engine.getConnectionChain(), new PublicKey(playersParsedDataEphem.payoutTokenAccount.toString()));
+          playerWalletEphem = tokenAccount.owner.toString();
+        } catch (error) {
+          console.log("Error getting token account:", error);
+        }
+      }
+
+      return {
+        seed: playerSeed,
+        playerEntityPda,
+        playersComponentPda,
+        parsedData,
+        playersParsedDataEphem,
+        delegated,
+        playerWallet,
+        playerWalletEphem
+      };
+    }
+    return null;
+  });
+
+  const resolvedPlayers = await Promise.all(playerPromises);
+  playersArr.push(...resolvedPlayers.filter(player => player !== null));
+  return playersArr;
+};
+
+export const fetchGames = async (engine: MagicBlockEngine, myGames: ActiveGame[]) => {
+  const startIndices = { devnet: 1970, mainnet: 25 };
+  const startIndex = startIndices[NETWORK];
+  let newGames: ActiveGame[] = myGames;
+  const gamePromises = Array.from({ length: 100 }, (_, idx) => {
+    const i = startIndex + idx;
+    return (async () => {
+      try {
+        const worldId = { worldId: new anchor.BN(i) };
+        const worldPda = await FindWorldPda(worldId);
+        
+        const mapEntityPda = FindEntityPda({
+          worldId: worldId.worldId,
+          entityId: new anchor.BN(0),
+          seed: stringToUint8Array("origin"),
+        });
+        
+        const mapComponentPda = FindComponentPda({
+          componentId: COMPONENT_MAP_ID,
+          entity: mapEntityPda,
+        });
+        
+        const mapParsedData = await mapFetchOnChain(engine, mapComponentPda);
+        if (mapParsedData?.authority && 
+            mapParsedData.authority.toString() === engine.getSessionPayer().toString()) {
+            const newGameInfo: ActiveGame = {
+              worldId: worldId.worldId,
+              worldPda,
+              name: mapParsedData.name,
+              active_players: 0,
+              max_players: mapParsedData.maxPlayers,
+              size: mapParsedData.width,
+              image: "",
+              token: "",
+              buy_in: mapParsedData.buyIn.toNumber(),
+              decimals: 0,
+              endpoint: "",
+              isLoaded: true,
+              permissionless: false,
+            };
+
+            newGames = newGames.some((game) => game.worldId === newGameInfo.worldId)
+          ? [...newGames] 
+          : [newGameInfo, ...newGames];          
+        }
+      } catch (error) {
+        console.log("error", error);
+      }
+    })();
+  });
+
+  await Promise.allSettled(gamePromises);
+  return [...newGames].sort((a, b) => b.worldId.cmp(a.worldId));;
 };

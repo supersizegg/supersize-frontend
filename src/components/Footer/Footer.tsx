@@ -25,34 +25,24 @@ const Footer: React.FC = () => {
         
         <div className="footerIcon" onClick={openDocs} style={{ display: "none" }}>
           <img src={`${process.env.PUBLIC_URL}/GitBook.png`} alt="GitBook" className="footerIconImg" />
-          <img
-            src={`${process.env.PUBLIC_URL}/GitBookhighlight.png`}
-            alt="GitBook hover"
-            className="footerIconImg footerIconImgHover"
-          />
         </div>
 
         <div className="footerIcon" onClick={openX}>
           <img src={`${process.env.PUBLIC_URL}/x-logo.png`} alt="X" className="footerIconImg" />
-          <img
-            src={`${process.env.PUBLIC_URL}/x-logo-highlight.png`}
-            alt="X hover"
-            className="footerIconImg footerIconImgHover"
-          />
         </div>
 
         <div className="footerIcon" onClick={openTG}>
           <img src={`${process.env.PUBLIC_URL}/tg2.png`} alt="Telegram" className="footerIconImg" />
-          <img
-            src={`${process.env.PUBLIC_URL}/tg.png`}
-            alt="Telegram hover"
-            className="footerIconImg footerIconImgHover"
-          />
         </div>
 
-        <button className="btn-outlined btn-green" onClick={() => navigate("/create-game")}>
-              [+ Create Game]
-        </button>
+        <button
+            className={`region-button text-white px-4 py-0 rounded-md border border-white/20 bg-[#666] hover:bg-[#555] transition-colors cursor-pointer`}
+            onClick={() => navigate("/create-game")}
+          >
+            <div className="flex flex-row items-center gap-1 text-sm">
+              <span>+ Create Game</span>
+            </div>
+          </button>
       </div>
     </footer>
   );

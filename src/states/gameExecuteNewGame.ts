@@ -43,21 +43,12 @@ export async function gameExecuteNewGame(
   setNewGameId: React.Dispatch<React.SetStateAction<string>>,
   setGameCreated: React.Dispatch<React.SetStateAction<boolean>>,
 ) {
-  /*
-  const base_buyin = Math.sqrt(max_buyin * min_buyin);
-  const max_multiple = max_buyin / base_buyin;
-  const min_multiple = base_buyin / min_buyin;
-  if (max_multiple > 10 || min_multiple > 10) {
-    throw new Error("Min-Max buy-in spread too large (max 10x).");
-  }*/
   const gameParams = {
     4000: { maxplayer: 10, foodcomponents: 32, cost: 0.4 },
     6000: { maxplayer: 20, foodcomponents: 72, cost: 1.0 },
     8000: { maxplayer: 40, foodcomponents: 128, cost: 1.6 },
   }[game_size];
   if (!gameParams) throw new Error("Invalid game size.");
-
-  // Get token mint info.
   const gameOwnerWallet = new PublicKey(game_owner_wallet_string);
   const mint_of_token = new PublicKey(game_token_string);
   const owner_token_account = await getAssociatedTokenAddress(mint_of_token, gameOwnerWallet);
