@@ -49,8 +49,8 @@ export const activeGamesList: {
 } = {
   devnet: [
     {
-      worldId: new anchor.BN(2021),
-      worldPda: new PublicKey("7syf8ZMWEpznHr2hUbySobsNbZRu4hHPxnxFXxp7BiM7"),
+      worldId: new anchor.BN(2052),
+      worldPda: new PublicKey("2qKUAdZynLgGxyrUJd9CPX6vmtNEhJ68FHevsbkQMFjU"),
       endpoint: "https://supersize.magicblock.app",
     },
   ],

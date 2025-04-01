@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import FooterLink from "@components/Footer/Footer";
 import "./Home.scss";
@@ -30,6 +30,13 @@ import GameComponent from "@components/Game/Game";
 import NotificationContainer from "@components/notification/NotificationContainer";
 import NotificationService from "@components/notification/NotificationService";
 import BalanceWarning from "@components/notification/BalanceWarning";
+
+type ClaimStatus = {
+  canClaim: boolean;
+  message: string;
+  nextClaimAvailableAt: string;
+  secondsRemaining: number;
+};
 
 type homeProps = {
   selectedGame: ActiveGame | null;
@@ -66,6 +73,8 @@ const Home = ({
   const [hasInsufficientTokenBalance, setHasInsufficientTokenBalance] = useState(false);
   const [tokenBalance, setTokenBalance] = useState(-1);
   const [gemBalance, setGemBalance] = useState(0);
+  const [claimStatus, setClaimStatus] = useState<ClaimStatus | null>(null);
+  const [isClaimLoading, setIsClaimLoading] = useState(false);
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(event.target.value);
@@ -492,28 +501,82 @@ const Home = ({
     setIsLoadingCurrentGames(false);
   };
 
-  useEffect(() => {
-    const fetchUserTokenBalance = async () => {
+  const fetchUserTokenBalance = async () => {
+    try {
       let connection = engine.getConnectionChainDevnet();
       const tokenMint = new PublicKey("8WQCnApczthptxS77aRQFzkrnXRjvGvfrateAK39PXpQ");
       let balance = 0;
       const tokenAccounts = await connection.getTokenAccountsByOwner(engine.getSessionPayer(), {
         mint: tokenMint,
       });
-      console.log("tokenAccounts", tokenAccounts);
       if (tokenAccounts.value.length > 0) {
         const accountInfo = tokenAccounts.value[0].pubkey;
         const balanceInfo = await connection.getTokenAccountBalance(accountInfo);
-        console.log("balanceInfo", balanceInfo.value.amount);
         balance = parseInt(balanceInfo.value.amount) || 0;
         setGemBalance(balance / 10 ** 9);
-      } else {
-        setGemBalance(0);
+      }
+    } catch (error) {
+      console.error("Error fetching gem balance:", error);
+    }
+  };
+
+  const sessionPayerBase58 = useMemo(() => engine.getSessionPayer().toBase58(), [engine]);
+
+  useEffect(() => {
+    const fetchClaimStatus = async () => {
+      try {
+        const address = engine.getSessionPayer().toBase58();
+        const res = await fetch(`https://supersize.miso.one/api/v1/airdrop/status?address=${address}`);
+        const data: ClaimStatus = await res.json();
+        setClaimStatus(data);
+      } catch (error) {
+        console.error("Error fetching claim status:", error);
       }
     };
+    if (engine.getSessionPayer()) {
+      console.log("Session keypair changed to", engine.getSessionPayer().toBase58());
+      fetchClaimStatus();
+      fetchUserTokenBalance();
+    }
+  }, [sessionPayerBase58]);
 
-    fetchUserTokenBalance();
-  }, [engine.getSessionPayer()]);
+  const handleClaimGem = async () => {
+    setIsClaimLoading(true);
+    try {
+      const address = engine.getSessionPayer().toBase58();
+      const res = await fetch("https://supersize.miso.one/api/v1/airdrop/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        NotificationService.addAlert({
+          type: "success",
+          message: data.message || "Airdrop successful",
+          shouldExit: true,
+        });
+        await fetchUserTokenBalance();
+        const statusRes = await fetch(`https://supersize.miso.one/api/v1/airdrop/status?address=${address}`);
+        const statusData: ClaimStatus = await statusRes.json();
+        setClaimStatus(statusData);
+      } else {
+        NotificationService.addAlert({
+          type: "error",
+          message: data.message || "Airdrop failed",
+          shouldExit: true,
+        });
+      }
+    } catch (error) {
+      console.error("Error claiming gem:", error);
+      NotificationService.addAlert({
+        type: "error",
+        message: "Error claiming gem",
+        shouldExit: true,
+      });
+    }
+    setIsClaimLoading(false);
+  };
 
   useEffect(() => {
     const fetchPingData = async () => {
@@ -705,22 +768,6 @@ const Home = ({
         />
       </div>
       <MenuBar />
-      <div
-        style={{
-          position: "fixed",
-          top: "3.5em",
-          right: "3em",
-          display: gemBalance > 0 ? "flex" : "none",
-          flexDirection: "row",
-        }}
-      >
-        <img
-          style={{ width: "20px", height: "20px", marginRight: "5px", marginTop: "1px" }}
-          src={cachedTokenMetadata["AsoX43Q5Y87RPRGFkkYUvu8CSksD9JXNEqWVGVsr8UEp"].image}
-          alt="Token Image"
-        />{" "}
-        {gemBalance.toFixed(2)}
-      </div>
 
       <div className="banner" style={{ position: "relative" }}>
         <svg width="160" height="160" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
@@ -930,7 +977,22 @@ const Home = ({
               <span className="balance-text">{gemBalance.toFixed(2)}</span>
               <img src="/gem.png" alt="GEM" className="gem-icon" />
             </div>
-            <button className="claim-gem-btn">Claim 1 gem (8h)</button>
+            {claimStatus ? (
+              claimStatus.canClaim ? (
+                <button className="claim-gem-btn" onClick={handleClaimGem} disabled={isClaimLoading}>
+                  {isClaimLoading ? "Claiming..." : "Claim 1 gem (8h)"}
+                </button>
+              ) : (
+                <div className="claim-gem-info">
+                  <p className="claim-message">You can claim free GEM once per 8h.</p>
+                  {/* {claimStatus.secondsRemaining > 0 && (
+                <> Time remaining: {claimStatus.secondsRemaining} seconds</>
+              )} */}
+                </div>
+              )
+            ) : (
+              <div className="claim-gem-info">Loading claim status...</div>
+            )}
           </div>
         </div>
       </div>
