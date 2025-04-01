@@ -193,6 +193,12 @@ export const cachedTokenMetadata: Record<
     image: "https://d23exngyjlavgo.cloudfront.net/solana_DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
     network: "mainnet",
   },
+  "8WQCnApczthptxS77aRQFzkrnXRjvGvfrateAK39PXpQ": {
+    name: "Supersize GEM",
+    symbol: "GEM",
+    image: "https://raw.githubusercontent.com/supersizegg/supersize-frontend/refs/heads/main/public/gem.png",
+    network: "devnet",
+  },
 };
 
 export const API_BASE_URL = "http://localhost:3000/api";

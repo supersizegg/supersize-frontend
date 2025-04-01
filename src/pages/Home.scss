@@ -92,8 +92,8 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   padding: 1rem;
   border-radius: 8px;
-  overflow-x: auto;
-  width: fit-content;
+  // overflow-x: auto;
+  // width: fit-content;
 }
 
 .lobby-table {
@@ -131,7 +131,7 @@
       }
       // 3rd column with Token logo/name must be left aligned
       td:nth-child(3) {
-        text-align: left;
+        // text-align: left;
       }
     }
   }
@@ -270,6 +270,60 @@ img.token-image {
 .banner-description .highlight {
   color: #00d37d;
   font-weight: bold;
+}
+
+.table-and-gems {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.gem-balance-block {
+  background-color: #16171b;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 1rem;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.gem-balance-header {
+  font-size: 1rem;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.gem-balance-amount {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+.gem-icon {
+  width: 30px;
+  height: 30px;
+  margin-left: 0.5rem;
+}
+
+.claim-gem-btn {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+  background-color: #0077ff;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.claim-gem-btn:hover {
+  background-color: #005ec7;
 }
 
 @keyframes spin {
