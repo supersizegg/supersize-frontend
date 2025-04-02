@@ -1,15 +1,16 @@
 import React from "react";
-import { API_BASE_URL, cachedTokenMetadata, endpoints, NETWORK, options } from "@utils/constants";
+import { API_BASE_URL, cachedTokenMetadata, endpoints, NETWORK, options, RPC_CONNECTION } from "@utils/constants";
 import { ActiveGame, Blob } from "@utils/types";
-import { PublicKey, Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { PublicKey, Keypair, LAMPORTS_PER_SOL, Connection } from "@solana/web3.js";
 import * as crypto from "crypto-js";
 import * as anchor from "@coral-xyz/anchor";
 import { MagicBlockEngine } from "@engine/MagicBlockEngine";
 import { playerFetchOnChain, 
-  playerFetchOnChainProcessed, 
-  playerFetchOnSpecificEphemProcessed, 
+  playerFetchOnSpecificEphem, 
+  playerFetchOnSpecificChain,
   mapFetchOnSpecificEphem, 
   anteroomFetchOnChain, 
+  anteroomFetchOnSpecificChain,
   mapFetchOnChain } from "@states/gameFetch";
 import { playerFetchOnEphem } from "@states/gameFetch";
 import { FindEntityPda, FindWorldPda } from "@magicblock-labs/bolt-sdk";
@@ -482,6 +483,12 @@ export function isPlayerStatus(
   return typeof result === "object" && "activeplayers" in result;
 }
 
+export const getNetwork = (thisEndpoint: string): string => {
+  if(NETWORK !== "mainnet")return "devnet";
+  let serverIndex = endpoints["devnet"].indexOf(thisEndpoint);
+  return serverIndex >= 0 ? "devnet" : "mainnet";
+};
+
 export const updatePlayerInfo = async (
   engine: MagicBlockEngine,
   worldId: BN,
@@ -500,11 +507,13 @@ export const updatePlayerInfo = async (
   newPlayerEntityPda: PublicKey,
   max_players: number,
 }> => {
+  let network = getNetwork(thisEndpoint)
   const result = await getMyPlayerStatus(
     engine,
     worldId,
     max_players,
     thisEndpoint,
+    network
   );
   if (isPlayerStatus(result)) {
     if (result.playerStatus == "error") {
@@ -561,10 +570,15 @@ export const getGameData = async (
     componentId: COMPONENT_ANTEROOM_ID,
     entity: anteEntityPda,
   });
-  //const mapParsedData = await mapFetchOnSpecificEphem(engine, mapComponentPda, thisEndpoint);
+  let network = getNetwork(thisEndpoint)
+
+  let mapParsedDataPromise = mapFetchOnChain(engine, mapComponentPda);
+  if(thisEndpoint !== ""){
+    mapParsedDataPromise = mapFetchOnSpecificEphem(engine, mapComponentPda, thisEndpoint);
+  }
   const [mapParsedData, anteParsedData] = await Promise.all([
-    mapFetchOnChain(engine, mapComponentPda),
-    anteroomFetchOnChain(engine, anteComponentPda)
+    mapParsedDataPromise,
+    anteroomFetchOnSpecificChain(engine, anteComponentPda, network)
   ]);
 
   if (! mapParsedData) { return {gameInfo, anteroomData: null}; }
@@ -586,7 +600,7 @@ export const getGameData = async (
     gameInfo.decimals = anteParsedData.tokenDecimals;
     mint_of_token_being_sent = anteParsedData.token;
     try {
-      const { name, image } = await fetchTokenMetadata(mint_of_token_being_sent.toString(), NETWORK);
+      const { name, image } = await fetchTokenMetadata(mint_of_token_being_sent.toString(), network);
       gameInfo.image = image;
       gameInfo.token = name;
       gameInfo.tokenMint = mint_of_token_being_sent;
@@ -603,6 +617,7 @@ export const getMyPlayerStatus = async (
   worldId: BN,
   maxplayer: number,
   endpoint: string,
+  network: string,
 ): Promise<
   | {
       playerStatus: string;
@@ -638,9 +653,9 @@ export const getMyPlayerStatus = async (
     
     fetchPromises.push(
       Promise.all([
-        engine.getChainAccountInfoProcessed(playersComponentPda),
-        playerFetchOnChainProcessed(engine, playersComponentPda),
-        playerFetchOnSpecificEphemProcessed(engine, playersComponentPda, endpoint),
+        engine.getChainAccountInfoProcessed(playersComponentPda, network),
+        playerFetchOnSpecificChain(engine, playersComponentPda, network),
+        playerFetchOnSpecificEphem(engine, playersComponentPda, endpoint),
       ]).then(([playersacc, playersParsedData, playersParsedDataER]) => ({
         playersComponentPda,
         playersacc,
@@ -819,7 +834,7 @@ export const fetchPlayers = async (engine: MagicBlockEngine, gameInfo: ActiveGam
 };
 
 export const fetchGames = async (engine: MagicBlockEngine, myGames: ActiveGame[]) => {
-  const startIndices = { devnet: 1970, mainnet: 25 };
+  const startIndices = { devnet: 2044, mainnet: 25 };
   const startIndex = startIndices[NETWORK];
   let newGames: ActiveGame[] = myGames;
   const gamePromises = Array.from({ length: 100 }, (_, idx) => {

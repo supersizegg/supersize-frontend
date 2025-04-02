@@ -21,7 +21,7 @@ export const CASH_OUT = new PublicKey("BAP315i1xoAXqbJcTT1LrUS45N3tAQnNnPuNQkCcv
 
 export const SOL_USDC_POOL_ID = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2";
 
-export const NETWORK = "mainnet"; //process.env.NODE_ENV === "production" ? "mainnet" : "devnet";
+export const NETWORK = "mainnet";//process.env.NODE_ENV === "production" ? "mainnet" : "devnet";
 
 export const RPC_CONNECTION = {
   mainnet: "https://staked.helius-rpc.com?api-key=cba33294-aa96-414c-9a26-03d5563aa676",
@@ -49,9 +49,19 @@ export const activeGamesList: {
 } = {
   devnet: [
     {
-      worldId: new anchor.BN(2021),
-      worldPda: new PublicKey("7syf8ZMWEpznHr2hUbySobsNbZRu4hHPxnxFXxp7BiM7"),
+      worldId: new anchor.BN(2044),
+      worldPda: new PublicKey("2gMVv5zk4ZoPr8CYkDUzk1fctFdFZ1Xv1h2wqe3Zqo2Q"),
+      endpoint: "https://supersize-fra.magicblock.app",
+    },
+    {
+      worldId: new anchor.BN(2047),
+      worldPda: new PublicKey("9VaBETe9jda36cuWKr36zE2SR2K1BeDXEU32JqW2ArZN"),
       endpoint: "https://supersize.magicblock.app",
+    },
+    {
+      worldId: new anchor.BN(2046),
+      worldPda: new PublicKey("BXrAw3MpuC7b3Dg6xPU7Xzn1vVpWTBegRoHuqh6GzpZp"),
+      endpoint: "https://supersize-sin.magicblock.app",
     },
   ],
   mainnet: [

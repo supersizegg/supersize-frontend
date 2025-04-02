@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Route, Routes } from "react-router-dom";
 import Home from "@pages/Home";
 import NotFound from "@pages/NotFound";
@@ -15,6 +15,8 @@ import { createUnloadedGame } from "@utils/game";
 
 const AppRoutes = () => {
   const [selectedGame, setSelectedGame] = useState<ActiveGame | null>(null);
+  const [sessionWalletInUse, setSessionWalletInUse] = useState<boolean>(NETWORK === 'mainnet' ? false : true);
+  const [username, setUsername] = useState<string>("");
   const [activeGamesLoaded, setActiveGamesLoaded] = useState<FetchedGame[]>(
     (NETWORK === 'mainnet' 
       ? [...activeGamesList[NETWORK], ...activeGamesList['devnet']]
@@ -31,6 +33,18 @@ const AppRoutes = () => {
     food_multiple: Math.floor(Math.random() * 10),
   })));
 
+  useEffect(() => {
+    const retrievedUser = localStorage.getItem("user");
+    let use_session = sessionWalletInUse;
+    let myusername = "";
+    if (retrievedUser) {
+      use_session = JSON.parse(retrievedUser).use_session;
+      myusername = JSON.parse(retrievedUser).name
+      setSessionWalletInUse(use_session);
+      setUsername(myusername);
+    }
+  },[]);
+
   return (
     <Routes>
       <Route
@@ -43,6 +57,8 @@ const AppRoutes = () => {
             activeGamesLoaded={activeGamesLoaded}
             setActiveGamesLoaded={setActiveGamesLoaded}
             randomFood={randomFood}
+            sessionWalletInUse={sessionWalletInUse}
+            username={username}
           />
         }
       />
@@ -51,11 +67,12 @@ const AppRoutes = () => {
         element={<CreateGame activeGamesLoaded={activeGamesLoaded} setActiveGamesLoaded={setActiveGamesLoaded} randomFood={randomFood} />}
       />
       {selectedGame && (
-        <Route path="/game" element={<Game gameInfo={selectedGame} myPlayerEntityPda={myPlayerEntityPda} />} />
+        <Route path="/game" element={<Game gameInfo={selectedGame} myPlayerEntityPda={myPlayerEntityPda} sessionWalletInUse={sessionWalletInUse} />} />
       )}
       <Route path="/leaderboard" element={<Leaderboard randomFood={randomFood} />} />
       <Route path="/about" element={<HowToPlay randomFood={randomFood}/>} />
-      <Route path="/profile" element={<Profile randomFood={randomFood}/>} />
+      <Route path="/profile" element={<Profile randomFood={randomFood} username={username} setUsername={setUsername}
+      sessionWalletInUse={sessionWalletInUse} setSessionWalletInUse={setSessionWalletInUse}/>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

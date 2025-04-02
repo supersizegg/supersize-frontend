@@ -5,7 +5,6 @@ import TxnModal from "@components/TxnModal/TxnModal";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { gameExecuteNewGame } from "../../states/gameExecuteNewGame";
 import "./CreateGameForm.scss";
-import { endpoints } from "@utils/constants";
 
 type gameProps = {
   game_size: number;
@@ -77,12 +76,6 @@ const CreateGameForm: React.FC<gameProps> = ({ game_size, activeGamesLoaded, set
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsModalOpen(true);
-    let isDevnet = endpoints["devnet"].indexOf(selectedServer) >= 0;
-    if (isDevnet){
-      engine.setDevnet();
-    } else {
-      engine.setChain();
-    }
     console.log(selectedServer);
     engine.setEndpointEphemRpc(selectedServer);
     gameExecuteNewGame(

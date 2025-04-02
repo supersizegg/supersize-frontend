@@ -1,4 +1,4 @@
-import { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY, Transaction } from "@solana/web3.js";
+import { ComputeBudgetProgram, PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY, Transaction } from "@solana/web3.js";
 import { ApplySystem, createDelegateInstruction, FindComponentPda } from "@magicblock-labs/bolt-sdk";
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
 import { COMPONENT_PLAYER_ID, SYSTEM_BUY_IN_ID, COMPONENT_ANTEROOM_ID } from "./gamePrograms";
@@ -25,7 +25,7 @@ export async function gameSystemBuyIn(
   anteEntityPda: PublicKey,
   buyIn: number,
   playerName: string,
-  isDevnet: boolean
+  useSessionWallet: boolean
 ): Promise<GameExecuteBuyInResult> {
   let payer = engine.getWalletPayer();
 
@@ -48,7 +48,7 @@ export async function gameSystemBuyIn(
   if (anteParsedData && anteParsedData.vaultTokenAccount && anteParsedData.token) {
     vault_token_account = anteParsedData.vaultTokenAccount;
     mint_of_token_being_sent = anteParsedData.token;
-    if(!isDevnet){
+    if(!useSessionWallet){
       payer = engine.getWalletPayer();
     }else{
       payer = engine.getSessionPayer();
@@ -77,7 +77,7 @@ export async function gameSystemBuyIn(
     }
     payout_token_account = usertokenAccountInfo;
   }
-  const extraAccounts = isDevnet ? [
+  const extraAccounts = [
     {
       pubkey: vault_token_account,
       isWritable: true,
@@ -95,44 +95,7 @@ export async function gameSystemBuyIn(
     },
 
     {
-      pubkey: engine.getSessionPayer(),
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: SystemProgram.programId,
-      isWritable: false,
-      isSigner: false,
-    },
-    {
-      pubkey: TOKEN_PROGRAM_ID,
-      isWritable: false,
-      isSigner: false,
-    },
-    {
-      pubkey: SYSVAR_RENT_PUBKEY,
-      isWritable: false,
-      isSigner: false,
-    },
-  ] : [
-    {
-      pubkey: vault_token_account,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: engine.getSessionPayer(),
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: payout_token_account,
-      isWritable: true,
-      isSigner: false,
-    },
-
-    {
-      pubkey: engine.getWalletPayer(),
+      pubkey: payer,
       isWritable: true,
       isSigner: false,
     },
@@ -181,7 +144,12 @@ export async function gameSystemBuyIn(
       payer: payer,
     });
     combinedTx.add(playerdelegateIx);
-    const playerdelsignature = isDevnet ? await engine.processSessionChainTransaction("playerdelegate", combinedTx) : await engine.processWalletTransaction("playerdelegate", combinedTx);
+    if(useSessionWallet){
+      const computeIx = ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 });
+      const computePriceIx = ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 10002 });
+      combinedTx.add(computeIx, computePriceIx);
+    }
+    const playerdelsignature = useSessionWallet ? await engine.processSessionChainTransaction("playerdelegate", combinedTx) : await engine.processWalletTransaction("playerdelegate", combinedTx);
     console.log(`buy in signature: ${playerdelsignature}`);
     return { success: true, transactionSignature: playerdelsignature };
 

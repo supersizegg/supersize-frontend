@@ -4,7 +4,7 @@ import FooterLink from "@components/Footer/Footer";
 import "./Home.scss";
 import { ActiveGame, Food } from "@utils/types";
 import { cachedTokenMetadata, NETWORK, options } from "@utils/constants";
-import { formatBuyIn, fetchTokenBalance, pingEndpoints, pingSpecificEndpoint, getMaxPlayers } from "@utils/helper";
+import { formatBuyIn, fetchTokenBalance, pingEndpoints, pingSpecificEndpoint, getMaxPlayers, getNetwork } from "@utils/helper";
 import { FindEntityPda, FindComponentPda, FindWorldPda, createDelegateInstruction, BN } from "@magicblock-labs/bolt-sdk";
 import { PublicKey, Transaction } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
@@ -32,6 +32,8 @@ type homeProps = {
   activeGamesLoaded: FetchedGame[];
   setActiveGamesLoaded: (games: FetchedGame[]) => void;
   randomFood: Food[];
+  sessionWalletInUse: boolean;
+  username: string;
 };
 
 const Home = ({
@@ -41,6 +43,8 @@ const Home = ({
   activeGamesLoaded,
   setActiveGamesLoaded,
   randomFood,
+  sessionWalletInUse,
+  username
 }: homeProps) => {
   const navigate = useNavigate();
   const engine = useMagicBlockEngine();
@@ -73,13 +77,6 @@ const Home = ({
   const handleEnterKeyPress = async (inputValue: string) => {
     console.log("Searching game", inputValue);
     const thisEndpoint = endpoints[NETWORK][options.indexOf(selectedServer.current)];
-    if (NETWORK === "mainnet"){
-      engine.setChain();
-      engine.setEndpointEphemRpc(thisEndpoint);
-    } else {
-      engine.setDevnet();
-      engine.setEndpointEphemRpc(thisEndpoint);
-    }
     if (inputValue.trim() !== "") {
       isSearchingGame.current = true;
       try {
@@ -101,19 +98,8 @@ const Home = ({
             let updatedPlayerInfo = await updatePlayerInfo(engine, newGameInfo.activeGame.worldId, newGameInfo.activeGame.max_players, "new_player", new PublicKey(0), 0, false, false, thisEndpoint);
             newGameInfo.activeGame.active_players = updatedPlayerInfo.activeplayers;
             newGameInfo.activeGame.max_players = updatedPlayerInfo.max_players;
+            newGameInfo.activeGame.isLoaded = true;
 
-            setActiveGamesLoaded([
-              ...activeGamesLoaded,
-              {
-                activeGame: newGameInfo.activeGame,
-                playerInfo: {
-                  playerStatus: updatedPlayerInfo.playerStatus,
-                  need_to_delegate: updatedPlayerInfo.need_to_delegate,
-                  need_to_undelegate: updatedPlayerInfo.need_to_undelegate,
-                  newplayerEntityPda: updatedPlayerInfo.newPlayerEntityPda,
-                },
-              },
-            ]);
             activeGamesRef.current = [
               ...activeGamesRef.current,
               {
@@ -126,6 +112,18 @@ const Home = ({
                 },
               },
             ];
+            setActiveGamesLoaded([
+              ...activeGamesLoaded,
+              {
+                activeGame: newGameInfo.activeGame,
+                playerInfo: {
+                  playerStatus: updatedPlayerInfo.playerStatus,
+                  need_to_delegate: updatedPlayerInfo.need_to_delegate,
+                  need_to_undelegate: updatedPlayerInfo.need_to_undelegate,
+                  newplayerEntityPda: updatedPlayerInfo.newPlayerEntityPda,
+                },
+              },
+            ]);
           }
         } catch (error) {
           console.error("Error fetching map data:", error);
@@ -140,10 +138,10 @@ const Home = ({
     }
   };
 
-  const handleRefresh = async (engine: MagicBlockEngine, activeGamesLoaded: FetchedGame[], index: number) => {
+  const handleRefresh = async (engine: MagicBlockEngine, activeGames: FetchedGame[], index: number) => {
     setIsLoadingCurrentGames(true);
     try {
-      const refreshedGames = [...activeGamesLoaded];
+      const refreshedGames = [...activeGames];
       const prewnewgame: FetchedGame = {
         activeGame: {
           ...refreshedGames[index].activeGame,
@@ -157,24 +155,13 @@ const Home = ({
       refreshedGames[index] = prewnewgame;
       setActiveGamesLoaded(refreshedGames);
 
-      const server = activeGamesLoaded[index].activeGame.endpoint
-      console.log("server", server);
-      let serverIndex = endpoints["devnet"].indexOf(server);
-      if (serverIndex >= 0){
-        engine.setDevnet();
-        engine.setEndpointEphemRpc(server);
-      } else {
-        engine.setChain();
-        engine.setEndpointEphemRpc(server);
-      }
-
-      let max_players = getMaxPlayers(activeGamesLoaded[index].activeGame.size);
-      let updatedPlayerInfo = await updatePlayerInfo(engine, activeGamesLoaded[index].activeGame.worldId, max_players, 
-        activeGamesLoaded[index].playerInfo.playerStatus, activeGamesLoaded[index].playerInfo.newplayerEntityPda, activeGamesLoaded[index].activeGame.active_players,
-        activeGamesLoaded[index].playerInfo.need_to_delegate, activeGamesLoaded[index].playerInfo.need_to_undelegate, activeGamesLoaded[index].activeGame.endpoint);
+      let max_players = getMaxPlayers(activeGames[index].activeGame.size);
+      let updatedPlayerInfo = await updatePlayerInfo(engine, activeGames[index].activeGame.worldId, max_players, 
+        activeGames[index].playerInfo.playerStatus, activeGames[index].playerInfo.newplayerEntityPda, activeGames[index].activeGame.active_players,
+        activeGames[index].playerInfo.need_to_delegate, activeGames[index].playerInfo.need_to_undelegate, activeGames[index].activeGame.endpoint);
       const newgame: FetchedGame = {
         activeGame: {
-          ...activeGamesLoaded[index].activeGame,
+          ...activeGames[index].activeGame,
           isLoaded: true,
           active_players: updatedPlayerInfo.activeplayers,
           max_players: updatedPlayerInfo.max_players,
@@ -188,6 +175,7 @@ const Home = ({
       };
 
       refreshedGames[index] = newgame;
+      activeGamesRef.current[index] = newgame;
       setActiveGamesLoaded([...refreshedGames]);
       setIsLoadingCurrentGames(false);
     } catch (error) {
@@ -198,7 +186,7 @@ const Home = ({
 
   const fetchAndLogMapData = async (
     engine: MagicBlockEngine,
-    activeGamesLoaded: FetchedGame[],
+    activeGames: FetchedGame[],
     server: string,
   ) => {
     let pingResults = await pingSpecificEndpoint(server);
@@ -206,33 +194,11 @@ const Home = ({
     pingResultsRef.current = pingResultsRef.current.map((result) =>
       result.endpoint === server ? { ...result, pingTime: pingTime } : result
     );
-    console.log("activeGamesLoaded", activeGamesLoaded);
-
-    const gameCopy = [...activeGamesLoaded];
-    let filteredGames = gameCopy.filter((game) => {
-      return server === game.activeGame.endpoint;
-    });
-
+    let filteredGames = [...activeGames];
     const serverIndex = endpoints[NETWORK].indexOf(server);
-
-    if (NETWORK === "mainnet") {
-      console.log(`Server index in mainnet endpoints: ${serverIndex}`);
-      const gameCopy = [...activeGamesLoaded];
-      filteredGames = gameCopy.filter((game) => {
-        return server === game.activeGame.endpoint || game.activeGame.endpoint === endpoints["devnet"][serverIndex];
-      });
-    }
-    console.log("filteredGames", filteredGames);
     for (let i = 0; i < filteredGames.length; i++) {
-      let isDevnet = filteredGames[i].activeGame.endpoint === endpoints["devnet"][serverIndex];
-      console.log("isDevnet", isDevnet);
-      if (isDevnet){
-        engine.setDevnet();
-        engine.setEndpointEphemRpc(endpoints["devnet"][serverIndex]);
-      } else {
-        engine.setChain();
-        engine.setEndpointEphemRpc(endpoints[NETWORK][serverIndex]);
-      }
+      //maybe if not on server, set isloaded to false
+      if(!(server === filteredGames[i].activeGame.endpoint || filteredGames[i].activeGame.endpoint === endpoints["devnet"][serverIndex])) continue;
       console.log("engine", engine);
       try {
         const preNewGame: FetchedGame = {
@@ -275,12 +241,7 @@ const Home = ({
         const mergedGames = [...filteredGames];
         mergedGames[i] = newgame;
         filteredGames = mergedGames;
-        console.log("filteredGames", filteredGames);
-        activeGamesRef.current.forEach((game, index) => {
-          if (game.activeGame.worldId.toString() === filteredGames[i].activeGame.worldId.toString()) {
-              activeGamesRef.current[index] = filteredGames[i];
-          }
-        });
+        activeGamesRef.current[i] = newgame;
         setActiveGamesLoaded(mergedGames);
       } catch (error) {
         console.log(`Error fetching map data for game ID ${filteredGames[i].activeGame.worldId}:`, error);
@@ -289,17 +250,9 @@ const Home = ({
   }
 
   const handlePlayButtonClick = async (game: FetchedGame) => {
-    let serverIndex = endpoints["devnet"].indexOf(game.activeGame.endpoint);
-    let isDevnet = serverIndex >= 0;
-    console.log("serverIndex", serverIndex);
-    if (isDevnet){
-      engine.setDevnet();
-      engine.setEndpointEphemRpc(game.activeGame.endpoint);
-    } else {
-      engine.setChain();
-      engine.setEndpointEphemRpc(game.activeGame.endpoint);
-    }
-    //engine.setEndpointEphemRpc(game.activeGame.endpoint);
+    let networkType = getNetwork(game.activeGame.endpoint);
+    engine.setChain(networkType);
+    engine.setEndpointEphemRpc(game.activeGame.endpoint);
     setSelectedGame(game.activeGame);
 
     if (game.playerInfo.playerStatus === "new_player") {
@@ -328,22 +281,17 @@ const Home = ({
         need_to_undelegate: updatedPlayerInfo.need_to_undelegate,
         newplayerEntityPda: updatedPlayerInfo.newPlayerEntityPda,
       };
-      const { tokenBalance, hasInsufficientTokenBalance } = await fetchTokenBalance(engine, game.activeGame, isDevnet);
+      const { tokenBalance, hasInsufficientTokenBalance } = await fetchTokenBalance(engine, game.activeGame, networkType == "devnet");
       setTokenBalance(tokenBalance);
       setHasInsufficientTokenBalance(hasInsufficientTokenBalance);
 
-      const retrievedUser = localStorage.getItem("user");
-      let myusername = "unnamed";
-      if (retrievedUser) {
-        myusername = JSON.parse(retrievedUser).name;
-      }
       const result = await gameExecuteJoin(
         engine,
         game.activeGame,
         game.activeGame.buy_in,
-        myusername,
+        username,
         game.playerInfo,
-        isDevnet,
+        networkType == "devnet" || sessionWalletInUse,
         setMyPlayerEntityPda,
       );
       if (result.success) { 
@@ -378,7 +326,7 @@ const Home = ({
           game.activeGame,
           anteEntityPda,
           game.playerInfo.newplayerEntityPda,
-          isDevnet,
+          networkType == "devnet" || sessionWalletInUse,
         );
         NotificationService.updateAlert(cashoutAlertId, { shouldExit: true });
         if (cashoutFeedback.success) {
@@ -476,7 +424,6 @@ const Home = ({
   }, [engine.getSessionPayer()]);
 
   useEffect(() => {
-
     const fetchPingData = async () => {
       setIsLoadingCurrentGames(true);
       try {
@@ -516,6 +463,20 @@ const Home = ({
 
   useEffect(() => {
     const fetchGameData = async () => {
+      const clearPingGames = [...activeGamesRef.current];
+      for (let i = 0; i < clearPingGames.length; i++) {
+        clearPingGames[i] = {
+          ...clearPingGames[i],
+          activeGame: {
+            ...clearPingGames[i].activeGame,
+            active_players: -1,
+            isLoaded: false,
+          },
+        };
+      }
+      activeGamesRef.current = clearPingGames;
+      setActiveGamesLoaded(clearPingGames);
+
       if (selectedEndpoint === "") {
         return;
       }
@@ -573,15 +534,6 @@ const Home = ({
                 `}
                 style={{ transitionDelay: `${index * 50}ms` }}
                 onClick={async () => {
-                  if (selectedServer.current === item.region) {
-                    let pingResults = await pingEndpoints();
-                    pingResultsRef.current = pingResults.pingResults;
-                    refreshAllGames();
-                    return;
-                  }
-  
-                  selectedServer.current = item.region;
-  
                   const clearPingGames = [...activeGamesRef.current];
                   for (let i = 0; i < clearPingGames.length; i++) {
                     clearPingGames[i] = {
@@ -593,9 +545,9 @@ const Home = ({
                       },
                     };
                   }
-  
                   activeGamesRef.current = clearPingGames;
                   setActiveGamesLoaded(clearPingGames);
+                  selectedServer.current = item.region;
                   setSelectedEndpoint(item.endpoint);
                 }}
                 disabled={isLoadingCurrentGames}
@@ -771,7 +723,6 @@ const Home = ({
                 </tr>
               )}
               {activeGamesLoaded
-                .filter((row) => row.activeGame.endpoint === selectedEndpoint || row.activeGame.endpoint === endpoints["devnet"][endpoints[NETWORK].indexOf(selectedEndpoint)])
                 .map((row, idx) => (
                   <tr key={idx} style={{ display: !row.activeGame.isLoaded ? "none" : "table-row" }}>
                     <td>{row.activeGame.worldId.toString()}</td>
@@ -838,11 +789,9 @@ const Home = ({
                         onClick={async () => {
                           try {
                             setLoadingGameNum(idx);
-                            const serverIndex = endpoints[NETWORK].indexOf(selectedEndpoint);
                             await handleRefresh(
                               engine,
-                              //activeGamesRef.current.filter((row) => row.activeGame.ping > 0),
-                              activeGamesLoaded.filter((row) => row.activeGame.endpoint === selectedEndpoint || row.activeGame.endpoint === endpoints["devnet"][serverIndex]),
+                              activeGamesRef.current,
                               idx,
                             );
                             setLoadingGameNum(-1);

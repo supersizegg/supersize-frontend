@@ -28,7 +28,7 @@ export async function gameExecuteJoin(
   buyIn: number,
   playerName: string,
   selectedGamePlayerInfo: PlayerInfo,
-  isDevnet: boolean,
+  useSessionWallet: boolean,
   setMyPlayerEntityPda: (pda: PublicKey | null) => void,
 ): Promise<GameExecuteJoinResult> {
   if (!selectGameId || selectGameId.name === "loading") {
@@ -100,7 +100,7 @@ export async function gameExecuteJoin(
   }
 
   try {
-    let buyInResult = await gameSystemBuyIn(engine, selectGameId, newplayerEntityPda, anteEntityPda, buyIn, playerName, isDevnet);
+    let buyInResult = await gameSystemBuyIn(engine, selectGameId, newplayerEntityPda, anteEntityPda, buyIn, playerName, useSessionWallet);
     if (!buyInResult.success) {
       return { success: false, error: buyInResult.error, message: "buyin_failed" };
     }
@@ -142,7 +142,7 @@ export async function gameExecuteJoin(
     const alltransaction = new anchor.web3.Transaction();
     alltransaction.add(makeMove.transaction);
 
-    let moveSig = await engine.processSessionEphemTransaction("txn:" + performance.now(), alltransaction).catch((error) => {
+    let moveSig = await engine.processSessionEphemTransactionNoConfirm("txn:" + performance.now(), alltransaction).catch((error) => {
       console.log(error);
     });
     if (moveSig) {

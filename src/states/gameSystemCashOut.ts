@@ -1,4 +1,4 @@
-import { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
+import { ComputeBudgetProgram, PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
 import { ApplySystem, createUndelegateInstruction, FindComponentPda, FindEntityPda } from "@magicblock-labs/bolt-sdk";
 import * as anchor from "@coral-xyz/anchor";
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
@@ -19,7 +19,7 @@ export async function gameSystemCashOut(
   gameInfo: ActiveGame,
   anteroomEntity: PublicKey,
   currentPlayerEntity: PublicKey,
-  isDevnet: boolean,
+  useSessionWallet: boolean,
 ): Promise<GameExecuteCashOutResult> {
   const mapseed = "origin";
   const mapEntityPda = FindEntityPda({
@@ -75,7 +75,7 @@ export async function gameSystemCashOut(
     );
        
     let payer = engine.getWalletPayer();
-    if(!isDevnet){
+    if(!useSessionWallet){
       payer = engine.getWalletPayer();
     }else{
       payer = engine.getSessionPayer();
@@ -170,7 +170,12 @@ export async function gameSystemCashOut(
     } 
 
     try {
-      let cashoutsig = isDevnet ? await engine.processSessionChainTransaction("playercashout", cashouttx) : await engine.processWalletTransaction("playercashout", cashouttx);
+      if(useSessionWallet){
+        const computeIx = ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 });
+        const computePriceIx = ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 10002 });
+        cashouttx.add(computeIx, computePriceIx);
+      }
+      let cashoutsig = useSessionWallet ? await engine.processSessionChainTransaction("playercashout", cashouttx) : await engine.processWalletTransaction("playercashout", cashouttx);
       if (!cashoutsig) {
         return { success: false, error: `Error cashing out`, message: "error" };
       }else{

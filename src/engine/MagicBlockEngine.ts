@@ -1,33 +1,25 @@
 import { Idl, Program, AnchorProvider } from "@coral-xyz/anchor";
 import { WalletContextState } from "@solana/wallet-adapter-react";
-import { AccountInfo, Commitment, Connection, Keypair, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
+import { AccountInfo, Commitment, Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
 import { WalletName } from "@solana/wallet-adapter-base";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
 import * as anchor from "@coral-xyz/anchor";
 import { endpoints, NETWORK, RPC_CONNECTION } from "@utils/constants";
 import { log, warn } from "../utils/logger";
 
-const ENDPOINT_CHAIN_RPC = RPC_CONNECTION[NETWORK]; //"https://proud-late-lambo.solana-devnet.quiknode.pro/ec12ab7b183190f9cfd274049f6ab83396c22e7d";
-const ENDPOINT_CHAIN_WS = ENDPOINT_CHAIN_RPC.replace("http", "ws"); //"wss://proud-late-lambo.solana-devnet.quiknode.pro/ec12ab7b183190f9cfd274049f6ab83396c22e7d";
-
-// const _ENDPOINT_CHAIN_RPC = "http://127.0.0.1:7899";
-// const _ENDPOINT_CHAIN_WS = "ws://127.0.0.1:7900";
-
-const TRANSACTION_COST_LAMPORTS = 5000;
-
+const ENDPOINT_CHAIN_RPC = RPC_CONNECTION[NETWORK]; 
+const ENDPOINT_CHAIN_WS = ENDPOINT_CHAIN_RPC.replace("http", "ws"); 
 const connectionChain = new Connection(ENDPOINT_CHAIN_RPC, {
   wsEndpoint: ENDPOINT_CHAIN_WS,
 });
 
-const connectionChainDevnet = new Connection(RPC_CONNECTION["devnet"], {
-  wsEndpoint: RPC_CONNECTION["devnet"].replace("http", "ws"),
+const ENDPOINT_CHAIN_RPC_DEVNET = RPC_CONNECTION["devnet"]; 
+const ENDPOINT_CHAIN_WS_DEVNET = ENDPOINT_CHAIN_RPC_DEVNET.replace("http", "ws"); 
+const connectionChainDevnet = new Connection(ENDPOINT_CHAIN_RPC_DEVNET, {
+  wsEndpoint: ENDPOINT_CHAIN_WS_DEVNET,
 });
 
-/*
-let connectionEphem = new Connection("https://supersize-sin.magicblock.app", {
-  wsEndpoint: "wss://supersize-sin.magicblock.app",
-});
-*/
+const TRANSACTION_COST_LAMPORTS = 5000;
 
 interface SessionConfig {
   minLamports: number;
@@ -52,7 +44,7 @@ export class MagicBlockEngine {
     this.walletContext = walletContext;
     this.sessionKey = sessionKey;
     this.sessionConfig = sessionConfig;
-    this.endpointEphemRpc = endpoints[NETWORK][0]; //"https://supersize-sin.magicblock.app";
+    this.endpointEphemRpc = endpoints[NETWORK][0]; 
     this.connectionEphem = new Connection(this.endpointEphemRpc, {
       wsEndpoint: this.endpointEphemRpc.replace("http", "ws"),
     });
@@ -67,14 +59,15 @@ export class MagicBlockEngine {
     });
   }
 
-  public setChain(): void {
-    this.provider = new AnchorProvider(connectionChain, new NodeWallet(this.sessionKey), {
-      preflightCommitment: "processed",
+  public setChain(network: string): void {
+    let NEW_ENDPOINT_CHAIN_RPC : string = RPC_CONNECTION[NETWORK];
+    if (network == "mainnet" || network == "devnet"){
+      NEW_ENDPOINT_CHAIN_RPC = RPC_CONNECTION[network];
+    }    
+    const newConnectionChain = new Connection(NEW_ENDPOINT_CHAIN_RPC, {
+      wsEndpoint: NEW_ENDPOINT_CHAIN_RPC.replace("http", "ws"),
     });
-  }
-
-  public setDevnet(): void {
-    this.provider = new AnchorProvider(connectionChainDevnet, new NodeWallet(this.sessionKey), {
+    this.provider = new AnchorProvider(newConnectionChain, new NodeWallet(this.sessionKey), {
       preflightCommitment: "processed",
     });
   }
@@ -95,6 +88,19 @@ export class MagicBlockEngine {
 
   getProgramOnChain<T extends Idl>(idl: object): Program<T> {
     return new Program<T>(idl as T, this.provider);
+  }
+  getProgramOnSpecificChain<T extends Idl>(idl: object, thisNework: string): Program<T> {
+    let NEW_ENDPOINT_CHAIN_RPC : string = RPC_CONNECTION[NETWORK];
+    if (thisNework == "mainnet" || thisNework == "devnet"){
+      NEW_ENDPOINT_CHAIN_RPC = RPC_CONNECTION[thisNework];
+    }    
+    const thisConnection = new Connection(NEW_ENDPOINT_CHAIN_RPC, {
+      wsEndpoint: NEW_ENDPOINT_CHAIN_RPC.replace("http", "ws"),
+    });
+    const thisProvider = new AnchorProvider(thisConnection, new NodeWallet(this.sessionKey), {
+      preflightCommitment: "processed",
+    });
+    return new Program<T>(idl as T, thisProvider);
   }
   getProgramOnEphem<T extends Idl>(idl: object): Program<T> {
     return new Program<T>(idl as T, this.providerEphemeralRollup);
@@ -165,7 +171,7 @@ export class MagicBlockEngine {
     const signature = await this.connectionEphem.sendTransaction(transaction, [this.sessionKey], {
       skipPreflight: true,
     });
-    await this.waitSignatureConfirmation(name, signature, this.connectionEphem, "finalized");
+    await this.waitSignatureConfirmation(name, signature, this.connectionEphem, "confirmed");
     return signature;
   }
 
@@ -238,32 +244,29 @@ export class MagicBlockEngine {
     }
   }
 
-  async fundSessionFromWallet() {
-    const missingLamports = await this.getSessionFundingMissingLamports();
-    if (missingLamports > 0) {
+  async fundSessionFromWallet(amount: number) {
       await this.processWalletTransaction(
         "FundSessionFromWallet",
         new Transaction().add(
           SystemProgram.transfer({
             fromPubkey: this.getWalletPayer(),
             toPubkey: this.getSessionPayer(),
-            lamports: missingLamports,
+            lamports: amount * LAMPORTS_PER_SOL,
           }),
         ),
       );
-    }
   }
 
-  async defundSessionBackToWallet() {
+  async defundSessionBackToWallet(amount: number, recipient: PublicKey = this.getWalletPayer()) {
     const accountInfo = await this.provider.connection.getAccountInfo(this.getSessionPayer());
     if (accountInfo && accountInfo.lamports > 0) {
-      const transferableLamports = accountInfo.lamports - TRANSACTION_COST_LAMPORTS;
+      const transferableLamports = Math.min(accountInfo.lamports - TRANSACTION_COST_LAMPORTS, amount * LAMPORTS_PER_SOL);
       await this.processSessionChainTransaction(
         "DefundSessionBackToWallet",
         new Transaction().add(
           SystemProgram.transfer({
             fromPubkey: this.getSessionPayer(),
-            toPubkey: this.getWalletPayer(),
+            toPubkey: recipient,
             lamports: transferableLamports,
           }),
         ),
@@ -276,8 +279,15 @@ export class MagicBlockEngine {
     return this.provider.connection.getAccountInfo(address);
   }
   
-  getChainAccountInfoProcessed(address: PublicKey) {
-    return this.provider.connection.getAccountInfo(address, "processed");
+  getChainAccountInfoProcessed(address: PublicKey, thisNework: string) {
+    let NEW_ENDPOINT_CHAIN_RPC : string = RPC_CONNECTION[NETWORK];
+    if (thisNework == "mainnet" || thisNework == "devnet"){
+      NEW_ENDPOINT_CHAIN_RPC = RPC_CONNECTION[thisNework];
+    }    
+    const thisConnection = new Connection(NEW_ENDPOINT_CHAIN_RPC, {
+      wsEndpoint: NEW_ENDPOINT_CHAIN_RPC.replace("http", "ws"),
+    });
+    return thisConnection.getAccountInfo(address, "processed");
   }
 
   getEphemAccountInfo(address: PublicKey) {

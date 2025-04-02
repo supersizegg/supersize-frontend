@@ -402,7 +402,6 @@ export const handleReinitializeClick = async (engine: MagicBlockEngine, gameInfo
       entityId: new anchor.BN(0),
       seed: stringToUint8Array("origin"),
     });
-    //console.log("reinitialize", foodEntityPda.toString(), mapEntityPda.toString(), foodComponentPda.toString(), x, y, seed);
       console.log("init food", foodEntityPda.toString(), x, y);
       const tx = new anchor.web3.Transaction();
       const delegateInstruction = createDelegateInstruction({
@@ -510,7 +509,6 @@ export const deposit = async (
         new PublicKey(mint_of_token_being_sent),
         engine.getWalletPayer(),
       );
-      console.log("usertokenAccountInfo", usertokenAccountInfo.toString(), gameWallet.toString(), engine.getWalletPayer().toString(), amount * 10 ** decimals);
       const transferIx = createTransferInstruction(
         usertokenAccountInfo,
         gameWallet,

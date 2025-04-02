@@ -24,9 +24,10 @@ import "./game.scss";
 type gameProps = {
   gameInfo: ActiveGame;
   myPlayerEntityPda: PublicKey | null;
+  sessionWalletInUse: boolean;
 };
 
-const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
+const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) => {
   const navigate = useNavigate();
   const engine = useMagicBlockEngine();
 
@@ -318,7 +319,7 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
             gameInfo,
             anteroomEntity.current,
             currentPlayerEntity.current,
-            isDevnet,
+            isDevnet || sessionWalletInUse,
           );
           console.log("cashoutTx", cashoutTx);
           if (cashoutTx.success) {
@@ -706,7 +707,7 @@ const Game = ({ gameInfo, myPlayerEntityPda }: gameProps) => {
                               gameInfo,
                               anteroomEntity.current,
                               currentPlayerEntity.current,
-                              isDevnet,
+                              isDevnet || sessionWalletInUse,
                             );
                             if (cashouttx.success) {
                               let cashoutTxSignature = cashouttx.transactionSignature;

@@ -40,16 +40,25 @@ import { handleCashout, handleUndelegatePlayer, handleDelegatePlayer, handleDele
   handleReinitializeClick, calculateGameplayStats, deposit } from "@states/adminFunctions";
 import DepositInput from '@components/util/DepositInput';
 import CollapsiblePanel from '@components/util/CollapsiblePanel';
+import DepositModal from "@components/util/DepositModal";
+import WithdrawalModal from "@components/util/WithdrawalModal";
 
 Chart.register(LineElement, PointElement, LinearScale, Title, Tooltip, Legend);
 
 type profileProps = {
   randomFood: Food[];
+  username: string;
+  setUsername: (username: string) => void;
+  sessionWalletInUse: boolean;
+  setSessionWalletInUse: (sessionWalletInUse: boolean) => void;
 };
 
-export default function Profile({ randomFood }: profileProps ) {
+export default function Profile({ randomFood, username, setUsername, sessionWalletInUse, setSessionWalletInUse }: profileProps ) {
   const engine = useMagicBlockEngine();
   const [activeTab, setActiveTab] = useState<"general" | "quests" | "admin">("general");
+  const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
+  const [isWithdrawalModalOpen, setIsWithdrawalModalOpen] = useState(false);
+  const [sessionLamports, setSessionLamports] = useState<number | undefined>(0);
   return (
     <div className="profile-page main-container">
         <div
@@ -100,38 +109,51 @@ export default function Profile({ randomFood }: profileProps ) {
         </div>
 
         <div className="profile-content">
-          {activeTab === "general" && <GeneralTab />}
+          {activeTab === "general" && 
+          <GeneralTab sessionWalletInUse={sessionWalletInUse} username={username} setUsername={setUsername}
+          setSessionWalletInUse={setSessionWalletInUse} setIsDepositModalOpen={setIsDepositModalOpen} setIsWithdrawalModalOpen={setIsWithdrawalModalOpen}
+          setSessionLamports={setSessionLamports} sessionLamports={sessionLamports}/>}
           {activeTab === "quests" && <QuestsTab />}
           {activeTab === "admin" && <AdminTab engine={engine} />}
         </div>
       </div>
 
+      <DepositModal walletAddress={engine.getSessionPayer()} isOpen={isDepositModalOpen} onClose={() => setIsDepositModalOpen(false)} onDeposit={async (amount: number) => {await engine.fundSessionFromWallet(amount);}} />
+      <WithdrawalModal accountBalance={sessionLamports} isOpen={isWithdrawalModalOpen} 
+        onClose={() => setIsWithdrawalModalOpen(false)} 
+        onWithdraw={async (amount: number, recipient: PublicKey | undefined) => {
+          if (recipient !== undefined) {
+          await engine.defundSessionBackToWallet(amount, recipient);
+        }
+        else{
+          await engine.defundSessionBackToWallet(amount);
+        }
+        }} />
       <FooterLink />
     </div>
   );
 }
 
-function GeneralTab() {
+type GeneralTabProps = {
+  sessionWalletInUse: boolean;
+  username: string;
+  sessionLamports: number | undefined;
+  setSessionWalletInUse: (sessionWalletInUse: boolean) => void;
+  setIsDepositModalOpen: (isDepositModalOpen: boolean) => void;
+  setIsWithdrawalModalOpen: (isWithdrawalModalOpen: boolean) => void;
+  setSessionLamports: (sessionLamports: number | undefined) => void;
+  setUsername: (username: string) => void;
+};
+
+function GeneralTab({ sessionWalletInUse, username, sessionLamports, setSessionWalletInUse, setIsDepositModalOpen, setIsWithdrawalModalOpen, setSessionLamports, setUsername }: GeneralTabProps) {
   const engine = useMagicBlockEngine();
   const [gemBalance, setGemBalance] = useState(0);
-  const [username, setUsername] = useState<string>("");
-  const [usernameSaved, setUsernameSaved] = useState(false);
 
-  const setInputUsername = (inputUsername: React.SetStateAction<string>) => {
-    const user = { name: inputUsername, referrer: "", referral_done: false };
+  const setInputUsername = (inputUsername: string) => {
+    const user = { name: inputUsername, use_session: sessionWalletInUse };
     localStorage.setItem("user", JSON.stringify(user));
     setUsername(inputUsername);
-    setUsernameSaved(true);
   };
-
-  useEffect(() => {
-    const retrievedUser = localStorage.getItem("user");
-    if (retrievedUser) {
-      let myusername = JSON.parse(retrievedUser).name;
-      console.log("myusername", myusername);
-      setUsername(myusername);
-    }
-  }, []);
 
   useEffect(() => {
     const fetchUserTokenBalance = async () => {
@@ -160,7 +182,8 @@ function GeneralTab() {
 
   return (
     <div className="general-tab">
-      <MenuSession />
+      <MenuSession username={username} sessionWalletInUse={sessionWalletInUse} setSessionWalletInUse={setSessionWalletInUse} setIsDepositModalOpen={setIsDepositModalOpen} 
+      setIsWithdrawalModalOpen={setIsWithdrawalModalOpen} setSessionLamports={setSessionLamports} sessionLamports={sessionLamports}/>
       <div style={{ display: "flex" , flexDirection: "row", marginLeft: "1em" }}>
           Supersize Gems: <img  style={{ width: "20px", height: "20px", marginRight: "5px",marginTop: "1px", marginLeft: "5px"   }} src={cachedTokenMetadata["AsoX43Q5Y87RPRGFkkYUvu8CSksD9JXNEqWVGVsr8UEp"].image} alt="Token Image" /> {gemBalance.toFixed(2)}
       </div>
@@ -175,11 +198,9 @@ function GeneralTab() {
           value={username}
           onChange={(e) => setUsername(e.target.value)}
         />
-        {!usernameSaved && (
-          <button className="btn-save" onClick={() => setInputUsername(username)}>
-            Save
-          </button>
-        )}
+        <button className="btn-save" onClick={() => setInputUsername(username)}>
+          Save
+        </button>
       </div>
     </div>
   );
@@ -306,7 +327,7 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
           Number(vaultAccount.amount) - anteroomData.totalActiveBuyins * anteroomData.buyIn;
         setTokenBalance(readableBalance);
         const k = calculateK(updatedGameInfo.max_players, 0.01);
-        const foodInWallet = Math.floor(tokenBalance / anteroomData.buyIn) * 1000
+        const foodInWallet = Math.floor(readableBalance / anteroomData.buyIn) * 1000
         const currentFoodToAdd = Math.max(0.5, Math.floor(calculateY(foodInWallet, k) * 100));
         setCurrentFoodToAdd(currentFoodToAdd);
 

@@ -78,6 +78,10 @@ export function getComponentAnteroomOnChain(engine: MagicBlockEngine) {
   return engine.getProgramOnChain<Anteroom>(componentAnteroom);
 }
 
+export function getComponentAnteroomOnSpecificChain(engine: MagicBlockEngine, thisNework: string) {
+  return engine.getProgramOnSpecificChain<Anteroom>(componentAnteroom, thisNework);
+}
+
 export function getComponentAnteroomOnEphem(engine: MagicBlockEngine) {
   return engine.getProgramOnEphem<Anteroom>(componentAnteroom);
 }
@@ -96,6 +100,10 @@ export function getComponentMapOnSpecificEphem(engine: MagicBlockEngine, endpoin
 
 export function getComponentPlayerOnChain(engine: MagicBlockEngine) {
   return engine.getProgramOnChain<Player>(componentPlayer);
+}
+
+export function getComponentPlayerOnSpecificChain(engine: MagicBlockEngine, thisNework: string) {
+  return engine.getProgramOnSpecificChain<Player>(componentPlayer, thisNework);
 }
 
 export function getComponentPlayerOnSpecificEphem(engine: MagicBlockEngine, endpoint: string) {
