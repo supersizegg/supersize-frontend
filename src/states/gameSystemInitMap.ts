@@ -9,7 +9,6 @@ export async function gameSystemInitMap(
   worldPda: PublicKey,
   newmapentityPda: PublicKey,
   game_name: string,
-  game_size: number,
   buy_in: number,
   token_string: string,
   decimals: number,
@@ -26,10 +25,9 @@ export async function gameSystemInitMap(
     systemId: SYSTEM_INIT_MAP_ID,
     args: {
       name: game_name,
-      size: game_size,
       buy_in: buy_in * 10 ** decimals,
       token_string: token_string,
-      token_decimals: decimals,
+      game_type: "blob",
     },
   });
 

@@ -2,7 +2,7 @@
   "address": "GP3L2w9SP9DASTJoJdTAQFzEZRHprMLaxGovxeMrvMNe",
   "metadata": {
     "name": "spawn_food",
-    "version": "0.2.0",
+    "version": "0.2.3",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -106,6 +106,11 @@
       "code": 6001,
       "name": "FoodOutOfBounds",
       "msg": "Food not in section provided."
+    },
+    {
+      "code": 6002,
+      "name": "InsufficientGameBalance",
+      "msg": "Game wallet doesn't have enough balance."
     }
   ],
   "types": [
@@ -125,10 +130,31 @@
       }
     },
     {
+      "name": "Food",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "food_data",
+            "type": {
+              "array": [
+                "u8",
+                4
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "Map",
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "game_type",
+            "type": "string"
+          },
           {
             "name": "name",
             "type": "string"
@@ -140,11 +166,7 @@
             }
           },
           {
-            "name": "width",
-            "type": "u16"
-          },
-          {
-            "name": "height",
+            "name": "size",
             "type": "u16"
           },
           {
@@ -158,23 +180,19 @@
             }
           },
           {
-            "name": "token_decimals",
-            "type": "u32"
-          },
-          {
-            "name": "max_players",
+            "name": "active_players",
             "type": "u8"
           },
           {
-            "name": "wallet_balance",
+            "name": "value_on_map",
             "type": "u64"
           },
           {
             "name": "next_food",
             "type": {
-              "option": {
+              "vec": {
                 "defined": {
-                  "name": "map::Food"
+                  "name": "MapFood"
                 }
               }
             }
@@ -186,6 +204,26 @@
                 "name": "BoltMetadata"
               }
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "MapFood",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "x",
+            "type": "u16"
+          },
+          {
+            "name": "y",
+            "type": "u16"
+          },
+          {
+            "name": "food_value",
+            "type": "u8"
           }
         ]
       }
@@ -214,7 +252,7 @@
             "type": {
               "vec": {
                 "defined": {
-                  "name": "section::Food"
+                  "name": "Food"
                 }
               }
             }
@@ -225,40 +263,6 @@
               "defined": {
                 "name": "BoltMetadata"
               }
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "map::Food",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "data",
-            "type": {
-              "array": [
-                "u8",
-                4
-              ]
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "section::Food",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "data",
-            "type": {
-              "array": [
-                "u8",
-                4
-              ]
             }
           }
         ]

@@ -5,23 +5,27 @@ export interface Food {
   x: number;
   y: number;
   food_value: number;
-  food_multiple: number;
+}
+
+export interface Circle {
+  x: number;
+  y: number;
+  size: number;
+  radius: number;
+  speed: number;
 }
 
 export interface Blob {
   name: string;
   authority: PublicKey | null;
+  score: number;
+  removal: BN;
   x: number;
   y: number;
-  radius: number;
-  mass: number;
-  score: number;
-  payoutTokenAccount: PublicKey | null;
-  speed: number;
-  removal: BN;
   target_x: number;
   target_y: number;
   timestamp: number;
+  circles: Circle[];
 }
 
 export type ActiveGame = {
@@ -52,8 +56,6 @@ export type Anteroom = {
 
 export type PlayerInfo = {
   playerStatus: string;
-  need_to_delegate: boolean;
-  need_to_undelegate: boolean;
   newplayerEntityPda: PublicKey;
 };
 export type FetchedGame = {

@@ -1,8 +1,8 @@
 import { PublicKey } from "@solana/web3.js";
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
 import {
-  getComponentAnteroomOnEphem,
-  getComponentAnteroomOnChain,
+  getComponentSnakeOnChain,
+  getComponentSnakeOnEphem,
   getComponentMapOnChain,
   getComponentMapOnEphem,
   getComponentPlayerOnChain,
@@ -11,21 +11,21 @@ import {
   getComponentSectionOnEphem,
   getComponentMapOnSpecificEphem,
   getComponentPlayerOnSpecificEphem,
-  getComponentAnteroomOnSpecificChain,
+  getComponentSnakeOnSpecificChain,
   getComponentPlayerOnSpecificChain,
 } from "./gamePrograms";
 
-export async function anteroomFetchOnChain(engine: MagicBlockEngine, antePda: PublicKey) {
-  const componentAnteroom = getComponentAnteroomOnChain(engine);
-  return componentAnteroom.account.anteroom.fetchNullable(antePda, "processed");
+export async function snakeFetchOnChain(engine: MagicBlockEngine, antePda: PublicKey) {
+  const componentSnake = getComponentSnakeOnChain(engine);
+  return componentSnake.account.snake.fetchNullable(antePda, "processed");
 }
-export async function anteroomFetchOnSpecificChain(engine: MagicBlockEngine, antePda: PublicKey, thisNework: string) {
-  const componentAnteroom = getComponentAnteroomOnSpecificChain(engine, thisNework);
-  return componentAnteroom.account.anteroom.fetchNullable(antePda, "processed");
+export async function snakeFetchOnSpecificChain(engine: MagicBlockEngine, antePda: PublicKey, thisNework: string) {
+  const componentSnake = getComponentSnakeOnSpecificChain(engine, thisNework);
+  return componentSnake.account.snake.fetchNullable(antePda, "processed");
 }
-export async function anteroomFetchOnEphem(engine: MagicBlockEngine, antePda: PublicKey) {
-  const componentAnteroom = getComponentAnteroomOnEphem(engine);
-  return componentAnteroom.account.anteroom.fetchNullable(antePda, "processed"  );
+export async function snakeFetchOnEphem(engine: MagicBlockEngine, antePda: PublicKey) {
+  const componentSnake = getComponentSnakeOnEphem(engine);
+  return componentSnake.account.snake.fetchNullable(antePda, "processed"  );
 }
 
 export async function mapFetchOnChain(engine: MagicBlockEngine, mapPda: PublicKey) {

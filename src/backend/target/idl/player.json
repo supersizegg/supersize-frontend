@@ -2,7 +2,7 @@
   "address": "2ewyq31Atu7yLcYMg51CEa22HmcCSJwM4jjHH8kKVAJw",
   "metadata": {
     "name": "player",
-    "version": "0.2.0",
+    "version": "0.2.3",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -92,7 +92,19 @@
         },
         {
           "name": "component",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": []
+              },
+              {
+                "kind": "account",
+                "path": "entity"
+              }
+            ]
+          }
         },
         {
           "name": "component_program_data"
@@ -128,7 +140,19 @@
         },
         {
           "name": "data",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": []
+              },
+              {
+                "kind": "account",
+                "path": "entity"
+              }
+            ]
+          }
         },
         {
           "name": "entity"
@@ -346,6 +370,34 @@
       }
     },
     {
+      "name": "Circle",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "x",
+            "type": "u16"
+          },
+          {
+            "name": "y",
+            "type": "u16"
+          },
+          {
+            "name": "size",
+            "type": "u16"
+          },
+          {
+            "name": "radius",
+            "type": "u16"
+          },
+          {
+            "name": "speed",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
       "name": "Entity",
       "type": {
         "kind": "struct",
@@ -363,6 +415,10 @@
         "kind": "struct",
         "fields": [
           {
+            "name": "game_type",
+            "type": "string"
+          },
+          {
             "name": "name",
             "type": "string"
           },
@@ -379,26 +435,8 @@
             }
           },
           {
-            "name": "status",
-            "type": "string"
-          },
-          {
-            "name": "payout_token_account",
-            "type": {
-              "option": "pubkey"
-            }
-          },
-          {
-            "name": "current_game_wallet_balance",
+            "name": "buy_in",
             "type": "u64"
-          },
-          {
-            "name": "x",
-            "type": "u16"
-          },
-          {
-            "name": "y",
-            "type": "u16"
           },
           {
             "name": "target_x",
@@ -417,35 +455,33 @@
             "type": "u64"
           },
           {
-            "name": "mass",
-            "type": "u64"
-          },
-          {
-            "name": "food_eaten",
-            "type": "u64"
-          },
-          {
-            "name": "players_eaten",
-            "type": "u16"
-          },
-          {
-            "name": "speed",
-            "type": "f32"
-          },
-          {
             "name": "join_time",
             "type": "i64"
           },
           {
-            "name": "scheduled_removal_time",
+            "name": "cooldown_timer",
             "type": {
               "option": "i64"
             }
           },
           {
-            "name": "boost_click_time",
+            "name": "removal_time",
             "type": {
               "option": "i64"
+            }
+          },
+          {
+            "name": "exit_locked",
+            "type": "bool"
+          },
+          {
+            "name": "circles",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "Circle"
+                }
+              }
             }
           },
           {

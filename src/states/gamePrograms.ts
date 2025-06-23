@@ -2,88 +2,90 @@ import { PublicKey } from "@solana/web3.js";
 
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
 
-import { Anteroom } from "../backend/target/types/anteroom";
+import { Snake } from "../backend/target/types/snake";
 import { Map } from "../backend/target/types/map";
 import { Player } from "../backend/target/types/player";
 import { Section } from "../backend/target/types/section";
 
 import { BuyIn } from "../backend/target/types/buy_in";
-import { CashOut } from "../backend/target/types/cash_out";
+import { MoveSnake } from "../backend/target/types/move_snake";
 import { EatFood } from "../backend/target/types/eat_food";
-import { EatPlayer } from "../backend/target/types/eat_player";
+import { EatBlob } from "../backend/target/types/eat_blob";
 import { ExitGame } from "../backend/target/types/exit_game";
-import { InitAnteroom } from "../backend/target/types/init_anteroom";
+import { InitSnake } from "../backend/target/types/init_snake";
 import { InitMap } from "../backend/target/types/init_map";
 import { InitPlayer } from "../backend/target/types/init_player";
 import { InitSection } from "../backend/target/types/init_section";
-import { Movement } from "../backend/target/types/movement";
+import { MoveBlob } from "../backend/target/types/move_blob";
 import { SpawnFood } from "../backend/target/types/spawn_food";
-import { SpawnPlayer } from "../backend/target/types/spawn_player";
+import { SplitBlob } from "../backend/target/types/split_blob";
+import { KillSnake } from "../backend/target/types/kill_snake";
 
-import * as AnteroomIdl from "../backend/target/idl/anteroom.json";
+import * as SnakeIdl from "../backend/target/idl/snake.json";
 import * as MapIdl from "../backend/target/idl/map.json";
 import * as PlayerIdl from "../backend/target/idl/player.json";
 import * as SectionIdl from "../backend/target/idl/section.json";
 
 import * as BuyInIdl from "../backend/target/idl/buy_in.json";
-import * as CashOutIdl from "../backend/target/idl/cash_out.json";
+import * as MoveSnakeIdl from "../backend/target/idl/move_snake.json";
 import * as EatFoodIdl from "../backend/target/idl/eat_food.json";
-import * as EatPlayerIdl from "../backend/target/idl/eat_player.json";
+import * as EatBlobIdl from "../backend/target/idl/eat_blob.json";
 import * as ExitGameIdl from "../backend/target/idl/exit_game.json";
-import * as InitAnteroomIdl from "../backend/target/idl/init_anteroom.json";
+import * as InitSnakeIdl from "../backend/target/idl/init_snake.json";
 import * as InitMapIdl from "../backend/target/idl/init_map.json";
 import * as InitPlayerIdl from "../backend/target/idl/init_player.json";
 import * as InitSectionIdl from "../backend/target/idl/init_section.json";
-import * as MovementIdl from "../backend/target/idl/movement.json";
+import * as MoveBlobIdl from "../backend/target/idl/move_blob.json";
 import * as SpawnFoodIdl from "../backend/target/idl/spawn_food.json";
-import * as SpawnPlayerIdl from "../backend/target/idl/spawn_player.json";
+import * as SplitBlobIdl from "../backend/target/idl/split_blob.json";
+import * as KillSnakeIdl from "../backend/target/idl/kill_snake.json";
 
-const componentAnteroom = AnteroomIdl as Anteroom;
+const componentSnake = SnakeIdl as Snake;
 const componentMap = MapIdl as Map;
 const componentPlayer = PlayerIdl as Player;
 const componentSection = SectionIdl as Section;
 
 const systemBuyIn = BuyInIdl as BuyIn;
-const systemCashOut = CashOutIdl as CashOut;
+const systemMoveSnake = MoveSnakeIdl as MoveSnake;
 const systemEatFood = EatFoodIdl as EatFood;
-const systemEatPlayer = EatPlayerIdl as EatPlayer;
+const systemEatBlob = EatBlobIdl as EatBlob;
 const systemExitGame = ExitGameIdl as ExitGame;
-const systemInitAnteroom = InitAnteroomIdl as InitAnteroom;
+const systemInitSnake = InitSnakeIdl as InitSnake;
 const systemInitMap = InitMapIdl as InitMap;
 const systemInitPlayer = InitPlayerIdl as InitPlayer;
 const systemInitSection = InitSectionIdl as InitSection;
-const systemMovement = MovementIdl as Movement;
+const systemMoveBlob = MoveBlobIdl as MoveBlob;
 const systemSpawnFood = SpawnFoodIdl as SpawnFood;
-const systemSpawnPlayer = SpawnPlayerIdl as SpawnPlayer;
+const systemSplitBlob = SplitBlobIdl as SplitBlob;
 
-export const COMPONENT_ANTEROOM_ID = new PublicKey(componentAnteroom.address);
+export const COMPONENT_SNAKE_ID = new PublicKey(componentSnake.address);
 export const COMPONENT_MAP_ID = new PublicKey(componentMap.address);
 export const COMPONENT_PLAYER_ID = new PublicKey(componentPlayer.address);
 export const COMPONENT_SECTION_ID = new PublicKey(componentSection.address);
 
 export const SYSTEM_BUY_IN_ID = new PublicKey(systemBuyIn.address);
-export const SYSTEM_CASH_OUT_ID = new PublicKey(systemCashOut.address);
+export const SYSTEM_MOVE_SNAKE_ID = new PublicKey(systemMoveSnake.address);
 export const SYSTEM_EAT_FOOD_ID = new PublicKey(systemEatFood.address);
-export const SYSTEM_EAT_PLAYER_ID = new PublicKey(systemEatPlayer.address);
+export const SYSTEM_EAT_BLOB_ID = new PublicKey(systemEatBlob.address);
 export const SYSTEM_EXIT_GAME_ID = new PublicKey(systemExitGame.address);
-export const SYSTEM_INIT_ANTEROOM_ID = new PublicKey(systemInitAnteroom.address);
+export const SYSTEM_INIT_SNAKE_ID = new PublicKey(systemInitSnake.address);
 export const SYSTEM_INIT_MAP_ID = new PublicKey(systemInitMap.address);
 export const SYSTEM_INIT_PLAYER_ID = new PublicKey(systemInitPlayer.address);
 export const SYSTEM_INIT_SECTION_ID = new PublicKey(systemInitSection.address);
-export const SYSTEM_MOVEMENT_ID = new PublicKey(systemMovement.address);
+export const SYSTEM_MOVE_BLOB_ID = new PublicKey(systemMoveBlob.address);
 export const SYSTEM_SPAWN_FOOD_ID = new PublicKey(systemSpawnFood.address);
-export const SYSTEM_SPAWN_PLAYER_ID = new PublicKey(systemSpawnPlayer.address);
+export const SYSTEM_SPLIT_BLOB_ID = new PublicKey(systemSplitBlob.address);
 
-export function getComponentAnteroomOnChain(engine: MagicBlockEngine) {
-  return engine.getProgramOnChain<Anteroom>(componentAnteroom);
+export function getComponentSnakeOnChain(engine: MagicBlockEngine) {
+  return engine.getProgramOnChain<Snake>(componentSnake);
 }
 
-export function getComponentAnteroomOnSpecificChain(engine: MagicBlockEngine, thisNework: string) {
-  return engine.getProgramOnSpecificChain<Anteroom>(componentAnteroom, thisNework);
+export function getComponentSnakeOnSpecificChain(engine: MagicBlockEngine, thisNework: string) {
+  return engine.getProgramOnSpecificChain<Snake>(componentSnake, thisNework);
 }
 
-export function getComponentAnteroomOnEphem(engine: MagicBlockEngine) {
-  return engine.getProgramOnEphem<Anteroom>(componentAnteroom);
+export function getComponentSnakeOnEphem(engine: MagicBlockEngine) {
+  return engine.getProgramOnEphem<Snake>(componentSnake);
 }
 
 export function getComponentMapOnChain(engine: MagicBlockEngine) {

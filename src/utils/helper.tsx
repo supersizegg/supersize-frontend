@@ -1,5 +1,5 @@
 import React from "react";
-import { API_BASE_URL, cachedTokenMetadata, endpoints, NETWORK, options, RPC_CONNECTION } from "@utils/constants";
+import { API_BASE_URL, cachedTokenMetadata, endpoints, NETWORK, OPPONENT_COLORS, options, RPC_CONNECTION } from "@utils/constants";
 import { ActiveGame, Blob } from "@utils/types";
 import { PublicKey, Keypair, LAMPORTS_PER_SOL, Connection } from "@solana/web3.js";
 import * as crypto from "crypto-js";
@@ -9,17 +9,15 @@ import { playerFetchOnChain,
   playerFetchOnSpecificEphem, 
   playerFetchOnSpecificChain,
   mapFetchOnSpecificEphem, 
-  anteroomFetchOnChain, 
-  anteroomFetchOnSpecificChain,
   mapFetchOnChain } from "@states/gameFetch";
 import { playerFetchOnEphem } from "@states/gameFetch";
 import { FindEntityPda, FindWorldPda } from "@magicblock-labs/bolt-sdk";
-import { COMPONENT_ANTEROOM_ID, COMPONENT_MAP_ID, COMPONENT_PLAYER_ID } from "@states/gamePrograms";
+import { COMPONENT_MAP_ID, COMPONENT_PLAYER_ID } from "@states/gamePrograms";
 import { FindComponentPda } from "@magicblock-labs/bolt-sdk";
 import { BN } from "@coral-xyz/anchor";
 import { HELIUS_API_KEY } from "@utils/constants";
 import { getAccount, NATIVE_MINT } from "@solana/spl-token";
-import { Anteroom } from "@utils/types";
+import { Circle } from "./types";
 
 export function getCustomErrorCode(error: any): number | undefined {
   let parsed: any = error;
@@ -128,6 +126,22 @@ export const getRoundedAmount = (amount: number, foodUnitValue: number): string 
   });
 };
 
+export function hashCode(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return Math.abs(hash);
+}
+
+export function getOpponentColor(authority: PublicKey | null, name: string): string {
+  const identifier = authority ? authority.toString() : name;
+  const index = hashCode(identifier) % OPPONENT_COLORS.length;
+  //console.log("id", authority ? authority.toString() : name, OPPONENT_COLORS[index])
+
+  return OPPONENT_COLORS[index];
+}
+
 export const calculateK = (z: number, epsilon: number): number => {
   const numerator = epsilon / (100.0 - 0.6);
   const logValue = Math.log(numerator);
@@ -142,8 +156,7 @@ export const calculateY = (x: number, k: number): number => {
 
 export const getMaxPlayers = (size: number): number => {
   if (size === 4000) return 10;
-  if (size === 6000) return 20;
-  if (size === 8000) return 40;
+  if (size === 10000) return 100;
   return 0;
 }
 
@@ -403,6 +416,25 @@ export const getSectionIndex = (x: number, y: number, mapSize: number, duplicate
   return baseIndex + (duplicateEncodings - 1) * mapSectionCount;
 };
 
+export function averageCircleCoordinates(circles: Circle[]): { avgX: number; avgY: number } {
+  const n = circles.length;
+  if (n === 0) {
+    return {avgX: 0, avgY: 0}; 
+  }
+
+  let sumX = 0;
+  let sumY = 0;
+  for (const circle of circles) {
+    sumX += circle.x;
+    sumY += circle.y;
+  }
+
+  return {
+    avgX: sumX / n,
+    avgY: sumY / n,
+  };
+}
+
 export const getClampedFoodPosition = (
   player_x: number,
   player_y: number,
@@ -430,17 +462,21 @@ export const getClampedFoodPosition = (
 
 export const checkPlayerDistances = (
   visiblePlayers: Blob[],
-  currentPlayer: Blob,
+  currentPlayer: Circle[],
 ) => {
-  if (currentPlayer?.radius && currentPlayer?.authority) {
-    const left = currentPlayer.x - currentPlayer.radius * 2;
-    const right = currentPlayer.x + currentPlayer.radius * 2;
-    const top = currentPlayer.y - currentPlayer.radius * 2;
-    const bottom = currentPlayer.y + currentPlayer.radius * 2;
+  for (const player of currentPlayer) {
+    if (player?.radius) { // && player?.authority
+      const left = player.x - player.radius * 2;
+      const right = player.x + player.radius * 2;
+      const top = player.y - player.radius * 2;
+      const bottom = player.y + player.radius * 2;
 
-    for (const player of visiblePlayers) {
-      if (player.x >= left && player.x <= right && player.y >= top && player.y <= bottom) {
-        return player.authority;
+      for (const player2 of visiblePlayers) {
+        for (const circle of player2.circles) {
+          if (circle.x >= left && circle.x <= right && circle.y >= top && circle.y <= bottom) {
+            return player2.authority;
+          }
+        }
       }
     }
   }
@@ -453,30 +489,26 @@ export const findListIndex = (pubkey: PublicKey, players: Blob[]): number | null
 };
 
 export const decodeFood = (data: Uint8Array) => {
-  if (!(data instanceof Uint8Array) || data.length !== 4) {
+  if (!(data instanceof Uint8Array) || data.byteLength !== 4) {
     throw new Error("Invalid food data format. Expected a Uint8Array of length 4.");
   }
-  const buffer = data.buffer;
-  const packed = new DataView(buffer).getUint32(data.byteOffset, true); // Little-endian
-  const x = packed & 0x1FFF;          // 13 bits
-  const y = (packed >> 13) & 0x1FFF;  // 13 bits
-  const food_value = (packed >> 26) & 0x07;  // 3 bits
-  const food_multiple_encoded = (packed >> 29) & 0x07;  // 3 bits
-  const food_multiple_map = [0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
-  const food_multiple = food_multiple_map[food_multiple_encoded];
+  // Create a DataView over exactly these 4 bytes
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  const packed = view.getUint32(0, true); // Little-endian
 
-  return { x, y, food_value, food_multiple };
+  const x = packed & 0x3FFF;
+  const y = (packed >>> 14) & 0x3FFF;
+  const food_value = (packed >>> 28) & 0x0F;
+
+  return { x, y, food_value };
 };
 
 export function isPlayerStatus(
   result:
     | {
         playerStatus: string;
-        need_to_delegate: boolean;
-        need_to_undelegate: boolean;
         newplayerEntityPda: PublicKey;
         activeplayers: number;
-        max_players: number;
       }
     | "error",
 ) {
@@ -496,16 +528,11 @@ export const updatePlayerInfo = async (
   playerStatus: string,
   newPlayerEntityPda: PublicKey,
   activeplayers: number,
-  need_to_delegate: boolean,
-  need_to_undelegate: boolean,
   thisEndpoint: string,
 ): Promise<{
-  playerStatus: string,
   activeplayers: number,
-  need_to_delegate: boolean,
-  need_to_undelegate: boolean,
   newPlayerEntityPda: PublicKey,
-  max_players: number,
+  playerStatus: string,
 }> => {
   let network = getNetwork(thisEndpoint)
   const result = await getMyPlayerStatus(
@@ -526,11 +553,8 @@ export const updatePlayerInfo = async (
       }
     } else {
       activeplayers = result.activeplayers;
-      need_to_delegate = result.need_to_delegate;
-      need_to_undelegate = result.need_to_undelegate;
       newPlayerEntityPda = result.newplayerEntityPda;
       playerStatus = result.playerStatus;
-      max_players = result.max_players;
     }
   } else {
     console.error("Error fetching player status");
@@ -538,10 +562,7 @@ export const updatePlayerInfo = async (
   return {
     playerStatus: playerStatus,
     activeplayers: activeplayers,
-    need_to_delegate: need_to_delegate,
-    need_to_undelegate: need_to_undelegate,
     newPlayerEntityPda: newPlayerEntityPda,
-    max_players: max_players,
   }
 }
 
@@ -550,7 +571,7 @@ export const getGameData = async (
   worldId: BN,
   thisEndpoint: string,
   gameInfo: ActiveGame,
-): Promise<{gameInfo: ActiveGame, anteroomData: Anteroom | null}> => {
+): Promise<{gameInfo: ActiveGame}> => {
   const mapEntityPda = FindEntityPda({
     worldId: worldId,
     entityId: new anchor.BN(0),
@@ -560,56 +581,46 @@ export const getGameData = async (
     componentId: COMPONENT_MAP_ID,
     entity: mapEntityPda,
   });
-  const anteseed = "ante";
-  const anteEntityPda = FindEntityPda({
-    worldId: worldId,
-    entityId: new anchor.BN(0),
-    seed: stringToUint8Array(anteseed),
-  });
-  const anteComponentPda = FindComponentPda({
-    componentId: COMPONENT_ANTEROOM_ID,
-    entity: anteEntityPda,
-  });
   let network = getNetwork(thisEndpoint)
 
   let mapParsedDataPromise = mapFetchOnChain(engine, mapComponentPda);
   if(thisEndpoint !== ""){
     mapParsedDataPromise = mapFetchOnSpecificEphem(engine, mapComponentPda, thisEndpoint);
   }
-  const [mapParsedData, anteParsedData] = await Promise.all([
-    mapParsedDataPromise,
-    anteroomFetchOnSpecificChain(engine, anteComponentPda, network)
-  ]);
+  const mapParsedData = await mapFetchOnChain(engine, mapComponentPda);
 
-  if (! mapParsedData) { return {gameInfo, anteroomData: null}; }
+  if (! mapParsedData) { return {gameInfo}; }
   gameInfo.endpoint = thisEndpoint;
   gameInfo.name = mapParsedData.name;
-  gameInfo.max_players = mapParsedData.maxPlayers;
-  gameInfo.size = mapParsedData.width;
+  gameInfo.max_players = 100;
+  gameInfo.size = 10000;
   gameInfo.buy_in = mapParsedData.buyIn.toNumber();
   gameInfo.isLoaded = true;
-  let anteroomData: Anteroom = {buyIn: 0, token: new PublicKey(0), tokenDecimals: 0, vaultTokenAccount: new PublicKey(0), gamemasterTokenAccount: new PublicKey(0), totalActiveBuyins: 0};
-  let mint_of_token_being_sent = new PublicKey(0);
-  if (anteParsedData && anteParsedData.token && anteParsedData.vaultTokenAccount && anteParsedData.gamemasterTokenAccount) {
-    anteroomData.buyIn = anteParsedData.buyIn.toNumber();
-    anteroomData.token = anteParsedData.token;
-    anteroomData.tokenDecimals = anteParsedData.tokenDecimals;
-    anteroomData.vaultTokenAccount = anteParsedData.vaultTokenAccount;
-    anteroomData.gamemasterTokenAccount = anteParsedData.gamemasterTokenAccount;
-    anteroomData.totalActiveBuyins = anteParsedData.totalActiveBuyins.toNumber();
-    gameInfo.decimals = anteParsedData.tokenDecimals;
-    mint_of_token_being_sent = anteParsedData.token;
+  gameInfo.active_players = mapParsedData.activePlayers;
+
+  if (mapParsedData.token) {
+    gameInfo.tokenMint = mapParsedData.token;
+
+    const connection = new Connection(RPC_CONNECTION[NETWORK]);
+    const mintInfo = await connection.getParsedAccountInfo(mapParsedData.token);
+    if (mintInfo.value && "parsed" in mintInfo.value.data) {
+      gameInfo.decimals = mintInfo.value.data.parsed.info.decimals;
+    } else {
+      throw new Error("Invalid token mint info.");
+    }
+
     try {
-      const { name, image } = await fetchTokenMetadata(mint_of_token_being_sent.toString(), network);
+      const { name, image } = await fetchTokenMetadata(mapParsedData.token.toString(), network);
       gameInfo.image = image;
       gameInfo.token = name;
-      gameInfo.tokenMint = mint_of_token_being_sent;
     } catch (error) {
       console.error("Error fetching token data:", error);
     }
+  } else {
+    console.warn("Token mint is null; skipping token-related setup");
   }
   
-  return {gameInfo, anteroomData};
+  return {gameInfo};
 }
 
 export const getMyPlayerStatus = async (
@@ -620,23 +631,23 @@ export const getMyPlayerStatus = async (
   network: string,
 ): Promise<
   | {
-      playerStatus: string;
-      need_to_delegate: boolean;
-      need_to_undelegate: boolean;
       newplayerEntityPda: PublicKey;
       activeplayers: number;
-      max_players: number;
+      playerStatus: string;
     }
   | "error"
 > => {
   const playerEntityPdas: PublicKey[] = [];
   let newplayerEntityPda: PublicKey | null = null;
   let playerStatus = "new_player";
-  let need_to_undelegate = false;
-  let need_to_delegate = false;
   let activeplayers = 0;
   let max_players = maxplayer;
-  const fetchPromises = [];
+  const fetchPromises: Array<Promise<{
+    playersComponentPda: PublicKey;
+    playersacc: any;
+    playersParsedDataER: any;
+    playerEntityPda: PublicKey;
+  }>> = [];
   for (let i = 1; i < maxplayer + 1; i++) {
     const playerentityseed = "player" + i.toString();
     const playerEntityPda = FindEntityPda({
@@ -651,15 +662,14 @@ export const getMyPlayerStatus = async (
       entity: playerEntityPda,
     });
     
+    let playersacc = playerFetchOnSpecificEphem(engine, playersComponentPda, endpoint);
     fetchPromises.push(
       Promise.all([
         engine.getChainAccountInfoProcessed(playersComponentPda, network),
-        playerFetchOnSpecificChain(engine, playersComponentPda, network),
         playerFetchOnSpecificEphem(engine, playersComponentPda, endpoint),
-      ]).then(([playersacc, playersParsedData, playersParsedDataER]) => ({
+      ]).then(([playersacc, playersParsedDataER]) => ({
         playersComponentPda,
         playersacc,
-        playersParsedData,
         playersParsedDataER,
         playerEntityPda,
       })),
@@ -667,96 +677,43 @@ export const getMyPlayerStatus = async (
   }
 
   const results = await Promise.all(fetchPromises);
-  for (const { playersComponentPda, playersacc, playersParsedData, playersParsedDataER, playerEntityPda } of results) {
-    if (!playersacc || !playersParsedData) {
+  for (const { playersComponentPda, playersacc, playersParsedDataER, playerEntityPda } of results) {
+    if (!playersacc) {
       continue;
     }
 
     if (playersacc.owner.toString() === "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh") {
       if ( playersParsedDataER) {
         if(
-          playersParsedDataER.status == "in_game"
+          playersParsedDataER.score > 0
         ){
           activeplayers += 1;
-        }
-        if(
-          playersParsedDataER.status == "exited"
-        ){
-          max_players = max_players - 1;
         }
       }
       if(playersParsedDataER && playersParsedDataER.authority && (playersParsedDataER.authority.toString() == engine.getSessionPayer().toString())){
         newplayerEntityPda = playerEntityPda;
-        if(playersParsedDataER.status == "in_game"){
-          need_to_undelegate = false;
-          need_to_delegate = false;
-          playerStatus = "in_game";
-        }
-        if(playersParsedDataER.status == "exited"){
-          need_to_undelegate = true;
-          need_to_delegate = false;
-          playerStatus = "cashing_out";
-        }
+        playerStatus = "in_game";
       }else{
-        if(playersParsedDataER && (playersParsedDataER.status == "eaten" || playersParsedDataER.status == "ready") 
-          && newplayerEntityPda == null){
-          need_to_undelegate = true;
-          need_to_delegate = false;
+        if(playersParsedDataER && playersParsedDataER.score == 0 && newplayerEntityPda == null){
           newplayerEntityPda = playerEntityPda;
+          playerStatus = "new_player";
         }
       }
     } else {
-      if ( playersParsedData) {
-        if(
-          playersParsedData.status == "in_game"
-        ){
-          activeplayers += 1;
-        }
-        if(
-          playersParsedData.status == "exited"
-        ){
-          max_players = max_players - 1;
-        }
-      }
-      if(playersParsedData && playersParsedData.authority && (playersParsedData.authority.toString() == engine.getSessionPayer().toString())){
-        newplayerEntityPda = playerEntityPda;
-        if(playersParsedData.status == "in_game"){
-          need_to_undelegate = false;
-          need_to_delegate = true;
-          playerStatus = "in_game";
-        }
-        if(playersParsedData.status == "exited"){
-          need_to_undelegate = false;
-          need_to_delegate = false;
-          playerStatus = "cashing_out";
-        }
-      }else{
-        if(playersParsedData && (playersParsedData.status == "eaten" || playersParsedData.status == "ready")
-           && newplayerEntityPda == null){
-          need_to_undelegate = false;
-          need_to_delegate = false;
-          newplayerEntityPda = playerEntityPda;
-        }
-      }
+      console.log("player not delegated");
     }
   }
 
   if (newplayerEntityPda == null)
     return {
-      playerStatus: "error",
-      need_to_delegate: false,
-      need_to_undelegate: false,
       newplayerEntityPda: new PublicKey(0),
       activeplayers: activeplayers,
-      max_players: max_players,
+      playerStatus: "error",
     };
   return {
-    playerStatus: playerStatus,
-    need_to_delegate: need_to_delegate,
-    need_to_undelegate: need_to_undelegate,
     newplayerEntityPda: newplayerEntityPda,
     activeplayers: activeplayers,
-    max_players: max_players,
+    playerStatus: playerStatus,
   };
 };
 
@@ -793,26 +750,8 @@ export const fetchPlayers = async (engine: MagicBlockEngine, gameInfo: ActiveGam
       } 
       const playersParsedDataEphem = await playerFetchOnEphem(engine, playersComponentPda);
       const parsedData = await playerFetchOnChain(engine, playersComponentPda);
-      let playerWallet = "";
-      if(parsedData && parsedData.payoutTokenAccount) {
-        playerWallet = parsedData.payoutTokenAccount.toString();
-        try {
-          const tokenAccount = await getAccount(engine.getConnectionChain(), new PublicKey(parsedData.payoutTokenAccount.toString()));
-          playerWallet = tokenAccount.owner.toString();
-        } catch (error) {
-          console.log("Error getting token account:", error);
-        }
-      }
-      let playerWalletEphem = "";
-      if(playersParsedDataEphem && playersParsedDataEphem.payoutTokenAccount) {
-        playerWalletEphem = playersParsedDataEphem.payoutTokenAccount.toString();
-        try {
-          const tokenAccount = await getAccount(engine.getConnectionChain(), new PublicKey(playersParsedDataEphem.payoutTokenAccount.toString()));
-          playerWalletEphem = tokenAccount.owner.toString();
-        } catch (error) {
-          console.log("Error getting token account:", error);
-        }
-      }
+      let playerWallet = "TODO";
+      let playerWalletEphem = "TODO";
 
       return {
         seed: playerSeed,
@@ -862,9 +801,9 @@ export const fetchGames = async (engine: MagicBlockEngine, myGames: ActiveGame[]
               worldId: worldId.worldId,
               worldPda,
               name: mapParsedData.name,
-              active_players: 0,
-              max_players: mapParsedData.maxPlayers,
-              size: mapParsedData.width,
+              active_players: mapParsedData.activePlayers,
+              max_players: 100,
+              size: mapParsedData.size,
               image: "",
               token: "",
               buy_in: mapParsedData.buyIn.toNumber(),

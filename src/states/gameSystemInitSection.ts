@@ -32,5 +32,5 @@ export async function gameSystemInitSection(
     },
   });
 
-  return await engine.processSessionEphemTransaction("initsection:" + newsectionPda, initSection.transaction);
+  return await engine.processSessionEphemTransactionHard("initsection:" + newsectionPda, initSection.transaction);
 }

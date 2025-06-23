@@ -6,12 +6,13 @@ import {
   COMPONENT_PLAYER_ID,
   COMPONENT_MAP_ID,
   SYSTEM_EAT_FOOD_ID,
-  SYSTEM_EAT_PLAYER_ID,
+  SYSTEM_EAT_BLOB_ID,
   COMPONENT_SECTION_ID,
-  SYSTEM_MOVEMENT_ID,
+  SYSTEM_MOVE_BLOB_ID,
+  SYSTEM_SPLIT_BLOB_ID,
 } from "./gamePrograms";
 import { ActiveGame, Blob } from "@utils/types";
-import { getSectionIndex, checkPlayerDistances, findListIndex, getClampedFoodPosition } from "@utils/helper";
+import { getSectionIndex, averageCircleCoordinates, checkPlayerDistances, findListIndex, getClampedFoodPosition } from "@utils/helper";
 
 export async function gameSystemMove(
   engine: MagicBlockEngine,
@@ -30,6 +31,7 @@ export async function gameSystemMove(
   screenSize: { width: number; height: number },
 ) {
   try {
+
     const newX = Math.max(
       0,
       Math.min(screenSize.width, Math.floor(currentPlayer.x + mousePositionX - window.innerWidth / 2)),
@@ -40,14 +42,8 @@ export async function gameSystemMove(
     );
 
     const alltransaction = new anchor.web3.Transaction();
-
-    const currentSection: number[] = [];  
-    for (let i = 1; i < 3; i++) { 
-      const currentSectionA = getSectionIndex(currentPlayer.x, currentPlayer.y, gameInfo.size, i);
-      currentSection.push(currentSectionA);
-    }
-    for (const section_index of currentSection) {
-      const eatFoodTx = await ApplySystem({
+    if(isMouseDown) {
+      const splitBlob = await ApplySystem({
         authority: engine.getSessionPayer(),
         world: gameInfo.worldPda,
         entities: [
@@ -56,23 +52,20 @@ export async function gameSystemMove(
             components: [{ componentId: COMPONENT_PLAYER_ID }],
           },
           {
-            entity: foodEntities[section_index],
-            components: [{ componentId: COMPONENT_SECTION_ID }],
-          },
-          {
             entity: entityMatch,
             components: [{ componentId: COMPONENT_MAP_ID }],
           },
         ],
-        systemId: SYSTEM_EAT_FOOD_ID,
+        systemId: SYSTEM_SPLIT_BLOB_ID,
         args: {
           timestamp: performance.now(),
         },
       });
-      alltransaction.add(eatFoodTx.transaction);
+
+      alltransaction.add(splitBlob.transaction);
     }
 
-    const playerstoeat = checkPlayerDistances(players, currentPlayer);
+    const playerstoeat = checkPlayerDistances(players, currentPlayer.circles); //should return index of player to eat
     if (playerstoeat) {
       const playersListIndex = findListIndex(playerstoeat, allplayers);
       if (playersListIndex != null) {
@@ -93,7 +86,7 @@ export async function gameSystemMove(
               components: [{ componentId: COMPONENT_MAP_ID }],
             },
           ],
-          systemId: SYSTEM_EAT_PLAYER_ID,
+          systemId: SYSTEM_EAT_BLOB_ID,
           args: {
             timestamp: performance.now(),
           },
@@ -103,16 +96,31 @@ export async function gameSystemMove(
       }
     }
 
-    const { food_x, food_y } = getClampedFoodPosition(
-      currentPlayer.x,
-      currentPlayer.y,
-      newX,
-      newY,
-      currentPlayer.radius,
-      gameInfo.size,
-      gameInfo.size,
-    );
-    const targetSectionBoosting = getSectionIndex(food_x, food_y, gameInfo.size, 2);
+    //index should be selected blob index
+    for (let i = 0; i < currentPlayer.circles.length; i++) {
+      const currentSection = getSectionIndex(currentPlayer.circles[i].x, currentPlayer.circles[i].y, gameInfo.size, 1);
+      const eatFoodTx = await ApplySystem({
+        authority: engine.getSessionPayer(),
+        world: gameInfo.worldPda,
+        entities: [
+          {
+            entity: currentPlayerEntity,
+            components: [{ componentId: COMPONENT_PLAYER_ID }],
+          },
+          {
+            entity: foodEntities[currentSection],
+            components: [{ componentId: COMPONENT_SECTION_ID }],
+          },
+        ],
+        systemId: SYSTEM_EAT_FOOD_ID,
+        args: {
+          index: i,
+          timestamp: performance.now(),
+        },
+      });
+      alltransaction.add(eatFoodTx.transaction);
+    }
+    
     const makeMove = await ApplySystem({
       authority: engine.getSessionPayer(),
       world: gameInfo.worldPda,
@@ -122,19 +130,14 @@ export async function gameSystemMove(
           components: [{ componentId: COMPONENT_PLAYER_ID }],
         },
         {
-          entity: foodEntities[targetSectionBoosting],
-          components: [{ componentId: COMPONENT_SECTION_ID }],
-        },
-        {
           entity: entityMatch,
           components: [{ componentId: COMPONENT_MAP_ID }],
         },
       ],
-      systemId: SYSTEM_MOVEMENT_ID,
+      systemId: SYSTEM_MOVE_BLOB_ID,
       args: {
         x: newX,
         y: newY,
-        boost: isMouseDown,
         timestamp: performance.now(),
       },
     });

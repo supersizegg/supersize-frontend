@@ -1,74 +1,7 @@
 import React, { useEffect, useRef } from "react";
-import { PublicKey } from "@solana/web3.js";
-import BN from "bn.js";
-
-const OPPONENT_COLORS = [
-  "#1abc9c",
-  "#2ecc71",
-  "#3498db",
-  "#9b59b6",
-  "#34495e",
-  "#16a085",
-  "#27ae60",
-  "#2980b9",
-  "#8e44ad",
-  "#2c3e50",
-  "#f1c40f",
-  "#e67e22",
-  "#e74c3c",
-  "#ecf0f1",
-  "#95a5a6",
-  "#f39c12",
-  "#d35400",
-  "#c0392b",
-  "#bdc3c7",
-  "#7f8c8d",
-];
-
-const FOOD_COLORS = [
-  "#12F194", // Green
-  "#27D7A2",
-  "#3DB7B5",
-  "#579BCB",
-  "#6C7BDE",
-  "#825AF0",
-  "#9A47FF", // Purple
-];
-
-function hashCode(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return Math.abs(hash);
-}
-
-function getOpponentColor(blob: Blob): string {
-  const identifier = blob.authority ? blob.authority.toString() : blob.name;
-  const index = hashCode(identifier) % OPPONENT_COLORS.length;
-  return OPPONENT_COLORS[index];
-}
-
-interface Blob {
-  name: string;
-  authority: PublicKey | null;
-  x: number;
-  y: number;
-  radius: number;
-  mass: number;
-  score: number;
-  speed: number;
-  removal: BN;
-  target_x: number;
-  target_y: number;
-}
-
-interface Food {
-  x: number;
-  y: number;
-  food_value: number;
-  food_multiple: number;
-}
+import { FOOD_COLORS } from "@utils/constants";
+import { getOpponentColor } from "@utils/helper";
+import { Blob, Food, Circle } from "@utils/types";
 
 interface GameComponentProps {
   players: Blob[];
@@ -76,7 +9,8 @@ interface GameComponentProps {
   currentPlayer: Blob | null;
   screenSize: { width: number; height: number };
   gameSize: number;
-  newTarget: { x: number; y: number; boost: boolean };
+  buyIn: number;
+  newTarget: { x: number; y: number; };
 }
 
 const SMOOTHING_FACTOR = 0.1;
@@ -87,9 +21,11 @@ const GameComponent: React.FC<GameComponentProps> = ({
   currentPlayer,
   screenSize,
   gameSize,
+  buyIn,
   newTarget,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const gameSizeRef = useRef(gameSize);
   const foodRef = useRef(visibleFood);
   const newTargetRef = useRef(newTarget);
 
@@ -105,6 +41,10 @@ const GameComponent: React.FC<GameComponentProps> = ({
   const playersRef = useRef<Blob[]>([]);
   const previousPlayersRef = useRef<Blob[]>(playersRef.current);
   const playersOnchainRef = useRef<Blob[]>([]);
+
+  useEffect(() => {
+    gameSizeRef.current = gameSize;
+  }, [gameSize]);
 
   useEffect(() => {
     foodRef.current = visibleFood;
@@ -132,11 +72,17 @@ const GameComponent: React.FC<GameComponentProps> = ({
     
     playersRef.current.forEach(existingPlayer => {
       const updatedPlayer = players.find(player => player.authority?.toString() === existingPlayer.authority?.toString());
-      if (updatedPlayer) {
-        existingPlayer.radius = updatedPlayer.radius;
+      if (updatedPlayer && updatedPlayer.circles.length > 0) {
+        if(existingPlayer.circles.length != updatedPlayer.circles.length) {
+          existingPlayer.circles = updatedPlayer.circles.map(c => ({ ...c }));
+        }
+        existingPlayer.circles.forEach((circle, index) => {
+          circle.radius = updatedPlayer.circles[index].radius;
+          circle.speed = updatedPlayer.circles[index].speed;
+        });
         existingPlayer.target_x = updatedPlayer.target_x;
         existingPlayer.target_y = updatedPlayer.target_y;
-        existingPlayer.speed = updatedPlayer.speed;
+        existingPlayer.score = updatedPlayer.score;
       }
     }); 
   }, [players]);
@@ -146,57 +92,117 @@ const GameComponent: React.FC<GameComponentProps> = ({
     if (currentPlayerRef.current == null) {
       currentPlayerRef.current = currentPlayer;
     }
-    if (currentPlayerRef.current && currentPlayer) {
-      currentPlayerRef.current.radius = currentPlayer.radius;
-      currentPlayerRef.current.speed = currentPlayer.speed;
+    if(currentPlayerRef.current && currentPlayer &&
+      currentPlayerRef.current.circles.length != currentPlayer.circles.length) {
+      currentPlayerRef.current.circles = currentPlayer.circles.map(c => ({ ...c }));
+    }
+    if (currentPlayerRef.current && currentPlayer && currentPlayer.circles.length > 0) {
+      currentPlayerRef.current.circles.forEach((circle, index) => {
+        circle.radius = currentPlayer.circles[index].radius;
+        circle.speed = currentPlayer.circles[index].speed;
+      });
       currentPlayerRef.current.target_x = currentPlayer.target_x;
       currentPlayerRef.current.target_y = currentPlayer.target_y;
+      currentPlayerRef.current.score = currentPlayer.score;
     }
     foodRef.current = visibleFood;
   }, [currentPlayer]);
 
-  const updatePlayerPosition = (player: Blob, target_x: number, target_y: number, boost: boolean) => {
-    const player_x = player.x;
-    const player_y = player.y;
-
-    const dx = target_x - player_x;
-    const dy = target_y - player_y;
-    const deg = Math.atan2(dy, dx);
-
-    let effective_mass = 100.0;
-    let true_mass = player.mass;
-    if (true_mass > 100.0) {
-      effective_mass = true_mass;
-    }
-    let slow_down = 1.0;
-    if (player.speed <= 6.25) {
-      slow_down = Math.log(effective_mass / 10) / 1.504 - 0.531;
-    }
-
-    let scale_up = 3.0;
-    if (true_mass < 100.0) {
-      scale_up = -0.01 * true_mass + 4.0;
-    }
-    /*
-    if (boost) {
-      if (player.mass > 100.0) {
-        let boosted_speed = 12.0;
-        if (true_mass > 100.0) {
-          boosted_speed = -0.00008 * true_mass + 12.0;
+  const updatePlayerPositionImmutable = (
+    player: Blob,
+    target_x: number,
+    target_y: number,
+    gameSize: number
+  ): Blob => {
+    // build a new circles array
+    const newCircles = player.circles.map(circle => {
+      // copy fields first
+      const { x: player_x, y: player_y, speed, size } = circle;
+      const player_speed = speed * 0.1;
+      const dx = target_x - player_x;
+      const dy = target_y - player_y;
+      const deg = Math.atan2(dy, dx);
+  
+      // compute slow_down safely
+      let slow_down = 1.0;
+      if (player_speed <= 6.3) {
+        const ratio = size / 10;
+        if (ratio > 0) {
+          const val = Math.log(ratio) / 1.504 - 0.531;
+          slow_down = Math.max(val, 0.1); // clamp to avoid zero/negative
         }
-        player.speed = boosted_speed;
       }
+      let delta_x = (player_speed * Math.cos(deg)) / slow_down;
+      let delta_y = (player_speed * Math.sin(deg)) / slow_down;
+  
+      let newX = player_x + delta_x;
+      let newY = player_y + delta_y;
+      // round if you need integer positions
+      newX = Math.round(newX);
+      newY = Math.round(newY);
+      // clamp to bounds
+      newX = Math.max(0, Math.min(newX, gameSize));
+      newY = Math.max(0, Math.min(newY, gameSize));
+  
+      return {
+        ...circle,
+        x: newX,
+        y: newY,
+      };
+    });
+  
+    // compute new center
+    const x_sum = newCircles.reduce((sum, c) => sum + c.x, 0);
+    const y_sum = newCircles.reduce((sum, c) => sum + c.y, 0);
+    const avgX = x_sum / newCircles.length;
+    const avgY = y_sum / newCircles.length;
+  
+    return {
+      ...player,
+      circles: newCircles,
+      x: avgX,
+      y: avgY,
+    };
+  };
+
+  const updatePlayerPosition = (player: Blob, target_x: number, target_y: number) => {
+    let x_sum = 0;
+    let y_sum = 0;
+
+    for (let i = 0; i < player.circles.length; i++) {
+      const circle = player.circles[i];
+      const player_x = circle.x;
+      const player_y = circle.y;
+      const player_speed = circle.speed * 0.1;
+
+      const dx = target_x - player_x;
+      const dy = target_y - player_y;
+      const deg = Math.atan2(dy, dx);
+
+      let effective_mass = circle.size;
+      let slow_down = 1.0;
+      if (player_speed <= 6.3) {
+        slow_down = Math.log(effective_mass / 10) / 1.504 - 0.531;
+      }
+
+      const delta_y = (player_speed * Math.sin(deg)) / slow_down;
+      const delta_x = (player_speed * Math.cos(deg)) / slow_down;
+
+      circle.y = Math.round(player_y + delta_y);
+      circle.x = Math.round(player_x + delta_x);
+
+      circle.y = Math.max(0, Math.min(circle.y, gameSize));
+      circle.x = Math.max(0, Math.min(circle.x, gameSize));
+
+      x_sum += circle.x;
+      y_sum += circle.y;
+
+      player.circles[i].x = circle.x;
+      player.circles[i].y = circle.y;
     }
-    */
 
-    const delta_y = (player.speed * scale_up * Math.sin(deg)) / slow_down;
-    const delta_x = (player.speed * scale_up * Math.cos(deg)) / slow_down;
-
-    player.y = Math.round(player_y + delta_y);
-    player.x = Math.round(player_x + delta_x);
-
-    player.y = Math.max(0, Math.min(player.y, gameSize));
-    player.x = Math.max(0, Math.min(player.x, gameSize));
+    player.x =  x_sum / player.circles.length;
+    player.y =  y_sum / player.circles.length;
 
     return player;
   };
@@ -209,34 +215,52 @@ const GameComponent: React.FC<GameComponentProps> = ({
 
     while (accumulator.current >= timeStep) {
       if (currentPlayerRef.current) {
-        previousPlayerPos.current = { ...currentPlayerRef.current };
-        currentPlayerRef.current = updatePlayerPosition(
+       // previousPlayerPos.current = { ...currentPlayerRef.current };
+        previousPlayerPos.current = {
+          ...currentPlayerRef.current,
+          circles: currentPlayerRef.current.circles.map(c => ({ ...c })),
+        };
+        currentPlayerRef.current = updatePlayerPositionImmutable(
           currentPlayerRef.current,
           newTargetRef.current.x,
           newTargetRef.current.y,
-          newTargetRef.current.boost,
+          gameSizeRef.current
           //currentPlayerRef.current.target_x,
           //currentPlayerRef.current.target_y,
           //currentPlayerRef.current.speed > 6.25,
         );
       }
+
       if (playersRef.current) {
-        previousPlayersRef.current = playersRef.current.map(player => ({ ...player }));
+        //previousPlayersRef.current = playersRef.current.map(player => ({ ...player }));
+        previousPlayersRef.current = playersRef.current.map(player => ({
+          ...player,
+          circles: player.circles.map(circle => ({ ...circle }))
+        }));
         playersRef.current = playersRef.current.map(existingPlayer => 
-            updatePlayerPosition(
+            updatePlayerPositionImmutable(
               existingPlayer,
               existingPlayer.target_x,
               existingPlayer.target_y,
-              existingPlayer.speed > 6.25,
+              gameSizeRef.current
             )
         );
       }
+      
       if (currentPlayerRef.current && currentPlayerOnchainRef.current) {
         currentPlayerRef.current.x +=
           SMOOTHING_FACTOR * (currentPlayerOnchainRef.current.x - currentPlayerRef.current.x);
         currentPlayerRef.current.y +=
           SMOOTHING_FACTOR * (currentPlayerOnchainRef.current.y - currentPlayerRef.current.y);
+
+        currentPlayerRef.current.circles.forEach((circle, index) => {
+          if(currentPlayerOnchainRef.current && currentPlayerOnchainRef.current.circles[index]) {
+            circle.x += SMOOTHING_FACTOR * (currentPlayerOnchainRef.current.circles[index].x - circle.x);
+            circle.y += SMOOTHING_FACTOR * (currentPlayerOnchainRef.current.circles[index].y - circle.y);
+          }
+        });
       }
+        
 
       if(playersRef.current) {
         playersRef.current.forEach(existingPlayer => {
@@ -244,10 +268,18 @@ const GameComponent: React.FC<GameComponentProps> = ({
           if (updatedPlayer) {
             existingPlayer.x += SMOOTHING_FACTOR * (updatedPlayer.x - existingPlayer.x);
             existingPlayer.y += SMOOTHING_FACTOR * (updatedPlayer.y - existingPlayer.y);
+
+            existingPlayer.circles.forEach((circle, index) => {
+              if(updatedPlayer && updatedPlayer.circles[index]) {
+                circle.x += SMOOTHING_FACTOR * (updatedPlayer.circles[index].x - circle.x);
+                circle.y += SMOOTHING_FACTOR * (updatedPlayer.circles[index].y - circle.y);
+              }
+            });
           }
       }); 
       } 
       
+
       accumulator.current -= timeStep;
     }
 
@@ -273,28 +305,55 @@ const GameComponent: React.FC<GameComponentProps> = ({
 
           const interpolatedX = prevPos.x + (currPos.x - prevPos.x) * alpha;
           const interpolatedY = prevPos.y + (currPos.y - prevPos.y) * alpha;
-
+          let interpolatedCircles : Circle[] = currPos.circles;          
+          if(prevPos.circles.length == currPos.circles.length) {
+            interpolatedCircles = prevPos.circles.map((circle, index) => {
+              return {
+                ...circle,
+                x: circle.x + (currPos.circles[index].x - circle.x) * alpha,
+                y: circle.y + (currPos.circles[index].y - circle.y) * alpha,
+              };
+            });
+          }
           drawBackground(ctx, { x: interpolatedX, y: interpolatedY }, screenSize);
-
+          
           playersRef.current.forEach((blob, index) => {
 
             const prevBlob = previousPlayersRef.current[index] || blob;
             const interpolatedBlobX = prevBlob.x + (blob.x - prevBlob.x) * alpha;
             const interpolatedBlobY = prevBlob.y + (blob.y - prevBlob.y) * alpha;
-
+            let interpolatedBlobCircles : Circle[] = blob.circles;
+            if(prevBlob.circles.length == blob.circles.length) {
+              interpolatedBlobCircles = prevBlob.circles.map((circle, index) => {
+                return {
+                  ...circle,
+                  x: circle.x + (blob.circles[index].x - circle.x) * alpha,
+                  y: circle.y + (blob.circles[index].y - circle.y) * alpha,
+                };
+              });
+            }
+  
             const adjustedX =
               interpolatedBlobX - interpolatedX + screenSize.width / 2;
             const adjustedY =
               interpolatedBlobY - interpolatedY + screenSize.height / 2;
-
+            const adjustedCircles = interpolatedBlobCircles.map((circle, index) => {
+              return {
+                ...circle,
+                x: circle.x - interpolatedX + screenSize.width / 2,
+                y: circle.y - interpolatedY + screenSize.height / 2,
+              };
+            });
+            
             if (currentPlayerRef.current) {
               drawOpponentPlayer(
                 ctx,
-                { ...blob, x: adjustedX, y: adjustedY },
+                { ...blob, x: adjustedX, y: adjustedY, circles: adjustedCircles },
+                currentPlayerRef.current.score
               );
             }
           });
-
+          
           foodRef.current.forEach((food) => {
             drawFood(ctx, {
               ...food,
@@ -311,10 +370,11 @@ const GameComponent: React.FC<GameComponentProps> = ({
 
           drawMyPlayer(
             ctx,
-            { ...centeredPlayer, x: centeredPlayer.x, y: centeredPlayer.y },
-            { ...currentPlayerRef.current, x: interpolatedX, y: interpolatedY },
+            { ...centeredPlayer, x: centeredPlayer.x, y: centeredPlayer.y, circles: centeredPlayer.circles },
+            { ...currentPlayerRef.current, x: interpolatedX, y: interpolatedY, circles: interpolatedCircles },
+            buyIn
           );
-          drawBorder(ctx, { ...currentPlayerRef.current, x: interpolatedX, y: interpolatedY }, screenSize, gameSize);
+          drawBorder(ctx, { ...currentPlayerRef.current, x: interpolatedX, y: interpolatedY }, screenSize, gameSizeRef.current);
         }
       }
     }
@@ -327,162 +387,92 @@ const GameComponent: React.FC<GameComponentProps> = ({
     });
   }, []);
 
-  const drawMouth = (ctx: CanvasRenderingContext2D, blob: Blob, isSmiling: boolean = true) => {
-    const mouthWidth = blob.radius * 0.5;
-    const mouthYOffset = blob.radius * 0.3;
-    const mouthHeight = blob.radius * 0.1;
+  const drawMouth = (ctx: CanvasRenderingContext2D, circle_x: number, circle_y: number, circle_radius: number, isSmiling: boolean = true) => {
+    const mouthWidth = circle_radius * 0.5;
+    const mouthYOffset = circle_radius * 0.3;
+    const mouthHeight = circle_radius * 0.1;
 
-    const startX = blob.x - mouthWidth;
-    const startY = blob.y + mouthYOffset;
-    const endX = blob.x + mouthWidth;
+    const startX = circle_x - mouthWidth;
+    const startY = circle_y + mouthYOffset;
+    const endX = circle_x + mouthWidth;
     const endY = startY;
 
     const controlY = isSmiling ? startY + mouthHeight : startY - mouthHeight;
 
     ctx.beginPath();
     ctx.moveTo(startX, startY);
-    ctx.quadraticCurveTo(blob.x, controlY, endX, endY);
+    ctx.quadraticCurveTo(circle_x, controlY, endX, endY);
     ctx.strokeStyle = "black";
     ctx.lineWidth = 2;
     ctx.stroke();
   };
 
-  const drawOpponentPlayer = (ctx: CanvasRenderingContext2D, blob: Blob) => {
+  const drawOpponentPlayer = (ctx: CanvasRenderingContext2D, blob: Blob, myPlayerScore: number) => {
+    for (const circle of blob.circles) {
+      const circle_x = circle.x;
+      const circle_y = circle.y;
 
-    const dx = blob.target_x - blob.x;
-    const dy = blob.target_y - blob.y;
-    const angle = Math.atan2(dy, dx);
+      const color = getOpponentColor(blob.authority, blob.name);
 
-    const color = getOpponentColor(blob);
+      const time = performance.now() / 1000;
+      const pulse = 10 + 10 * Math.abs(Math.sin(time * 2));
 
-    const time = performance.now() / 1000;
-    const pulse = 10 + 10 * Math.abs(Math.sin(time * 2));
+      ctx.save();
 
-    ctx.save();
+      ctx.shadowBlur = pulse;
+      ctx.shadowColor = color;
 
-    ctx.shadowBlur = pulse;
-    ctx.shadowColor = color;
+      ctx.beginPath();
+      ctx.arc(circle_x, circle_y, circle.radius, 0, 2 * Math.PI);
+      ctx.fillStyle = color;
+      ctx.fill();
 
-    ctx.beginPath();
-    ctx.arc(blob.x, blob.y, blob.radius, 0, 2 * Math.PI);
-    ctx.fillStyle = color;
-    ctx.fill();
-
-    const eyeballRadius = blob.radius * 0.2;
-    const pupilRadius = blob.radius * 0.08;
-    const eyeSeparation = blob.radius * 0.4;
-    const eyeVerticalOffset = blob.radius * 0.2;
-    const maxPupilOffset = eyeballRadius - pupilRadius;
-    const pupilDx = Math.cos(angle) * maxPupilOffset;
-    const pupilDy = Math.sin(angle) * maxPupilOffset;
-
-    const leftEyeX = blob.x - eyeSeparation;
-    const leftEyeY = blob.y - eyeVerticalOffset;
-    ctx.beginPath();
-    ctx.arc(leftEyeX, leftEyeY, eyeballRadius, 0, 2 * Math.PI);
-    ctx.fillStyle = "white";
-    ctx.fill();
-    ctx.strokeStyle = "black";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(leftEyeX + pupilDx, leftEyeY + pupilDy, pupilRadius, 0, 2 * Math.PI);
-    ctx.fillStyle = "black";
-    ctx.fill();
-
-    const rightEyeX = blob.x + eyeSeparation;
-    const rightEyeY = blob.y - eyeVerticalOffset;
-    ctx.beginPath();
-    ctx.arc(rightEyeX, rightEyeY, eyeballRadius, 0, 2 * Math.PI);
-    ctx.fillStyle = "white";
-    ctx.fill();
-    ctx.strokeStyle = "black";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(rightEyeX + pupilDx, rightEyeY + pupilDy, pupilRadius, 0, 2 * Math.PI);
-    ctx.fillStyle = "black";
-    ctx.fill();
-
-    drawMouth(ctx, blob, false);
+      // Render the blob's name and dollar signs 10px above the player circle
+      ctx.fillStyle = color;
+      ctx.font = "24px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(`${blob.name}`, circle_x, circle_y - circle.radius - 20);
+    }
 
     ctx.restore();
   };
 
-  const drawMyPlayer = (ctx: CanvasRenderingContext2D, blob: Blob, currentblob: Blob) => {
-    const dx = newTargetRef.current.x - currentblob.x;
-    const dy = newTargetRef.current.y - currentblob.y;
-    const angle = Math.atan2(dy, dx);
+  const drawMyPlayer = (ctx: CanvasRenderingContext2D, blob: Blob, currentblob: Blob, buyIn: number) => {
+    for (const circle of currentblob.circles) {
+      const circle_x = circle.x - currentblob.x + screenSize.width / 2;
+      const circle_y = circle.y - currentblob.y + screenSize.height / 2;
 
-    const color = getOpponentColor(blob);
+      const color = getOpponentColor(blob.authority, blob.name);
 
-    const time = performance.now() / 1000;
-    const pulse = 10 + 10 * Math.abs(Math.sin(time * 2));
+      const time = performance.now() / 1000;
+      const pulse = 10 + 10 * Math.abs(Math.sin(time * 2));
 
-    ctx.save();
+      ctx.save();
 
-    ctx.shadowBlur = pulse;
-    ctx.shadowColor = color;
+      ctx.shadowBlur = pulse;
+      ctx.shadowColor = color;
 
-    ctx.beginPath();
-    ctx.arc(blob.x, blob.y, blob.radius, 0, 2 * Math.PI);
-    ctx.fillStyle = color;
-    ctx.fill();
+      ctx.beginPath();
+      ctx.arc(circle_x, circle_y, circle.radius, 0, 2 * Math.PI);
+      ctx.fillStyle = color;
+      ctx.fill();
 
-    const eyeballRadius = blob.radius * 0.2;
-    const pupilRadius = blob.radius * 0.08;
-    const eyeSeparation = blob.radius * 0.4;
-    const eyeVerticalOffset = blob.radius * 0.2;
-    const maxPupilOffset = eyeballRadius - pupilRadius;
-
-    const pupilDx = Math.cos(angle) * maxPupilOffset;
-    const pupilDy = Math.sin(angle) * maxPupilOffset;
-
-    const leftEyeX = blob.x - eyeSeparation;
-    const leftEyeY = blob.y - eyeVerticalOffset;
-
-    ctx.beginPath();
-    ctx.arc(leftEyeX, leftEyeY, eyeballRadius, 0, 2 * Math.PI);
-    ctx.fillStyle = "white";
-    ctx.fill();
-    ctx.strokeStyle = "black";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(leftEyeX + pupilDx, leftEyeY + pupilDy, pupilRadius, 0, 2 * Math.PI);
-    ctx.fillStyle = "black";
-    ctx.fill();
-
-    const rightEyeX = blob.x + eyeSeparation;
-    const rightEyeY = blob.y - eyeVerticalOffset;
-
-    ctx.beginPath();
-    ctx.arc(rightEyeX, rightEyeY, eyeballRadius, 0, 2 * Math.PI);
-    ctx.fillStyle = "white";
-    ctx.fill();
-    ctx.strokeStyle = "black";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(rightEyeX + pupilDx, rightEyeY + pupilDy, pupilRadius, 0, 2 * Math.PI);
-    ctx.fillStyle = "black";
-    ctx.fill();
-
-    drawMouth(ctx, blob, true);
+      // Render the blob's name and dollar signs 10px above the player circle
+      ctx.fillStyle = color;
+      ctx.font = "24px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(`${blob.name}`, circle_x, circle_y - circle.radius - 20);
+    }
   };
 
   const drawFood = (ctx: CanvasRenderingContext2D, food: Food) => {
     let diameter = 20;
     let color;
-    if (food.food_multiple == 7.0) {
+    if (food.food_value >= 10.0) {
       color = "#FFD700";
       ctx.shadowBlur = 30;
       ctx.shadowColor = "rgba(255, 215, 0, 1.0)";
-      diameter = 20 + 3 * food.food_value;
+      diameter = 3 * food.food_value;
     } else {
       const index = Math.max(0, Math.min(FOOD_COLORS.length - 1, food.food_value - 1));
       color = FOOD_COLORS[index];

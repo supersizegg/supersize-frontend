@@ -31,5 +31,5 @@ export async function gameSystemExit(
     },
   });
 
-  return await engine.processSessionEphemTransaction("exit:" + currentPlayerEntity, applySystem.transaction);
+  return await engine.processSessionEphemTransactionNoConfirm("exit:" + currentPlayerEntity, applySystem.transaction);
 }

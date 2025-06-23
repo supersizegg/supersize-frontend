@@ -18,13 +18,12 @@ import {
 } from "@magicblock-labs/bolt-sdk";
 import { getAssociatedTokenAddress, createAssociatedTokenAccountInstruction } from "@solana/spl-token";
 import { stringToUint8Array, getTopLeftCorner } from "@utils/helper";
-import { COMPONENT_ANTEROOM_ID, COMPONENT_MAP_ID, COMPONENT_PLAYER_ID, COMPONENT_SECTION_ID } from "./gamePrograms";
+import { COMPONENT_MAP_ID, COMPONENT_PLAYER_ID, COMPONENT_SECTION_ID } from "./gamePrograms";
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
 import { executeStep } from "../utils/helper";
 import { gameSystemInitSection } from "./gameSystemInitSection";
 import { gameSystemInitMap } from "./gameSystemInitMap";
 import { gameSystemInitPlayer } from "./gameSystemInitPlayer";
-import { gameSystemInitAnteroom } from "./gameSystemInitAnteroom";
 
 export const CONFIG = {
   computeUnitLimit: 200_000,
@@ -41,7 +40,7 @@ export interface GameContext {
   mapEntityPda: PublicKey;
   foodEntityPdas: PublicKey[];
   playerEntityPdas: PublicKey[];
-  anteroomEntityPda: PublicKey;
+  playersComponentPdas: PublicKey[];
   foodComponentPdas: PublicKey[];
   gameParams: { maxplayer: number; foodcomponents: number; cost: number };
   base_buyin: number;
@@ -247,42 +246,6 @@ export async function stepCreatePlayerEntities(
   );
 }
 
-// 6) Create the anteroom entity
-export async function stepCreateAnteroom(
-  context: GameContext,
-  setTransactions: React.Dispatch<React.SetStateAction<{ id: string; status: string }[]>>,
-  showPrompt: (errorMessage: string) => Promise<boolean>,
-) {
-  const anteroomTxnId = "create-anteroom";
-  await executeStep(
-    anteroomTxnId,
-    async () => {
-      const anteroomSeed = "ante";
-      const anteroomEntityPda = FindEntityPda({
-        worldId: context.world.worldId,
-        entityId: new anchor.BN(0),
-        seed: stringToUint8Array(anteroomSeed),
-      });
-      context.anteroomEntityPda = anteroomEntityPda;
-      const anteroomAddIx = await createAddEntityInstruction(
-        {
-          payer: context.engine.getSessionPayer(),
-          world: context.world.worldPda,
-          entity: anteroomEntityPda,
-        },
-        { extraSeed: stringToUint8Array(anteroomSeed) },
-      );
-      const anteroomTx = new Transaction()
-        .add(anteroomAddIx)
-        .add(ComputeBudgetProgram.setComputeUnitLimit({ units: CONFIG.computeUnitLimit }))
-        .add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1 }));
-      await context.engine.processSessionChainTransaction(anteroomTxnId, anteroomTx);
-    },
-    setTransactions,
-    showPrompt,
-  );
-}
-
 // 7) Initialize the map component
 export async function stepInitMapComponent(
   context: GameContext,
@@ -355,6 +318,7 @@ export async function stepInitPlayerComponents(
   await executeStep(
     initPlayerComponentTxnId,
     async () => {
+      context.playersComponentPdas = [];
       for (let i = 0; i < context.playerEntityPdas.length; i += CONFIG.defaultBatchSize) {
         const batch = context.playerEntityPdas.slice(i, i + CONFIG.defaultBatchSize);
         const tx = new Transaction();
@@ -365,6 +329,7 @@ export async function stepInitPlayerComponents(
             componentId: COMPONENT_PLAYER_ID,
           });
           tx.add(initPlayerComponent.transaction);
+          context.playersComponentPdas.push(initPlayerComponent.componentPda);
         });
         await Promise.all(initComponentPromises);
         tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 }));
@@ -372,33 +337,6 @@ export async function stepInitPlayerComponents(
         await context.engine.processSessionChainTransaction(initPlayerComponentTxnId, tx);
         console.log(`Initialized player components batch.`);
       }
-    },
-    setTransactions,
-    showPrompt,
-  );
-}
-
-// 10) Initialize the anteroom component
-export async function stepInitAnteroomComponent(
-  context: GameContext,
-  setTransactions: React.Dispatch<React.SetStateAction<{ id: string; status: string }[]>>,
-  showPrompt: (errorMessage: string) => Promise<boolean>,
-) {
-  const initAnteroomComponentTxnId = "init-anteroom-component";
-  await executeStep(
-    initAnteroomComponentTxnId,
-    async () => {
-      const initAnteIx = await InitializeComponent({
-        payer: context.engine.getSessionPayer(),
-        entity: context.anteroomEntityPda,
-        componentId: COMPONENT_ANTEROOM_ID,
-      });
-      const initAnteTx = new Transaction()
-        .add(initAnteIx.transaction)
-        .add(ComputeBudgetProgram.setComputeUnitLimit({ units: 50_000 }))
-        .add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1 }));
-      await context.engine.processSessionChainTransaction(initAnteroomComponentTxnId, initAnteTx);
-      console.log(`Initialized anteroom component.`);
     },
     setTransactions,
     showPrompt,
@@ -448,7 +386,6 @@ export async function stepSetupVault(
 export async function stepInitializeGame(
   context: GameContext,
   game_name: string,
-  game_size: number,
   buy_in: number,
   mint_of_token: string,
   decimals: number,
@@ -464,65 +401,11 @@ export async function stepInitializeGame(
         context.world.worldPda,
         context.mapEntityPda,
         game_name,
-        game_size,
         buy_in,
         mint_of_token,
         decimals,
       );
       console.log(`Game initialized with signature: ${initGameSig}`);
-    },
-    setTransactions,
-    showPrompt,
-  );
-}
-
-// 13) Initialize players
-export async function stepInitPlayers(
-  context: GameContext,
-  setTransactions: React.Dispatch<React.SetStateAction<{ id: string; status: string }[]>>,
-  showPrompt: (errorMessage: string) => Promise<boolean>,
-) {
-  const initPlayersTxnId = "init-players";
-  await executeStep(
-    initPlayersTxnId,
-    async () => {
-      // For each player entity, call your game system init player.
-      for (let i = 0; i < context.playerEntityPdas.length; i++) {
-        const initPlayerSig = await gameSystemInitPlayer(
-          context.engine,
-          context.world.worldPda,
-          context.playerEntityPdas[i],
-          context.mapEntityPda,
-        );
-        console.log(`Initialized player with signature: ${initPlayerSig}`);
-      }
-    },
-    setTransactions,
-    showPrompt,
-  );
-}
-
-// 14) Initialize the anteroom
-export async function stepInitAnteroom(
-  context: GameContext,
-  tokenVault: PublicKey,
-  owner_token_account: PublicKey,
-  setTransactions: React.Dispatch<React.SetStateAction<{ id: string; status: string }[]>>,
-  showPrompt: (errorMessage: string) => Promise<boolean>,
-) {
-  const initAnteroomTxnId = "init-anteroom";
-  await executeStep(
-    initAnteroomTxnId,
-    async () => {
-      const initAnteroomSig = await gameSystemInitAnteroom(
-        context.engine,
-        context.world.worldPda,
-        context.anteroomEntityPda,
-        context.mapEntityPda,
-        tokenVault,
-        owner_token_account,
-      );
-      console.log(`Initialized anteroom with signature: ${initAnteroomSig}`);
     },
     setTransactions,
     showPrompt,
@@ -555,6 +438,50 @@ export async function stepDelegateMap(
         .add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1 }));
       const delSig = await context.engine.processSessionChainTransaction(delegateMapTxnId, maptx);
       console.log(`Delegated map component: ${delSig}`);
+    },
+    setTransactions,
+    showPrompt,
+  );
+}
+
+// 16) Delegate food components
+export async function stepDelegatePlayers(
+  context: GameContext,
+  setTransactions: React.Dispatch<React.SetStateAction<{ id: string; status: string }[]>>,
+  showPrompt: (errorMessage: string) => Promise<boolean>,
+) {
+  const delegatePlayersTxnId = "delegate-players";
+  await executeStep(
+    delegatePlayersTxnId,
+    async () => {
+      const delbatchSize = 1; //3
+      for (let i = 0; i < context.playerEntityPdas.length; i += delbatchSize) {
+        const tx = new Transaction();
+        const batch = context.playerEntityPdas.slice(i, i + delbatchSize);
+        const delegatePromises = batch.map(async (playerEntityPda, index) => {
+          return createDelegateInstruction({
+            entity: playerEntityPda,
+            account: context.playersComponentPdas[i + index],
+            ownerProgram: COMPONENT_PLAYER_ID,
+            payer: context.engine.getSessionPayer(),
+          });
+        });
+        const instructions = await Promise.all(delegatePromises);
+        instructions.forEach((instruction) => tx.add(instruction));
+        tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 }));
+        tx.add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1 }));
+        try {
+          const delSig = await context.engine.processSessionChainTransaction(delegatePlayersTxnId, tx);
+          console.log(`Delegated players batch: ${delSig}`);
+        } catch (e) {
+          // @ts-ignore
+          if (e.message.includes("ExternalAccountLamportSpend")) {
+            console.log(e);
+          } else {
+            throw e;
+          }
+        }
+      }
     },
     setTransactions,
     showPrompt,
@@ -598,6 +525,32 @@ export async function stepDelegateFood(
             throw e;
           }
         }
+      }
+    },
+    setTransactions,
+    showPrompt,
+  );
+}
+
+// 17) Initialize players
+export async function stepInitPlayers(
+  context: GameContext,
+  setTransactions: React.Dispatch<React.SetStateAction<{ id: string; status: string }[]>>,
+  showPrompt: (errorMessage: string) => Promise<boolean>,
+) {
+  const initPlayersTxnId = "init-players";
+  await executeStep(
+    initPlayersTxnId,
+    async () => {
+      // For each player entity, call your game system init player.
+      for (let i = 0; i < context.playerEntityPdas.length; i++) {
+        const initPlayerSig = await gameSystemInitPlayer(
+          context.engine,
+          context.world.worldPda,
+          context.playerEntityPdas[i],
+          context.mapEntityPda,
+        );
+        console.log(`Initialized player with signature: ${initPlayerSig}`);
       }
     },
     setTransactions,

@@ -13,13 +13,13 @@ import { gameSystemExit } from "../states/gameSystemExit";
 import { useMagicBlockEngine } from "../engine/MagicBlockEngineProvider";
 import { mapFetchOnEphem, playerFetchOnEphem } from "../states/gameFetch";
 import { subscribeToGame, updateLeaderboard, updateMyPlayer } from "../states/gameListen";
-import { gameSystemCashOut } from "../states/gameSystemCashOut";
 import { gameSystemMove } from "../states/gameSystemMove";
 import { gameSystemSpawnFood } from "../states/gameSystemSpawnFood";
 import { decodeFood, stringToUint8Array } from "@utils/helper";
 import { useSoundManager } from "../hooks/useSoundManager";
 
 import "./game.scss";
+import { averageCircleCoordinates } from "../utils/helper";
 
 type gameProps = {
   gameInfo: ActiveGame;
@@ -50,6 +50,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
   const playerRemovalTimeRef = useRef<BN | null>(null);
   const [playerExiting, setPlayerExiting] = useState(false);
   const [gameEnded, setGameEnded] = useState(0);
+  const [currentGameSize, setCurrentGameSize] = useState(gameInfo.size);
   const [cashoutTx, setCashoutTx] = useState<string | null>(null);
 
   const [leaderboard, setLeaderboard] = useState<Blob[]>([]);
@@ -61,13 +62,15 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
   const playersComponentSubscriptionId = useRef<number[] | null>([]);
   const foodComponentSubscriptionId = useRef<number[] | null>([]);
   const myplayerComponentSubscriptionId = useRef<number | null>(null);
+  const mapComponentSubscriptionId = useRef<number | null>(null);
 
   const currentPlayerRef = useRef<Blob | null>(null);
   const currentMousePositionRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const lastMousePosition = useRef({ x: 0, y: 0 });
-  const currentIsMouseDownRef = useRef<boolean>(false);
+  const currentIsSpaceDownRef = useRef<boolean>(false);
   const allplayersRef = useRef<Blob[]>([]);
   const playersRef = useRef<Blob[]>([]);
+  const currentGameSizeRef = useRef(gameInfo.size);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const { playBoostSound } = useSoundManager(soundEnabled);
 
@@ -82,7 +85,19 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
     currentPlayerRef.current = currentPlayer;
   }, [currentPlayer]);
 
-  const handleExitClick = () => {
+  useEffect(() => {
+    currentGameSizeRef.current = currentGameSize;
+  }, [currentGameSize])
+
+  const checkSuccessfulExit = async (myplayerComponent: PublicKey) => {
+    const playerData = await playerFetchOnEphem(engine, myplayerComponent);
+    if (playerData && playerData.circles.length == 0 && playerData.name == "exited") {
+      return true;
+    }
+    return false;
+  }
+
+  const handleExitClick = async () => {
     if (!currentPlayerEntity.current) {
       return;
     }
@@ -90,33 +105,19 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
       return;
     }
 
-    if (playerRemovalTimeRef.current !== null) {
-      const currentTime = Date.now();
-      const elapsedTime = currentTime - playerRemovalTimeRef.current.toNumber() * 1000;
-
-      if (elapsedTime > 10000 || elapsedTime < 5000) {
-        try {
-          gameSystemExit(engine, gameInfo, currentPlayerEntity.current, entityMatch.current);
-        } catch (error) {
-          console.log("error", error);
-        }
-      } else {
-        return;
-      }
-    }
-
-    countdown.current = 5;
     setPlayerExiting(true);
+    countdown.current = 5;
+    const myplayerComponent = FindComponentPda({
+      componentId: COMPONENT_PLAYER_ID,
+      entity: currentPlayerEntity.current,
+    });
+
     try {
       gameSystemExit(engine, gameInfo, currentPlayerEntity.current, entityMatch.current).then(async () => {
-        if (currentPlayerEntity.current) {
-          const myplayerComponent = FindComponentPda({
-            componentId: COMPONENT_PLAYER_ID,
-            entity: currentPlayerEntity.current,
-          });
+        if (currentPlayerEntity.current && currentPlayer) {
           const playerData = await playerFetchOnEphem(engine, myplayerComponent);
           if (playerData) {
-            updateMyPlayer(playerData, setCurrentPlayer, gameEnded, setGameEnded);
+            updateMyPlayer(playerData, currentPlayer, setCurrentPlayer, setGameEnded);
           }
         }
       });
@@ -124,12 +125,14 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
       console.log("error", error);
     }
 
-    const interval = setInterval(() => {
-      countdown.current = countdown.current - 1;
-    }, 1000);
+    //const interval = setInterval(() => {
+    //  countdown.current = countdown.current - 1;
+    //}, 1000);
 
     let startTime = Date.now();
+
     const checkRemovalTime = setInterval(() => {
+      console.log("checkRemovalTime", playerRemovalTimeRef.current);
       if (playerRemovalTimeRef.current && !playerRemovalTimeRef.current.isZero()) {
         startTime = playerRemovalTimeRef.current.toNumber() * 1000;
         clearInterval(checkRemovalTime);
@@ -139,8 +142,10 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
           }
           const currentTime = Date.now();
           const elapsedTime = currentTime - startTime;
+         //console.log("elapsedTime", elapsedTime);
+          countdown.current = Math.max(0, Math.floor(500 - elapsedTime / 10));
 
-          if (elapsedTime >= 6000) {
+          if (elapsedTime > 5000) {
             if (!currentPlayerEntity.current) {
               return;
             }
@@ -149,17 +154,23 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
             }
             console.log("5 seconds have passed");
             try {
-              gameSystemExit(engine, gameInfo, currentPlayerEntity.current, entityMatch.current);
+              gameSystemExit(engine, gameInfo, currentPlayerEntity.current, entityMatch.current).then((exitTx) => {
+                setCashoutTx(exitTx); 
+              });
             } catch (error) {
               console.log("error", error);
             }
-            clearInterval(timeoutinterval);
-            clearInterval(interval);
-            setPlayerExiting(false);
+            checkSuccessfulExit(myplayerComponent).then((success) => {
+              if (success) {
+                clearInterval(timeoutinterval);
+                setPlayerExiting(false);
+              }
+            });
+            //clearInterval(interval);
           } else {
             console.log("Waiting...", elapsedTime);
           }
-        }, 1000);
+        }, 100);
       }
     }, 100);
   };
@@ -183,16 +194,14 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
         entity: entityMatch.current,
       });
 
-      let newFood = { x: 0, y: 0, food_value: 0, food_multiple: 0 };
+      let newFood = { x: 0, y: 0, food_value: 0 };
       const mapParsedData = await mapFetchOnEphem(engine, mapComponent);
-      if (mapParsedData) {
-        console.log("mapParsedData", mapParsedData.walletBalance.toNumber());
-      }
-      if (mapParsedData && mapParsedData.nextFood) {
-        const foodDataArray = new Uint8Array(mapParsedData.nextFood.data);
-        const decodedFood = decodeFood(foodDataArray);
-        console.log("decodedFood", decodedFood);
-        newFood = { x: decodedFood.x, y: decodedFood.y, food_value: decodedFood.food_value, food_multiple: decodedFood.food_multiple };
+      //console.log("mapParsedData", mapParsedData);
+      if (mapParsedData && mapParsedData.nextFood.length > 0) {
+        //const foodDataArray = new Uint8Array(mapParsedData.nextFood[0].foodData);
+        //const decodedFood = decodeFood(foodDataArray);
+        //console.log("decodedFood", mapParsedData.nextFood[0]);
+        newFood = { x: mapParsedData.nextFood[0].x, y: mapParsedData.nextFood[0].y, food_value: mapParsedData.nextFood[0].foodValue };
       } 
 
       await gameSystemSpawnFood(
@@ -225,18 +234,15 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
     });
     const foodEntityPdas: PublicKey[] = [];
     let maxplayer = 10;
-    let foodcomponents = 32;
+    let foodcomponents = 100;
 
     if (gameInfo.size == 4000) {
       maxplayer = 10;
       foodcomponents = 16 * 2;
-    } else if (gameInfo.size == 6000) {
-      maxplayer = 20;
-      foodcomponents = 36 * 2;
-    } else if (gameInfo.size == 8000) {
-      maxplayer = 40;
-      foodcomponents = 64 * 2;
-    }
+    } else if (gameInfo.size == 10000) {
+      maxplayer = 100;
+      foodcomponents = 100;
+    } 
 
     for (let i = 1; i < foodcomponents + 1; i++) {
       const foodseed = "food" + i.toString();
@@ -267,22 +273,29 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
     const emptyPlayer: Blob = {
       name: "unnamed",
       authority: null,
-      x: 50000,
-      y: 50000,
-      radius: 0,
-      mass: 0,
       score: 0,
-      payoutTokenAccount: null,
-      speed: 0,
       removal: new BN(0),
+      x: 0,
+      y: 0,
       target_x: 0,
       target_y: 0,
+      circles: [],
       timestamp: 0,
     };
     setAllPlayers(new Array(playerEntityPdas.length).fill(emptyPlayer));
     setAllFood(new Array(foodEntityPdas.length).fill([]));
     setFoodListLen(new Array(foodEntityPdas.length).fill(0));
     if (!entityMatch.current || !currentPlayerEntity.current) return;
+    const mapComponent = FindComponentPda({
+      componentId: MAP_COMPONENT,
+      entity: entityMatch.current,
+    });
+    const mapData = mapFetchOnEphem(engine, mapComponent).then((mapData) => {
+      if (mapData) {
+        setCurrentGameSize(mapData.size);
+      }
+    });
+    
     subscribeToGame(
       engine,
       foodEntities.current,
@@ -290,84 +303,31 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
       entityMatch.current,
       currentPlayerEntity.current,
       emptyPlayer,
-      gameEnded,
       foodComponentSubscriptionId,
       playersComponentSubscriptionId,
       myplayerComponentSubscriptionId,
+      mapComponentSubscriptionId,
       setAllPlayers,
       setCurrentPlayer,
       setGameEnded,
       setAllFood,
       setFoodListLen,
+      setCurrentGameSize,
     );
   }, [gameInfo]);
 
   const endGame = async () => {
-    if (currentPlayer && Math.sqrt(currentPlayer.mass) == 0 && currentPlayerEntity.current && anteroomEntity.current) {
-      if (currentPlayer.score > 0) {
-        //gameended == 2
+    if (currentPlayer && currentPlayer.circles.length == 0 && currentPlayerEntity.current && anteroomEntity.current) {
         playersComponentSubscriptionId.current = [];
+        foodComponentSubscriptionId.current = [];
+        myplayerComponentSubscriptionId.current = null;
+        mapComponentSubscriptionId.current = null;
+        currentPlayerRef.current = null;
         entityMatch.current = null;
         foodEntities.current = [];
         playersRef.current = [];
         setAllFood([]);
         setFoodListLen([]);
-        try {
-          let isDevnet = endpoints["devnet"].indexOf(gameInfo.endpoint) >= 0;
-          const cashoutTx = await gameSystemCashOut(
-            engine,
-            gameInfo,
-            anteroomEntity.current,
-            currentPlayerEntity.current,
-            isDevnet || sessionWalletInUse,
-          );
-          console.log("cashoutTx", cashoutTx);
-          if (cashoutTx.success) {
-            let cashoutTxSignature = cashoutTx.transactionSignature;
-            if (cashoutTxSignature) {
-              setCashoutTx(cashoutTxSignature);
-            }
-            currentPlayerEntity.current = null;
-          } else {
-            setCashoutTx("error");
-          }
-        } catch (error) {
-          console.log("error", error);
-          setCashoutTx("error");
-        }
-      } else {
-        try {
-          const myplayerComponent = FindComponentPda({
-            componentId: COMPONENT_PLAYER_ID,
-            entity: currentPlayerEntity.current,
-          });
-
-          const undelegateIx = createUndelegateInstruction({
-            payer: engine.getSessionPayer(),
-            delegatedAccount: myplayerComponent,
-            componentPda: COMPONENT_PLAYER_ID,
-          });
-
-          const undeltx = new anchor.web3.Transaction().add(undelegateIx);
-          undeltx.recentBlockhash = (await engine.getConnectionEphem().getLatestBlockhash()).blockhash;
-          undeltx.feePayer = engine.getSessionPayer();
-          const playerundelsignature = await engine.processSessionEphemTransaction(
-            "undelPlayer:" + myplayerComponent.toString(),
-            undeltx,
-          );
-          console.log("undelegate", playerundelsignature);
-        } catch (error) {
-          console.log("error", error);
-        }
-
-        playersComponentSubscriptionId.current = [];
-        currentPlayerEntity.current = null;
-        entityMatch.current = null;
-        foodEntities.current = [];
-        playersRef.current = [];
-        setAllFood([]);
-        setFoodListLen([]);
-      }
     }
   };
 
@@ -386,7 +346,6 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
               x: foodItem.x,
               y: foodItem.y,
               food_value: foodItem.food_value,
-              food_multiple: foodItem.food_multiple,
             });
           }
           return innerAcc;
@@ -401,17 +360,17 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
       lastMousePosition.current = { x: event.clientX, y: event.clientY };
     };
 
-    const handleMouseDown = () => {
-      if (!exitHovered.current) {
-        currentIsMouseDownRef.current = true;
-        if (!gameEnded && soundEnabled) {
-          playBoostSound();
-        }
+    const handleSpaceDown = (event: KeyboardEvent) => {
+      if (event.code !== "Space") return;
+      currentIsSpaceDownRef.current = false;
+      if (!gameEnded && soundEnabled) {
+        playBoostSound();
       }
     };
 
-    const handleMouseUp = () => {
-      currentIsMouseDownRef.current = false;
+    const handleSpaceUp = (event: KeyboardEvent) => {
+      if (event.code !== "Space") return;
+      currentIsSpaceDownRef.current = true;
     };
 
     const handleResize = () => {
@@ -425,8 +384,8 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
     };
 
     console.log("Set mouse listeners");
-    window.addEventListener("mousedown", handleMouseDown);
-    window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("keydown", handleSpaceDown);
+    window.addEventListener("keyup", handleSpaceUp);
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("resize", handleResize);
 
@@ -434,8 +393,8 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
       console.log("Remove mouse listeners");
       window.removeEventListener("mousemove", handleMouseMove);
       cancelAnimationFrame(animationFrame.current);
-      window.removeEventListener("mousedown", handleMouseDown);
-      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("keydown", handleSpaceDown);
+      window.removeEventListener("keyup", handleSpaceUp);
       window.removeEventListener("resize", handleResize);
     };
   }, []);
@@ -464,7 +423,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
     if (currentPlayer) {
       const playersWithAuthority = allplayersRef.current.filter(
         (player) =>
-          player.authority !== null && player.x !== 50000 && player.y !== 50000 && Math.sqrt(player.mass) !== 0,
+          player.authority !== null && player.circles.length > 0,
       );
       updateLeaderboard(playersWithAuthority, setLeaderboard);
       const newVisiblePlayers: Blob[] = playersWithAuthority.reduce((accumulator: Blob[], playerx) => {
@@ -474,21 +433,17 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
             const halfHeight = screenSize.height / 2 + 100;
             const diffX = playerx.x - currentPlayer.x;
             const diffY = playerx.y - currentPlayer.y;
-
             if (Math.abs(diffX) <= halfWidth && Math.abs(diffY) <= halfHeight) {
               accumulator.push({
                 name: playerx.name,
                 authority: playerx.authority,
+                score: playerx.score,
+                removal: playerx.removal,
                 x: playerx.x,
                 y: playerx.y,
-                radius: 4 + Math.sqrt(playerx.mass) * 6,
-                mass: playerx.mass,
-                score: playerx.score,
-                payoutTokenAccount: playerx.payoutTokenAccount,
-                speed: playerx.speed,
-                removal: playerx.removal,
                 target_x: playerx.target_x,
                 target_y: playerx.target_y,
+                circles: playerx.circles,
                 timestamp: performance.now(),
               });
             }
@@ -532,24 +487,25 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
           foodListLen,
           currentMousePositionRef.current.x,
           currentMousePositionRef.current.y,
-          currentIsMouseDownRef.current,
-          { width: gameInfo.size, height: gameInfo.size },
+          currentIsSpaceDownRef.current,
+          { width: currentGameSizeRef.current, height: currentGameSizeRef.current },
         );
         const newX = Math.max(
           0,
           Math.min(
-            gameInfo.size,
+            currentGameSizeRef.current,
             Math.floor(currentPlayerRef.current.x + currentMousePositionRef.current.x - screenSize.width / 2),
           ),
         );
         const newY = Math.max(
           0,
           Math.min(
-            gameInfo.size,
+            currentGameSizeRef.current,
             Math.floor(currentPlayerRef.current.y + currentMousePositionRef.current.y - screenSize.height / 2),
           ),
         );
-        setTarget({ x: newX, y: newY, boost: currentIsMouseDownRef.current });
+        currentIsSpaceDownRef.current = false;
+        setTarget({ x: newX, y: newY, boost: currentIsSpaceDownRef.current });
       }
     }, 30); //testing 30-50
 
@@ -604,19 +560,19 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
         </button>
         {playerExiting && countdown.current > 0 && (
           <div className="text-[#f07171] font-[Terminus] text-xl text-right ml-2.5">
-            Disconnecting in {countdown.current} seconds
+            Disconnecting in {(countdown.current / 100).toFixed(2)} seconds
           </div>
         )}
-        {currentPlayer && currentPlayer.mass > 3700 && (
+        {currentPlayer && currentPlayer.score * 2500 / gameInfo.buy_in > 250000 && (
           <div className="text-[#ffa500] font-[Terminus] text-xl text-right ml-2.5 font-bold animate-pulse animate-glow">
             Approaching max size!!
           </div>
         )}
       </div>
 
-      <div className={`fixed bottom-0 left-0 m-2 z-[9999] text-white text-base font-[terminus] flex flex-col`}>
+      <div className={`fixed bottom-0 left-0 m-2 z-[9999] text-white text-base font-[terminus] flex flex-col text-xl`}>
         <div>
-          <span className="opacity-50">Your size: </span>
+          <span className="opacity-50">{gameInfo.token}: </span>
           <span className="opacity-100">
             {currentPlayer ? currentPlayer.score / 10 ** gameInfo.decimals : null}
           </span>
@@ -637,7 +593,8 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
           currentPlayer={currentPlayer}
           screenSize={screenSize}
           newTarget={target}
-          gameSize={gameInfo.size}
+          gameSize={currentGameSizeRef.current}
+          buyIn={gameInfo.buy_in}
         />
       </div>
 
@@ -655,33 +612,22 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
           </div>
         )}
 
-        {(gameEnded === 2 || gameEnded === 3) && (
+        {gameEnded === 2 && (
           <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-black z-[9999]">
             <div className="bg-black flex flex-col items-center justify-center select-text">
-              <p className=" p-0 m-1 text-center text-white text-xl inline">
-                Final score:{" "}
-                {currentPlayer ? currentPlayer.score / 10 ** gameInfo.decimals: ""}
-              </p>
-              <p className=" p-0 m-1 text-center text-white text-xl inline">
-                Exit tax:{" "}
-                {currentPlayer
-                  ? currentPlayer.score * 0.03 / 10 ** gameInfo.decimals 
-                  : ""}
-              </p>
-              <p className=" p-0 m-1 text-center text-white text-xl inline">
-                <b>
+              <p className=" p-0 m-1 text-center text-white inline">
+                <b className="text-[50px]">
                   Payout:{" "}
-                  {currentPlayer ? currentPlayer.score * 0.97 / 10 ** gameInfo.decimals : ""}
+                  {currentPlayer ? currentPlayer.score / 10 ** gameInfo.decimals : ""}
                 </b>
               </p>
               <div className="flex items-center justify-center" style={{ flexDirection: "column" }}>
                 <pre style={{ margin: "20px 0" }}>
-                  {cashoutTx !== null && cashoutTx !== "error" ? (
                     <>
                       ✅
                       <a
                         className=" p-0 m-1 text-center text-white text-xl inline"
-                        href={`https://explorer.solana.com/tx/${cashoutTx}?cluster=mainnet`}
+                        href={`https://explorer.solana.com/tx/${cashoutTx}?cluster=custom&customUrl=${gameInfo.endpoint}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{ textDecoration: "underline" }}
@@ -689,82 +635,16 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
                         Cashout transaction
                       </a>
                     </>
-                  ) : (
-                    <span className="warning-alert">Confirm the cashout TX in your wallet</span>
-                  )}
                 </pre>
-                {cashoutTx != null ? (
-                  cashoutTx == "error" && (
-                    <button
-                      className="w-full bg-white flex items-center justify-center h-[3em] rounded-[1em] border border-white text-black text-base cursor-pointer transition-all duration-300 z-[10] hover:bg-black hover:text-[#eee] hover:border-white"
-                      onClick={async () => {
-                        if (anteroomEntity.current && currentPlayerEntity.current && currentPlayer) {
-                          setCashoutTx(null);
-                          try {
-                            let isDevnet = endpoints["devnet"].indexOf(gameInfo.endpoint) >= 0;
-                            let cashouttx = await gameSystemCashOut(
-                              engine,
-                              gameInfo,
-                              anteroomEntity.current,
-                              currentPlayerEntity.current,
-                              isDevnet || sessionWalletInUse,
-                            );
-                            if (cashouttx.success) {
-                              let cashoutTxSignature = cashouttx.transactionSignature;
-                              if (cashoutTxSignature) {
-                                setCashoutTx(cashoutTxSignature);
-                              } else {
-                                setCashoutTx("error");
-                              }
-                            } else {
-                              setCashoutTx("error");
-                            }
-                          } catch (error) {
-                            console.log("Cashout error", error);
-                            setCashoutTx("error");
-                          }
-                        }
-                      }}
-                    >
-                      Retry
-                    </button>
-                  )
-                ) : (
-                  <svg
-                    className="inline ml-[5px] mt-[2px] h-[20px] w-[20px] stroke-[white]"
-                    width="52"
-                    height="52"
-                    viewBox="0 0 38 38"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <g fill="none" fillRule="evenodd">
-                      <g transform="translate(1 1)" strokeWidth="2">
-                        <circle strokeOpacity=".5" cx="18" cy="18" r="18" />
-                        <path d="M36 18c0-9.94-8.06-18-18-18">
-                          <animateTransform
-                            attributeName="transform"
-                            type="rotate"
-                            from="0 18 18"
-                            to="360 18 18"
-                            dur="1s"
-                            repeatCount="indefinite"
-                          />
-                        </path>
-                      </g>
-                    </g>
-                  </svg>
-                )}
               </div>
-              {cashoutTx !== null && cashoutTx !== "error" && (
-                <button id="returnButton" onClick={() => (window.location.href = "/")}>
-                  Return home
-                </button>
-              )}
+              <button id="returnButton" onClick={() => (window.location.href = "/")}>
+                Return home
+              </button>
             </div>
           </div>
         )}
 
-        {gameEnded === 4 && (
+        {gameEnded === 3 && (
           <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-black z-[9999]">
             <div className="bg-black flex flex-col items-center justify-center select-text">
               <p className="font-[Terminus] text-red-600 text-center text-sm m-0 p-0">

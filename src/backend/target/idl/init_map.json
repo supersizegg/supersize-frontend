@@ -2,7 +2,7 @@
   "address": "NrQkd31YsAWX6qyuLgktt4VPG4Q2DY94rBq7fWdRgo7",
   "metadata": {
     "name": "init_map",
-    "version": "0.2.0",
+    "version": "0.2.3",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -105,6 +105,11 @@
       "code": 6004,
       "name": "AccountNotFound",
       "msg": "Account not found."
+    },
+    {
+      "code": 6005,
+      "name": "InvalidGameType",
+      "msg": "Invalid game type."
     }
   ],
   "types": [
@@ -124,27 +129,14 @@
       }
     },
     {
-      "name": "Food",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "data",
-            "type": {
-              "array": [
-                "u8",
-                4
-              ]
-            }
-          }
-        ]
-      }
-    },
-    {
       "name": "Map",
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "game_type",
+            "type": "string"
+          },
           {
             "name": "name",
             "type": "string"
@@ -156,11 +148,7 @@
             }
           },
           {
-            "name": "width",
-            "type": "u16"
-          },
-          {
-            "name": "height",
+            "name": "size",
             "type": "u16"
           },
           {
@@ -174,23 +162,19 @@
             }
           },
           {
-            "name": "token_decimals",
-            "type": "u32"
-          },
-          {
-            "name": "max_players",
+            "name": "active_players",
             "type": "u8"
           },
           {
-            "name": "wallet_balance",
+            "name": "value_on_map",
             "type": "u64"
           },
           {
             "name": "next_food",
             "type": {
-              "option": {
+              "vec": {
                 "defined": {
-                  "name": "Food"
+                  "name": "MapFood"
                 }
               }
             }
@@ -202,6 +186,26 @@
                 "name": "BoltMetadata"
               }
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "MapFood",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "x",
+            "type": "u16"
+          },
+          {
+            "name": "y",
+            "type": "u16"
+          },
+          {
+            "name": "food_value",
+            "type": "u8"
           }
         ]
       }

@@ -103,24 +103,24 @@ const HowToPlay: React.FC<HowToPlayProps> = ({ randomFood }) => {
           players={[]}
           visibleFood={randomFood}
           currentPlayer={{
-            name: "unnamed",
+            name: "",
             authority: null,
-            x: 2000,
-            y: 2000,
-            radius: 0,
-            mass: 0,
             score: 0,
-            speed: 0,
+            circles: [{x: 5000, y: 5000, radius: 0, size: 0, speed: 0}],
             removal: new BN(0),
-            target_x: 0,
-            target_y: 0,
+            x: 5000,
+            y: 5000,
+            target_x: 5000,
+            target_y: 5000,
+            timestamp: 0,
           }}
           screenSize={{
             width: window.innerWidth,
             height: window.innerHeight,
           }}
-          newTarget={{ x: 0, y: 0, boost: false }}
-          gameSize={4000}
+          newTarget={{ x: 0, y: 0 }}
+          gameSize={10000}
+          buyIn={0}
         />
       </div>
       <MenuBar />
@@ -169,7 +169,7 @@ const HowToPlay: React.FC<HowToPlayProps> = ({ randomFood }) => {
           position: "fixed",
           bottom: "3em",
           left: "3em",
-          display: "flex",
+          display: "none",
           flexDirection: "row",
         }}
       >

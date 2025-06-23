@@ -2,10 +2,9 @@ import { PublicKey } from "@solana/web3.js";
 import { ApplySystem, createUndelegateInstruction, FindComponentPda, FindEntityPda } from "@magicblock-labs/bolt-sdk";
 import { ActiveGame } from "@utils/types";
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
-import { gameSystemBuyIn } from "./gameSystemBuyIn";
-import { COMPONENT_PLAYER_ID, COMPONENT_ANTEROOM_ID, SYSTEM_MOVEMENT_ID, COMPONENT_MAP_ID, COMPONENT_SECTION_ID } from "./gamePrograms";
+import { gameSystemJoin } from "./gameSystemJoin";
+import { COMPONENT_PLAYER_ID, COMPONENT_MAP_ID, COMPONENT_SECTION_ID, SYSTEM_MOVE_BLOB_ID } from "./gamePrograms";
 import * as anchor from "@coral-xyz/anchor";
-import { anteroomFetchOnChain } from "./gameFetch";
 import { stringToUint8Array } from "@utils/helper";
 
 type GameExecuteJoinResult = {
@@ -17,8 +16,6 @@ type GameExecuteJoinResult = {
 
 type PlayerInfo = {
   playerStatus: string;
-  need_to_delegate: boolean;
-  need_to_undelegate: boolean;
   newplayerEntityPda: PublicKey;
 };
 
@@ -42,15 +39,8 @@ export async function gameExecuteJoin(
     entityId: new anchor.BN(0),
     seed: stringToUint8Array(mapseed),
   });
-  const foodseed = "food1";
-  const foodEntityPda = FindEntityPda({
-    worldId: gameInfo.worldId,
-    entityId: new anchor.BN(0),
-    seed: stringToUint8Array(foodseed),
-  });
 
   let newplayerEntityPda = selectedGamePlayerInfo.newplayerEntityPda;
-  let need_to_undelegate = selectedGamePlayerInfo.need_to_undelegate;
 
   if (!newplayerEntityPda) {
     return { success: false, error: "No available player slots in this game", message: "error" };
@@ -61,46 +51,8 @@ export async function gameExecuteJoin(
     entity: newplayerEntityPda,
   });
 
-  if (need_to_undelegate) {
-    try {
-      const undelegateIx = createUndelegateInstruction({
-        payer: engine.getSessionPayer(),
-        delegatedAccount: playerComponentPda,
-        componentPda: COMPONENT_PLAYER_ID,
-      });
-      const undeltx = new anchor.web3.Transaction().add(undelegateIx);
-      undeltx.recentBlockhash = (await engine.getConnectionEphem().getLatestBlockhash()).blockhash;
-      undeltx.feePayer = engine.getSessionPayer();
-      const playerundelsignature = await engine.processSessionEphemTransaction(
-        "undelPlayer:" + playerComponentPda.toString(),
-        undeltx,
-      );
-      console.log("undelegate", playerundelsignature);
-    } catch (error) {
-      console.log("Error undelegating:", error);
-    }
-  }
-
-  const anteseed = "ante";
-  const anteEntityPda = FindEntityPda({
-    worldId: gameInfo.worldId,
-    entityId: new anchor.BN(0),
-    seed: stringToUint8Array(anteseed),
-  });
-
-  const anteComponentPda = FindComponentPda({
-    componentId: COMPONENT_ANTEROOM_ID,
-    entity: anteEntityPda,
-  });
-
-  const anteParsedData = await anteroomFetchOnChain(engine, anteComponentPda);
-
-  if (!anteParsedData || !anteParsedData.vaultTokenAccount || !anteParsedData.token) {
-    return { success: false, error: "Missing or invalid ante data", message: "error" };
-  }
-
   try {
-    let buyInResult = await gameSystemBuyIn(engine, selectGameId, newplayerEntityPda, anteEntityPda, buyIn, playerName, useSessionWallet);
+    let buyInResult = await gameSystemJoin(engine, selectGameId, newplayerEntityPda, mapEntityPda, playerName);
     if (!buyInResult.success) {
       return { success: false, error: buyInResult.error, message: "buyin_failed" };
     }
@@ -122,19 +74,14 @@ export async function gameExecuteJoin(
           components: [{ componentId: COMPONENT_PLAYER_ID }],
         },
         {
-          entity: foodEntityPda,
-          components: [{ componentId: COMPONENT_SECTION_ID }],
-        },
-        {
           entity: mapEntityPda,
           components: [{ componentId: COMPONENT_MAP_ID }],
         },
       ],
-      systemId: SYSTEM_MOVEMENT_ID,
+      systemId: SYSTEM_MOVE_BLOB_ID,
       args: {
         x: 0,
         y: 0,
-        boost: false,
         timestamp: performance.now(),
       },
     });

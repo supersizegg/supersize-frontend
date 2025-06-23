@@ -47,7 +47,7 @@ export function MenuSession({ username, sessionWalletInUse, sessionLamports, set
       <div className="session-bottom">
         <div className="session-top row-inline">
           <div className="network-switch" style={{ display: "flex", alignItems: "center" }}>
-            <span className="session-label" style={{marginRight: '10px'}}>E-Z play wallet:</span>
+            <span className="session-label" style={{marginRight: '10px'}}>Game wallet:</span>
             <label className="switch" style={{ marginRight: "10px", marginTop: '3px' }}>
               <input
                 type="checkbox"

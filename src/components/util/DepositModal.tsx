@@ -15,7 +15,7 @@ type DepositMode = 'selection' | 'thisWallet' | 'anotherWallet';
 const DepositModal: React.FC<DepositModalProps> = ({ walletAddress, isOpen, onClose, onDeposit }) => {
   const [mode, setMode] = useState<DepositMode>('selection');
   const [selectedDeposit, setSelectedDeposit] = useState<number | null>(null);
-  const options: number[] = [0.2, 0.5, 1.0, 1.5, 2.0, 3.0];
+  const options: number[] = [0.15, 0.3, 0.5, 1.0, 1.5, 2.0];
 
   if (!isOpen) return null;
 
@@ -64,7 +64,7 @@ const DepositModal: React.FC<DepositModalProps> = ({ walletAddress, isOpen, onCl
     return (
       <div className="another-wallet">
         <QRCodeSVG value={walletAddress.toString()} size={256} includeMargin={true} style={{margin: '0 auto', borderRadius: '8px'}}/>
-        <p style={{ textAlign: 'center', marginTop: '10px', fontSize: '14px' }}>Send SOL to:</p>
+        <p style={{ textAlign: 'center', marginTop: '10px', fontSize: '14px' }}>Send at least 0.11 SOL to:</p>
         <p style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '9px' }}>{walletAddress.toString()}</p>
         <button 
           className="deposit-submit" 

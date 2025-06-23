@@ -11,7 +11,6 @@ import {
 } from "@magicblock-labs/bolt-sdk";
 import { ActiveGame, Food } from "@utils/types";
 import {
-  COMPONENT_ANTEROOM_ID,
   COMPONENT_MAP_ID,
   COMPONENT_SECTION_ID,
 } from "@states/gamePrograms";
@@ -36,7 +35,7 @@ import Graph from "../components/util/Graph";
 import { Chart, LineElement, PointElement, LinearScale, Title, Tooltip, Legend } from "chart.js";
 import { getTopLeftCorner, getRegion } from "@utils/helper";
 import GameComponent from "@components/Game/Game";
-import { handleCashout, handleUndelegatePlayer, handleDelegatePlayer, handleDeleteGame, 
+import { handleUndelegatePlayer, handleDelegatePlayer, handleDeleteGame, 
   handleReinitializeClick, calculateGameplayStats, deposit } from "@states/adminFunctions";
 import DepositInput from '@components/util/DepositInput';
 import CollapsiblePanel from '@components/util/CollapsiblePanel';
@@ -77,21 +76,21 @@ export default function Profile({ randomFood, username, setUsername, sessionWall
           players={[]}
           visibleFood={randomFood}
           currentPlayer={{
-            name: "unnamed",
+            name: "",
             authority: null,
-            x: 2000,
-            y: 2000,
-            radius: 0,
-            mass: 0,
             score: 0,
-            speed: 0,
+            circles: [{x: 5000, y: 5000, radius: 0, size: 0, speed: 0}],
             removal: new BN(0),
-            target_x: 0,
-            target_y: 0,
+            x: 5000,
+            y: 5000,
+            target_x: 5000,
+            target_y: 5000,
+            timestamp: 0,
           }}
           screenSize={{width: window.innerWidth, height: window.innerHeight }}
-          newTarget={{ x: 0, y: 0, boost: false }}
-          gameSize={4000}
+          newTarget={{ x: 0, y: 0}}
+          gameSize={10000}
+          buyIn={0}
         />
       </div>
       <MenuBar />
@@ -146,8 +145,6 @@ type GeneralTabProps = {
 };
 
 function GeneralTab({ sessionWalletInUse, username, sessionLamports, setSessionWalletInUse, setIsDepositModalOpen, setIsWithdrawalModalOpen, setSessionLamports, setUsername }: GeneralTabProps) {
-  const engine = useMagicBlockEngine();
-  const [gemBalance, setGemBalance] = useState(0);
 
   const setInputUsername = (inputUsername: string) => {
     const user = { name: inputUsername, use_session: sessionWalletInUse };
@@ -155,38 +152,10 @@ function GeneralTab({ sessionWalletInUse, username, sessionLamports, setSessionW
     setUsername(inputUsername);
   };
 
-  useEffect(() => {
-    const fetchUserTokenBalance = async () => {
-      let connection = engine.getConnectionChainDevnet();
-      const tokenMint = new PublicKey("AsoX43Q5Y87RPRGFkkYUvu8CSksD9JXNEqWVGVsr8UEp");
-      let balance = 0;
-        const tokenAccounts = await connection.getTokenAccountsByOwner(engine.getSessionPayer(), {
-          mint: tokenMint,
-        });
-        console.log("tokenAccounts", tokenAccounts);
-        if (tokenAccounts.value.length > 0) {
-          const accountInfo = tokenAccounts.value[0].pubkey;
-          const balanceInfo = await connection.getTokenAccountBalance(accountInfo);
-          console.log("balanceInfo", balanceInfo.value.amount);
-          balance = parseInt(balanceInfo.value.amount) || 0;
-          setGemBalance(balance / 10 ** 9);
-        }
-        else{
-          setGemBalance(0);
-        }
-    }
-
-    fetchUserTokenBalance();
-  }, [engine.getSessionPayer()]);
-
-
   return (
     <div className="general-tab">
       <MenuSession username={username} sessionWalletInUse={sessionWalletInUse} setSessionWalletInUse={setSessionWalletInUse} setIsDepositModalOpen={setIsDepositModalOpen} 
       setIsWithdrawalModalOpen={setIsWithdrawalModalOpen} setSessionLamports={setSessionLamports} sessionLamports={sessionLamports}/>
-      <div style={{ display: "flex" , flexDirection: "row", marginLeft: "1em" }}>
-          Supersize Gems: <img  style={{ width: "20px", height: "20px", marginRight: "5px",marginTop: "1px", marginLeft: "5px"   }} src={cachedTokenMetadata["AsoX43Q5Y87RPRGFkkYUvu8CSksD9JXNEqWVGVsr8UEp"].image} alt="Token Image" /> {gemBalance.toFixed(2)}
-      </div>
       
       <hr className="divider" />
 
@@ -288,48 +257,12 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
     try {  
       // p1: Process game and anteroom data
       const processGameData = async () => {
-        const { gameInfo: updatedGameInfo, anteroomData } = await getGameData(
+        const { gameInfo: updatedGameInfo } = await getGameData(
           engine,
           newGameInfo.worldId,
           "",
           newGameInfo
         );
-        if (!anteroomData) {
-          throw new Error("anteroomData missing");
-        }
-        console.log("updatedGameInfo", updatedGameInfo);
-        setGameTokenAccount(anteroomData.vaultTokenAccount.toString());
-  
-        const readableAnteroomData = `
-          Buy in: ${anteroomData.buyIn} |
-          Token: ${anteroomData.token.toString()} |
-          Decimals: ${anteroomData.tokenDecimals} |
-          Vault token account: ${anteroomData.vaultTokenAccount.toString()} |
-          Gamemaster token account: ${anteroomData.gamemasterTokenAccount.toString()} |
-          Total Active Buyins: ${anteroomData.totalActiveBuyins}
-        `;
-        console.log("readableAnteroomData", readableAnteroomData);
-        setAnteParsedData(readableAnteroomData);
-  
-        const [tokenAccount, vaultAccount] = await Promise.all([
-          getAccount(engine.getConnectionChain(), anteroomData.gamemasterTokenAccount),
-          getAccount(engine.getConnectionChain(), anteroomData.vaultTokenAccount),
-        ]);
-        const [tokenAccountOwnerPda] = PublicKey.findProgramAddressSync(
-          [Buffer.from("token_account_owner_pda"), mapComponentPda.toBuffer()],
-          new PublicKey("BAP315i1xoAXqbJcTT1LrUS45N3tAQnNnPuNQkCcvbAr")
-        );
-        console.log("Token Account Owner:", tokenAccount.owner.toString());
-        setGameOwner(tokenAccount.owner.toString());
-        setGameWallet(tokenAccountOwnerPda.toString());
-        console.log("Balance:", vaultAccount.amount.toString());
-        const readableBalance =
-          Number(vaultAccount.amount) - anteroomData.totalActiveBuyins * anteroomData.buyIn;
-        setTokenBalance(readableBalance);
-        const k = calculateK(updatedGameInfo.max_players, 0.01);
-        const foodInWallet = Math.floor(readableBalance / anteroomData.buyIn) * 1000
-        const currentFoodToAdd = Math.max(0.5, Math.floor(calculateY(foodInWallet, k) * 100));
-        setCurrentFoodToAdd(currentFoodToAdd);
 
         return updatedGameInfo;
       };
@@ -340,11 +273,10 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
         const mapSize = newGameInfo.size;
         if (mapSize === 4000) {
           foodcomponents = 16 * 2;
-        } else if (mapSize === 6000) {
-          foodcomponents = 36 * 2;
-        } else if (mapSize === 8000) {
-          foodcomponents = 64 * 2;
-        }
+        } else if (mapSize === 10000) {
+          foodcomponents = 100;
+        } 
+        
         const foodPromises = Array.from({ length: foodcomponents }, (_, idx) => {
           const index = idx + 1;
           const foodseed = "food" + index.toString();
@@ -396,26 +328,6 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
         setPlayers(players);
       };
   
-      // p4: Process ante token balances
-      const processAnteTokenBalances = async () => {
-        const anteseed = "ante";
-        const anteEntityPda = FindEntityPda({
-          worldId: newGameInfo.worldId,
-          entityId: new anchor.BN(0),
-          seed: stringToUint8Array(anteseed),
-        });
-        const anteComponentPda = FindComponentPda({
-          componentId: COMPONENT_ANTEROOM_ID,
-          entity: anteEntityPda,
-        });
-        const account = anteComponentPda.toString();
-        const balanceData = await calculateGameplayStats(engine, account);
-        setCashoutStats({
-          cashOutSum: balanceData.cashOutSum,
-          buyInSum: balanceData.buyInSum,
-          buyInCount: balanceData.buyInCount,
-        });
-      };
       
       let updatedGameInfo;
       let validEndpointResult;
@@ -431,7 +343,6 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
       await Promise.all([
         processFoodComponents(),
         processPlayers(),
-        processAnteTokenBalances(),
       ]);
     } catch (error) {
       console.error("Error in handlePanelOpen:", error);
@@ -513,7 +424,7 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                   className="btn-copy"
                   style={{ flex: "1 1 10%", margin: "10px" }}
                   onClick={() =>
-                    handleCashout(engine, players[players.length - 1], row, parseFloat(depositValue) * 10 ** row.decimals)
+                    console.log("TODO: withdraw")
                   }
                 >
                   Withdraw{" "}
@@ -693,7 +604,7 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                                     <button
                                       className="btn-copy"
                                       style={{ maxHeight: "40px" }}
-                                      onClick={() => handleCashout(engine, player, row)}
+                                      onClick={() => console.log("TODO: cashout")}
                                     >
                                       Cash Out
                                     </button>

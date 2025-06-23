@@ -8,7 +8,7 @@ export type InitMap = {
   "address": "NrQkd31YsAWX6qyuLgktt4VPG4Q2DY94rBq7fWdRgo7",
   "metadata": {
     "name": "initMap",
-    "version": "0.2.0",
+    "version": "0.2.3",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -111,6 +111,11 @@ export type InitMap = {
       "code": 6004,
       "name": "accountNotFound",
       "msg": "Account not found."
+    },
+    {
+      "code": 6005,
+      "name": "invalidGameType",
+      "msg": "Invalid game type."
     }
   ],
   "types": [
@@ -130,27 +135,14 @@ export type InitMap = {
       }
     },
     {
-      "name": "food",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "data",
-            "type": {
-              "array": [
-                "u8",
-                4
-              ]
-            }
-          }
-        ]
-      }
-    },
-    {
       "name": "map",
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "gameType",
+            "type": "string"
+          },
           {
             "name": "name",
             "type": "string"
@@ -162,11 +154,7 @@ export type InitMap = {
             }
           },
           {
-            "name": "width",
-            "type": "u16"
-          },
-          {
-            "name": "height",
+            "name": "size",
             "type": "u16"
           },
           {
@@ -180,23 +168,19 @@ export type InitMap = {
             }
           },
           {
-            "name": "tokenDecimals",
-            "type": "u32"
-          },
-          {
-            "name": "maxPlayers",
+            "name": "activePlayers",
             "type": "u8"
           },
           {
-            "name": "walletBalance",
+            "name": "valueOnMap",
             "type": "u64"
           },
           {
             "name": "nextFood",
             "type": {
-              "option": {
+              "vec": {
                 "defined": {
-                  "name": "food"
+                  "name": "mapFood"
                 }
               }
             }
@@ -208,6 +192,26 @@ export type InitMap = {
                 "name": "boltMetadata"
               }
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "mapFood",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "x",
+            "type": "u16"
+          },
+          {
+            "name": "y",
+            "type": "u16"
+          },
+          {
+            "name": "foodValue",
+            "type": "u8"
           }
         ]
       }

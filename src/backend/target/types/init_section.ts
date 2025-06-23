@@ -8,7 +8,7 @@ export type InitSection = {
   "address": "4euz4ceqv5ugh1x6wZP3BsLNZHqBxQwXcK59psw5KeQw",
   "metadata": {
     "name": "initSection",
-    "version": "0.2.0",
+    "version": "0.2.3",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -131,10 +131,31 @@ export type InitSection = {
       }
     },
     {
+      "name": "food",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "foodData",
+            "type": {
+              "array": [
+                "u8",
+                4
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "map",
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "gameType",
+            "type": "string"
+          },
           {
             "name": "name",
             "type": "string"
@@ -146,11 +167,7 @@ export type InitSection = {
             }
           },
           {
-            "name": "width",
-            "type": "u16"
-          },
-          {
-            "name": "height",
+            "name": "size",
             "type": "u16"
           },
           {
@@ -164,23 +181,19 @@ export type InitSection = {
             }
           },
           {
-            "name": "tokenDecimals",
-            "type": "u32"
-          },
-          {
-            "name": "maxPlayers",
+            "name": "activePlayers",
             "type": "u8"
           },
           {
-            "name": "walletBalance",
+            "name": "valueOnMap",
             "type": "u64"
           },
           {
             "name": "nextFood",
             "type": {
-              "option": {
+              "vec": {
                 "defined": {
-                  "name": "map::Food"
+                  "name": "mapFood"
                 }
               }
             }
@@ -192,6 +205,26 @@ export type InitSection = {
                 "name": "boltMetadata"
               }
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "mapFood",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "x",
+            "type": "u16"
+          },
+          {
+            "name": "y",
+            "type": "u16"
+          },
+          {
+            "name": "foodValue",
+            "type": "u8"
           }
         ]
       }
@@ -220,7 +253,7 @@ export type InitSection = {
             "type": {
               "vec": {
                 "defined": {
-                  "name": "section::Food"
+                  "name": "food"
                 }
               }
             }
@@ -231,40 +264,6 @@ export type InitSection = {
               "defined": {
                 "name": "boltMetadata"
               }
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "map::Food",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "data",
-            "type": {
-              "array": [
-                "u8",
-                4
-              ]
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "section::Food",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "data",
-            "type": {
-              "array": [
-                "u8",
-                4
-              ]
             }
           }
         ]

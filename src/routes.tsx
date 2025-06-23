@@ -26,11 +26,10 @@ const AppRoutes = () => {
     ),
   );
   const [myPlayerEntityPda, setMyPlayerEntityPda] = useState<PublicKey | null>(null);
-  const [randomFood] = useState<Food[]>(Array.from({ length: 50 }, () => ({
-    x: Math.floor(Math.random() * 1500) + 1000,
-    y: Math.floor(Math.random() * 1500) + 1000,
+  const [randomFood] = useState<Food[]>(Array.from({ length: 100 }, () => ({
+    x: Math.floor(Math.random() * 4500) + 1000,
+    y: Math.floor(Math.random() * 4500) + 1000,
     food_value: Math.floor(Math.random() * 10),
-    food_multiple: Math.floor(Math.random() * 10),
   })));
 
   useEffect(() => {

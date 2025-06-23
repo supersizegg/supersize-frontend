@@ -1,12 +1,14 @@
 import { AccountInfo, PublicKey } from "@solana/web3.js";
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
-import { decodeFood } from "@utils/helper";
+import { decodeFood, averageCircleCoordinates } from "@utils/helper";
 import { Food, Blob } from "@utils/types";
 import {
   COMPONENT_PLAYER_ID,
   COMPONENT_SECTION_ID,
+  COMPONENT_MAP_ID, 
   getComponentPlayerOnEphem,
   getComponentSectionOnEphem,
+  getComponentMapOnEphem,
 } from "./gamePrograms";
 import { FindComponentPda } from "@magicblock-labs/bolt-sdk";
 
@@ -17,24 +19,23 @@ export function updateFoodList(
   setFoodListLen: (callback: (prevFoodListLen: number[]) => number[]) => void,
 ) {
   const foodArray = section.food;
-  const foodData: Food[] = [];
-  foodArray.forEach((foodItem: { data: Uint8Array }) => {
-    const foodDataArray = new Uint8Array(foodItem.data);
+  const foodDataList: Food[] = [];
+  foodArray.forEach((foodItem: { foodData: Uint8Array }) => {
+    const foodDataArray = new Uint8Array(foodItem.foodData);
     const decodedFood = decodeFood(foodDataArray);
-    foodData.push({
+    foodDataList.push({
       x: decodedFood.x,
       y: decodedFood.y,
       food_value: decodedFood.food_value,
-      food_multiple: decodedFood.food_multiple,
     });
   });
-  if (foodData.length > 0) {
+  if (foodDataList.length > 0) {
     setAllFood((prevAllFood) => {
-      return prevAllFood.map((foodArray, index) => (food_index === index ? foodData : foodArray));
+      return prevAllFood.map((foodArray, index) => (food_index === index ? foodDataList : foodArray));
     });
     setFoodListLen((prevFoodListLen) => {
       const updatedFoodListLen = [...prevFoodListLen];
-      updatedFoodListLen[food_index] = foodData.length;
+      updatedFoodListLen[food_index] = foodDataList.length;
       return updatedFoodListLen;
     });
   }
@@ -50,14 +51,8 @@ export function updateLeaderboard(
     .map((player) => ({
       name: player.name,
       authority: player.authority,
-      x: player.x,
-      y: player.y,
-      radius: 4 + Math.sqrt(player.mass) * 6,
-      mass: player.mass,
       score: player.score,
-      payoutTokenAccount: player.payoutTokenAccount,
-      speed: player.speed,
-      removal: player.scheduledRemovalTime,
+      removal: player.removalTime,
       target_x: player.target_x,
       target_y: player.target_y,
       timestamp: performance.now(),
@@ -67,34 +62,34 @@ export function updateLeaderboard(
 
 export function updateMyPlayer(
   player: any,
+  currentPlayer: Blob,
   setCurrentPlayer: (player: Blob) => void,
-  gameEnded: number,
   setGameEnded: (gameEnded: number) => void,
 ) {
-  if (Math.sqrt(player.mass) == 0 && player.score == 0.0 && gameEnded == 0) {
-    const startTime = player.joinTime.toNumber() * 1000;
-    const currentTime = Date.now();
-    const elapsedTime = currentTime - startTime;
-    if (elapsedTime >= 6000) {
-      setGameEnded(1);
+  //console.log('player', player)
+  if(player.name != "exited") {
+    if (player.circles.length == 0 && player.score == 0) {
+      const startTime = player.joinTime.toNumber() * 1000;
+      const currentTime = Date.now();
+      const elapsedTime = currentTime - startTime;
+      if (elapsedTime >= 6000) {
+        setGameEnded(1);
+      }
     }
-  }
-  setCurrentPlayer({
-    name: player.name,
-    authority: player.authority,
-    x: player.x,
-    y: player.y,
-    radius: 4 + Math.sqrt(player.mass) * 6,
-    mass: player.mass,
-    score: player.score,
-    speed: player.speed,
-    removal: player.scheduledRemovalTime,
-    target_x: player.targetX,
-    target_y: player.targetY,
-    timestamp: performance.now(),
-  } as Blob);
-
-  if (Math.sqrt(player.mass) == 0 && player.score != 0.0 && gameEnded == 0) {
+    const result = averageCircleCoordinates(player.circles);
+    setCurrentPlayer({
+      name: player.name,
+      authority: player.authority,
+      score: player.score,
+      removal: player.removalTime,
+      x: result.avgX,
+      y: result.avgY,
+      target_x: player.targetX,
+      target_y: player.targetY,
+      circles: player.circles,
+      timestamp: performance.now(),
+    } as Blob);
+  }else{
     setGameEnded(2);
   }
 }
@@ -106,19 +101,17 @@ export function updatePlayers(
 ) {
   if (player) {
     setAllPlayers((prevPlayers: Blob[]) => {
+      const result = averageCircleCoordinates(player.circles);
       const newPlayer: Blob = {
         name: player.name,
         authority: player.authority,
-        x: player.x,
-        y: player.y,
-        radius: 4 + Math.sqrt(player.mass) * 6,
-        mass: player.mass,
         score: player.score,
-        payoutTokenAccount: player.payoutTokenAccount,
-        speed: player.speed,
-        removal: player.scheduledRemovalTime,
+        removal: player.removalTime,
+        x: result.avgX,
+        y: result.avgY,
         target_x: player.targetX,
         target_y: player.targetY,
+        circles: player.circles,
         timestamp: performance.now(),
       };
       const updatedPlayers = [...prevPlayers];
@@ -154,13 +147,23 @@ export function handleFoodComponentChange(
 export function handleMyPlayerComponentChange(
   accountInfo: AccountInfo<Buffer>,
   engine: MagicBlockEngine,
+  currentPlayer: Blob,
   setCurrentPlayer: (player: Blob) => void,
-  gameEnded: number,
   setGameEnded: (gameEnded: number) => void,
 ) {
   const coder = getComponentPlayerOnEphem(engine).coder;
   const parsedData = coder.accounts.decode("player", accountInfo.data);
-  updateMyPlayer(parsedData, setCurrentPlayer, gameEnded, setGameEnded);
+  updateMyPlayer(parsedData, currentPlayer, setCurrentPlayer, setGameEnded);
+}
+
+export function handleMapComponentChange(
+  accountInfo: AccountInfo<Buffer>,
+  engine: MagicBlockEngine,
+  setCurrentGameSize: (gameSize: number) => void,
+) {
+  const coder = getComponentMapOnEphem(engine).coder;
+  const parsedData = coder.accounts.decode("map", accountInfo.data);
+  setCurrentGameSize(parsedData.size);
 }
 
 // Subscribe to the game state
@@ -171,15 +174,16 @@ export function subscribeToGame(
   entityMatch: PublicKey,
   currentPlayerEntity: PublicKey,
   currentPlayer: Blob,
-  gameEnded: number,
   foodComponentSubscriptionId: any,
   playersComponentSubscriptionId: any,
   myplayerComponentSubscriptionId: any,
+  mapComponentSubscriptionId: any,
   setAllPlayers: (callback: (prevAllPlayers: Blob[]) => Blob[]) => void,
   setCurrentPlayer: (player: Blob) => void,
   setGameEnded: (gameEnded: number) => void,
   setAllFood: (callback: (prevAllFood: any[][]) => any[][]) => void,
   setFoodListLen: (callback: (prevFoodListLen: number[]) => number[]) => void,
+  setCurrentGameSize: (gameSize: number) => void,
 ) {
   for (let i = 0; i < foodEntities.length; i++) {
     const foodComponenti = FindComponentPda({
@@ -242,6 +246,17 @@ export function subscribeToGame(
     if (!accountInfo) {
       return;
     }
-    handleMyPlayerComponentChange(accountInfo, engine, setCurrentPlayer, gameEnded, setGameEnded);
+    handleMyPlayerComponentChange(accountInfo, engine, currentPlayer, setCurrentPlayer, setGameEnded);
+  });
+
+  const mapComponent = FindComponentPda({
+    componentId: COMPONENT_MAP_ID,
+    entity: entityMatch,
+  });
+  mapComponentSubscriptionId.current = engine.subscribeToEphemAccountInfo(mapComponent, (accountInfo) => {
+    if (!accountInfo) {
+      return;
+    }
+    handleMapComponentChange(accountInfo, engine, setCurrentGameSize);
   });
 }

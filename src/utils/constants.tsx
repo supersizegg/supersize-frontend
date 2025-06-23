@@ -19,9 +19,42 @@ export const INIT_FOOD = new PublicKey("4euz4ceqv5ugh1x6wZP3BsLNZHqBxQwXcK59psw5
 export const BUY_IN = new PublicKey("CLC46PuyXnSuZGmUrqkFbAh7WwzQm8aBPjSQ3HMP56kp");
 export const CASH_OUT = new PublicKey("BAP315i1xoAXqbJcTT1LrUS45N3tAQnNnPuNQkCcvbAr");
 
+export const OPPONENT_COLORS = [
+  "#1abc9c",
+  "#2ecc71",
+  "#3498db",
+  "#9b59b6",
+  "#34495e",
+  "#16a085",
+  "#27ae60",
+  "#2980b9",
+  "#8e44ad",
+  "#2c3e50",
+  "#f1c40f",
+  "#e67e22",
+  "#e74c3c",
+  "#ecf0f1",
+  "#95a5a6",
+  "#f39c12",
+  "#d35400",
+  "#c0392b",
+  "#bdc3c7",
+  "#7f8c8d",
+];
+
+export const FOOD_COLORS = [
+  "#12F194", // Green
+  "#27D7A2",
+  "#3DB7B5",
+  "#579BCB",
+  "#6C7BDE",
+  "#825AF0",
+  "#9A47FF", // Purple
+];
+
 export const SOL_USDC_POOL_ID = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2";
 
-export const NETWORK = "mainnet";//process.env.NODE_ENV === "production" ? "mainnet" : "devnet";
+export const NETWORK = process.env.NODE_ENV === "production" ? "mainnet" : "devnet";
 
 export const RPC_CONNECTION = {
   mainnet: "https://staked.helius-rpc.com?api-key=cba33294-aa96-414c-9a26-03d5563aa676",
@@ -49,19 +82,9 @@ export const activeGamesList: {
 } = {
   devnet: [
     {
-      worldId: new anchor.BN(2044),
-      worldPda: new PublicKey("2gMVv5zk4ZoPr8CYkDUzk1fctFdFZ1Xv1h2wqe3Zqo2Q"),
+      worldId: new anchor.BN(2293),
+      worldPda: new PublicKey("6uz1j3v2b2xGM35tMaEiNDhNVfiJjamPZkePtWigqLLP"),
       endpoint: "https://supersize-fra.magicblock.app",
-    },
-    {
-      worldId: new anchor.BN(2047),
-      worldPda: new PublicKey("9VaBETe9jda36cuWKr36zE2SR2K1BeDXEU32JqW2ArZN"),
-      endpoint: "https://supersize.magicblock.app",
-    },
-    {
-      worldId: new anchor.BN(2046),
-      worldPda: new PublicKey("BXrAw3MpuC7b3Dg6xPU7Xzn1vVpWTBegRoHuqh6GzpZp"),
-      endpoint: "https://supersize-sin.magicblock.app",
     },
   ],
   mainnet: [
@@ -168,7 +191,23 @@ export const activeGamesList: {
       worldId: new anchor.BN(11),
       worldPda: new PublicKey("AiS8sVquRX8t17m1ZCi82TqfKVMVvSvUvUibFT9jv33k"),
       endpoint: "https://supersize-mainnet.magicblock.app",
-    }, */
+    }, 
+    {
+      worldId: new anchor.BN(2293),
+      worldPda: new PublicKey("6uz1j3v2b2xGM35tMaEiNDhNVfiJjamPZkePtWigqLLP"),
+      endpoint: "https://supersize-fra.magicblock.app",
+    },
+    {
+      worldId: new anchor.BN(2047),
+      worldPda: new PublicKey("9VaBETe9jda36cuWKr36zE2SR2K1BeDXEU32JqW2ArZN"),
+      endpoint: "https://supersize.magicblock.app",
+    },
+    {
+      worldId: new anchor.BN(2046),
+      worldPda: new PublicKey("BXrAw3MpuC7b3Dg6xPU7Xzn1vVpWTBegRoHuqh6GzpZp"),
+      endpoint: "https://supersize-sin.magicblock.app",
+    },
+    */
   ],
 };
 

@@ -1,6 +1,8 @@
 import React from "react";
 import { PublicKey } from "@solana/web3.js";
 import "./GameLeaderboard.css";
+import { getOpponentColor } from "@utils/helper";
+
 interface LeaderboardItem {
   name?: string;
   authority: PublicKey | null;
@@ -42,8 +44,9 @@ const GameLeaderboard: React.FC<LeaderboardProps> = ({ leaderboard, currentPlaye
             <li
               key={item.authority ? item.authority.toString() : `${item.name}-${index}`}
               className={isCurrentPlayer ? "me" : ""}
+              style={{ color: getOpponentColor(item.authority, "unnamed") }}
             >
-              <b>{displayName}</b> <span>{item.score / 10 ** gameInfo.decimals}</span>
+              <b>{displayName}</b> {/* <span>{item.score / 10 ** gameInfo.decimals}</span> */}
             </li>
           );
         })}

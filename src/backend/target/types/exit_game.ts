@@ -8,7 +8,7 @@ export type ExitGame = {
   "address": "wdH5MUvXcyKM58yffCxhRQfB5jLQHpnWZhhdYhLCThf",
   "metadata": {
     "name": "exitGame",
-    "version": "0.2.0",
+    "version": "0.2.3",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -117,6 +117,16 @@ export type ExitGame = {
       "code": 6002,
       "name": "mapKeyMismatch",
       "msg": "Component doesn't belong to map."
+    },
+    {
+      "code": 6003,
+      "name": "wrongToken",
+      "msg": "Incorrect token address."
+    },
+    {
+      "code": 6004,
+      "name": "exitLocked",
+      "msg": "Can't exit."
     }
   ],
   "types": [
@@ -136,18 +146,29 @@ export type ExitGame = {
       }
     },
     {
-      "name": "food",
+      "name": "circle",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "data",
-            "type": {
-              "array": [
-                "u8",
-                4
-              ]
-            }
+            "name": "x",
+            "type": "u16"
+          },
+          {
+            "name": "y",
+            "type": "u16"
+          },
+          {
+            "name": "size",
+            "type": "u16"
+          },
+          {
+            "name": "radius",
+            "type": "u16"
+          },
+          {
+            "name": "speed",
+            "type": "u8"
           }
         ]
       }
@@ -157,6 +178,10 @@ export type ExitGame = {
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "gameType",
+            "type": "string"
+          },
           {
             "name": "name",
             "type": "string"
@@ -168,11 +193,7 @@ export type ExitGame = {
             }
           },
           {
-            "name": "width",
-            "type": "u16"
-          },
-          {
-            "name": "height",
+            "name": "size",
             "type": "u16"
           },
           {
@@ -186,23 +207,19 @@ export type ExitGame = {
             }
           },
           {
-            "name": "tokenDecimals",
-            "type": "u32"
-          },
-          {
-            "name": "maxPlayers",
+            "name": "activePlayers",
             "type": "u8"
           },
           {
-            "name": "walletBalance",
+            "name": "valueOnMap",
             "type": "u64"
           },
           {
             "name": "nextFood",
             "type": {
-              "option": {
+              "vec": {
                 "defined": {
-                  "name": "food"
+                  "name": "mapFood"
                 }
               }
             }
@@ -219,10 +236,34 @@ export type ExitGame = {
       }
     },
     {
+      "name": "mapFood",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "x",
+            "type": "u16"
+          },
+          {
+            "name": "y",
+            "type": "u16"
+          },
+          {
+            "name": "foodValue",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
       "name": "player",
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "gameType",
+            "type": "string"
+          },
           {
             "name": "name",
             "type": "string"
@@ -240,26 +281,8 @@ export type ExitGame = {
             }
           },
           {
-            "name": "status",
-            "type": "string"
-          },
-          {
-            "name": "payoutTokenAccount",
-            "type": {
-              "option": "pubkey"
-            }
-          },
-          {
-            "name": "currentGameWalletBalance",
+            "name": "buyIn",
             "type": "u64"
-          },
-          {
-            "name": "x",
-            "type": "u16"
-          },
-          {
-            "name": "y",
-            "type": "u16"
           },
           {
             "name": "targetX",
@@ -278,35 +301,33 @@ export type ExitGame = {
             "type": "u64"
           },
           {
-            "name": "mass",
-            "type": "u64"
-          },
-          {
-            "name": "foodEaten",
-            "type": "u64"
-          },
-          {
-            "name": "playersEaten",
-            "type": "u16"
-          },
-          {
-            "name": "speed",
-            "type": "f32"
-          },
-          {
             "name": "joinTime",
             "type": "i64"
           },
           {
-            "name": "scheduledRemovalTime",
+            "name": "cooldownTimer",
             "type": {
               "option": "i64"
             }
           },
           {
-            "name": "boostClickTime",
+            "name": "removalTime",
             "type": {
               "option": "i64"
+            }
+          },
+          {
+            "name": "exitLocked",
+            "type": "bool"
+          },
+          {
+            "name": "circles",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "circle"
+                }
+              }
             }
           },
           {

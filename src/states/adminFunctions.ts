@@ -1,10 +1,9 @@
 import { createTransferInstruction } from "@solana/spl-token";
 import { createDelegateInstruction } from "@magicblock-labs/bolt-sdk";
 import { AccountMeta, ComputeBudgetProgram } from "@solana/web3.js";
-import { COMPONENT_SECTION_ID, SYSTEM_CASH_OUT_ID } from "./gamePrograms";
+import { COMPONENT_SECTION_ID } from "./gamePrograms";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { getAssociatedTokenAddress } from "@solana/spl-token";
-import { COMPONENT_ANTEROOM_ID } from "./gamePrograms";
 import { COMPONENT_PLAYER_ID } from "./gamePrograms";
 import { getMaxPlayers, stringToUint8Array } from "@utils/helper";
 import { anchor, ApplySystem, createUndelegateInstruction, DestroyComponent, FindComponentPda } from "@magicblock-labs/bolt-sdk";
@@ -13,7 +12,6 @@ import { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
 import { ActiveGame } from "@utils/types";
 import { COMPONENT_MAP_ID } from "./gamePrograms";
 import { MagicBlockEngine } from "@engine/MagicBlockEngine";
-import { anteroomFetchOnChain } from "./gameFetch";
 import { gameSystemInitSection } from "./gameSystemInitSection";
 
 export const handleUndelegatePlayer = async (
@@ -62,198 +60,6 @@ export const handleDelegatePlayer = async (
     }
 };
 
-export const handleCashout = async (
-    engine: MagicBlockEngine, 
-    playerData: {
-    playersComponentPda: PublicKey;
-    parsedData: any;
-  }, selectGameId: ActiveGame, withdraw: number = -1) => {
-    try {
-      const gameInfo = selectGameId;
-      const mapEntityPda = FindEntityPda({
-        worldId: gameInfo.worldId,
-        entityId: new anchor.BN(0),
-        seed: stringToUint8Array("origin"),
-      });
-      
-      let max_players = getMaxPlayers(gameInfo.size);
-      let seed = "player" + max_players.toString();
-      let sender_token_account = new PublicKey(0);
-
-      if (playerData){
-        sender_token_account = playerData.parsedData.payoutTokenAccount;
-      }
-      const playerEntityPda = FindEntityPda({
-        worldId: gameInfo.worldId,
-        entityId: new anchor.BN(0),
-        seed: stringToUint8Array(seed),
-      });
-
-      const mapComponentPda = FindComponentPda({
-        componentId: COMPONENT_MAP_ID,
-        entity: mapEntityPda,
-      });
-
-      if(withdraw == -1) {
-        const undelegateIx = createUndelegateInstruction({
-          payer: engine.getSessionPayer(),
-          delegatedAccount: playerData.playersComponentPda,
-          componentPda: COMPONENT_PLAYER_ID,
-        });
-        const tx = new anchor.web3.Transaction().add(undelegateIx);
-        tx.recentBlockhash = (await engine.getConnectionEphem().getLatestBlockhash()).blockhash;
-        tx.feePayer = engine.getSessionPayer();
-        try {
-          const playerundelsignature = await engine.processSessionEphemTransaction(
-            "undelPlayer:" + playerData.playersComponentPda.toString(),
-            tx,
-          );
-          console.log("undelegate", playerundelsignature);
-        } catch (error) {
-            console.log("Error undelegating:", error);
-        }
-      }
-
-      const anteseed = "ante";
-      const anteEntityPda = FindEntityPda({
-        worldId: gameInfo.worldId,
-        entityId: new anchor.BN(0),
-        seed: stringToUint8Array(anteseed),
-      });
-      const anteComponentPda = FindComponentPda({
-        componentId: COMPONENT_ANTEROOM_ID,
-        entity: anteEntityPda,
-      });
-      const anteParsedData = await anteroomFetchOnChain(engine, anteComponentPda);
-
-      let supersize_token_account = new PublicKey(0);
-      let vault_program_id = new PublicKey("BAP315i1xoAXqbJcTT1LrUS45N3tAQnNnPuNQkCcvbAr");
-
-      if (anteParsedData) {
-        let vault_token_account = anteParsedData.vaultTokenAccount;
-        let mint_of_token_being_sent = anteParsedData.token;
-        let owner_token_account = anteParsedData.gamemasterTokenAccount;
-        if (!mint_of_token_being_sent) {
-          return;
-        }
-        //supersize_token_account = anteParsedData.gamemasterTokenAccount;
-        supersize_token_account = await getAssociatedTokenAddress(
-          mint_of_token_being_sent,
-          new PublicKey("DdGB1EpmshJvCq48W1LvB1csrDnC4uataLnQbUVhp6XB"),
-        );
-        let [tokenAccountOwnerPda] = PublicKey.findProgramAddressSync(
-          [Buffer.from("token_account_owner_pda"), mapComponentPda.toBuffer()],
-          vault_program_id,
-        );
-
-        let extraAccounts = [
-          {
-            pubkey: vault_token_account,
-            isWritable: true,
-            isSigner: false,
-          },
-          {
-            pubkey: sender_token_account,
-            isWritable: true,
-            isSigner: false,
-          },
-          {
-            pubkey: owner_token_account,
-            isWritable: true,
-            isSigner: false,
-          },
-          {
-            pubkey: supersize_token_account,
-            isWritable: true,
-            isSigner: false,
-          },
-          {
-            pubkey: tokenAccountOwnerPda,
-            isWritable: true,
-            isSigner: false,
-          },
-          {
-            pubkey: engine.getWalletPayer(),
-            isWritable: true,
-            isSigner: false,
-          },
-          {
-            pubkey: SystemProgram.programId,
-            isWritable: false,
-            isSigner: false,
-          },
-          {
-            pubkey: TOKEN_PROGRAM_ID,
-            isWritable: false,
-            isSigner: false,
-          },
-          {
-            pubkey: SYSVAR_RENT_PUBKEY,
-            isWritable: false,
-            isSigner: false,
-          },
-        ];
-
-        const cashouttx = new anchor.web3.Transaction()
-        if(withdraw == -1) {
-          const applyCashOutSystem = await ApplySystem({
-              authority: engine.getWalletPayer(),
-              world: gameInfo.worldPda,
-              entities: [
-              {
-                entity: playerEntityPda,
-                components: [{ componentId: COMPONENT_PLAYER_ID }],
-              },
-              {
-                entity: anteEntityPda,
-                components: [{ componentId: COMPONENT_ANTEROOM_ID }],
-              },
-            ],
-            systemId: SYSTEM_CASH_OUT_ID,
-            args: {
-              referred: false,
-            },
-            extraAccounts: extraAccounts as AccountMeta[],
-          });
-          cashouttx.add(applyCashOutSystem.transaction);
-        }else{
-            extraAccounts[1] = {
-              pubkey: supersize_token_account,
-              isWritable: true,
-              isSigner: false,
-            }
-            
-            const applyCashOutSystem = await ApplySystem({
-              authority: engine.getWalletPayer(),
-              world: gameInfo.worldPda,
-              entities: [
-              {
-                entity: playerEntityPda,
-                components: [{ componentId: COMPONENT_PLAYER_ID }],
-              },
-              {
-                entity: anteEntityPda,
-                components: [{ componentId: COMPONENT_ANTEROOM_ID }],
-              },
-            ],
-            systemId: SYSTEM_CASH_OUT_ID,
-            args: {
-              referred: false,
-              widthdrawl_amount: withdraw,
-            },
-            extraAccounts: extraAccounts as AccountMeta[],
-          });
-          cashouttx.add(applyCashOutSystem.transaction);
-        }
-        
-        const cashoutsignature = await engine.processWalletTransaction("playercashout", cashouttx);
-        console.log("cashoutsignature", cashoutsignature);
-    } 
-    }catch (error) {
-      console.error(`Error unclogging player:`, error);
-    }
-};
-
 export const handleDeleteGame = async (engine: MagicBlockEngine, gameInfo: ActiveGame) => {
     console.log("delete game", gameInfo.worldId.toString());
     let maxplayer = 10;
@@ -270,22 +76,11 @@ export const handleDeleteGame = async (engine: MagicBlockEngine, gameInfo: Activ
       entityId: new anchor.BN(0),
       seed: stringToUint8Array("origin"),
     });
-
-    const anteComponentPda = FindComponentPda({
-      componentId: COMPONENT_ANTEROOM_ID,
-      entity: anteEntityPda,
-    });
-
+    
     const mapComponentPda = FindComponentPda({
       componentId: COMPONENT_MAP_ID,
       entity: mapEntityPda,
     });
-
-    let destroyAnteComponentSig = await DestroyComponent({authority: engine.getSessionPayer(), entity: anteEntityPda, componentId: COMPONENT_ANTEROOM_ID, receiver: engine.getSessionPayer(), seed: "ante"});
-    let destroyAnteComponentTx = await engine.processSessionChainTransaction("destroy:ante", destroyAnteComponentSig.transaction).catch((error) => {
-      console.log("Error destroying:", error);
-    });
-    console.log("destroyAnteComponentTx", destroyAnteComponentTx);
 
     const undelegateIx = createUndelegateInstruction({
       payer: engine.getSessionPayer(),

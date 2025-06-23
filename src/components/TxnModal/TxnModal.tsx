@@ -30,6 +30,7 @@ const steps: { [key: string]: string } = {
   "init-anteroom": "Initializing anteroom",
   "delegate-map": "Delegating map",
   "delegate-food": "Delegating food",
+  "delegate-players": "Delegating players",
   "init-food": "Initializing food",
   "reclaim-sol": "Reclaiming leftover SOL",
 };

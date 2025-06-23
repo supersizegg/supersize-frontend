@@ -26,5 +26,5 @@ export async function gameSystemInitPlayer(
     systemId: SYSTEM_INIT_PLAYER_ID,
   });
 
-  return await engine.processSessionChainTransaction("initplayer:" + newplayerPda, initPlayer.transaction);
+  return await engine.processSessionEphemTransactionHard("initplayer:" + newplayerPda, initPlayer.transaction);
 }

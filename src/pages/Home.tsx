@@ -18,7 +18,6 @@ import { useMagicBlockEngine } from "../engine/MagicBlockEngineProvider";
 import { endpoints } from "@utils/constants";
 import { createUnloadedGame } from "@utils/game";
 import { stringToUint8Array, getRegion, getGameData, updatePlayerInfo, getPingColor } from "@utils/helper";
-import { gameSystemCashOut } from "@states/gameSystemCashOut";
 import { MagicBlockEngine } from "@engine/MagicBlockEngine";
 import GameComponent from "@components/Game/Game";
 import NotificationContainer from "@components/notification/NotificationContainer";
@@ -63,7 +62,6 @@ const Home = ({
   const [numberOfGamesInEndpoint, setNumberOfGamesInEndpoint] = useState<null | number>(null);
   const [hasInsufficientTokenBalance, setHasInsufficientTokenBalance] = useState(false);
   const [tokenBalance, setTokenBalance] = useState(-1);
-  const [gemBalance, setGemBalance] = useState(0);
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(event.target.value);
@@ -90,14 +88,13 @@ const Home = ({
         const worldPda = await FindWorldPda(worldId);
         const newGameInfo = createUnloadedGame(worldId.worldId, worldPda, "", true);
         try {
-          const { gameInfo: updateGameInfo, anteroomData } = await getGameData(engine, worldId.worldId, thisEndpoint, newGameInfo.activeGame);
+          const { gameInfo: updateGameInfo } = await getGameData(engine, worldId.worldId, thisEndpoint, newGameInfo.activeGame);
           newGameInfo.activeGame = updateGameInfo;
           if (newGameInfo.activeGame.max_players > 0){
-            console.log("new game info", newGameInfo.activeGame.worldId, newGameInfo.activeGame.worldPda.toString());
+            console.log("new game info", newGameInfo, updateGameInfo, newGameInfo.activeGame.worldId, newGameInfo.activeGame.worldPda.toString());
             setSelectedGame(newGameInfo.activeGame);
-            let updatedPlayerInfo = await updatePlayerInfo(engine, newGameInfo.activeGame.worldId, newGameInfo.activeGame.max_players, "new_player", new PublicKey(0), 0, false, false, thisEndpoint);
+            let updatedPlayerInfo = await updatePlayerInfo(engine, newGameInfo.activeGame.worldId, newGameInfo.activeGame.max_players, "new_player", new PublicKey(0), 0, thisEndpoint);
             newGameInfo.activeGame.active_players = updatedPlayerInfo.activeplayers;
-            newGameInfo.activeGame.max_players = updatedPlayerInfo.max_players;
             newGameInfo.activeGame.isLoaded = true;
 
             activeGamesRef.current = [
@@ -106,8 +103,6 @@ const Home = ({
                 activeGame: newGameInfo.activeGame,
                 playerInfo: {
                   playerStatus: updatedPlayerInfo.playerStatus,
-                  need_to_delegate: updatedPlayerInfo.need_to_delegate,
-                  need_to_undelegate: updatedPlayerInfo.need_to_undelegate,
                   newplayerEntityPda: updatedPlayerInfo.newPlayerEntityPda,
                 },
               },
@@ -118,8 +113,6 @@ const Home = ({
                 activeGame: newGameInfo.activeGame,
                 playerInfo: {
                   playerStatus: updatedPlayerInfo.playerStatus,
-                  need_to_delegate: updatedPlayerInfo.need_to_delegate,
-                  need_to_undelegate: updatedPlayerInfo.need_to_undelegate,
                   newplayerEntityPda: updatedPlayerInfo.newPlayerEntityPda,
                 },
               },
@@ -158,18 +151,15 @@ const Home = ({
       let max_players = getMaxPlayers(activeGames[index].activeGame.size);
       let updatedPlayerInfo = await updatePlayerInfo(engine, activeGames[index].activeGame.worldId, max_players, 
         activeGames[index].playerInfo.playerStatus, activeGames[index].playerInfo.newplayerEntityPda, activeGames[index].activeGame.active_players,
-        activeGames[index].playerInfo.need_to_delegate, activeGames[index].playerInfo.need_to_undelegate, activeGames[index].activeGame.endpoint);
+        activeGames[index].activeGame.endpoint);
       const newgame: FetchedGame = {
         activeGame: {
           ...activeGames[index].activeGame,
           isLoaded: true,
           active_players: updatedPlayerInfo.activeplayers,
-          max_players: updatedPlayerInfo.max_players,
         } as ActiveGame,
         playerInfo: {
           playerStatus: updatedPlayerInfo.playerStatus,
-          need_to_delegate: updatedPlayerInfo.need_to_delegate,
-          need_to_undelegate: updatedPlayerInfo.need_to_undelegate,
           newplayerEntityPda: updatedPlayerInfo.newPlayerEntityPda,
         } as PlayerInfo,
       };
@@ -197,43 +187,48 @@ const Home = ({
     let filteredGames = [...activeGames];
     const serverIndex = endpoints[NETWORK].indexOf(server);
     for (let i = 0; i < filteredGames.length; i++) {
-      //maybe if not on server, set isloaded to false
-      if(!(server === filteredGames[i].activeGame.endpoint || filteredGames[i].activeGame.endpoint === endpoints["devnet"][serverIndex])) continue;
+      //if not on server, set isloaded to false
+      const preNewGame: FetchedGame = {
+        activeGame: {
+          ...filteredGames[i].activeGame,
+          isLoaded: true,
+          active_players: -1,
+        } as ActiveGame,
+        playerInfo: {
+          ...filteredGames[i].playerInfo,
+        } as PlayerInfo,
+      };
+      const preMergedGames = [...filteredGames];
+
+      //if(!(server === filteredGames[i].activeGame.endpoint || filteredGames[i].activeGame.endpoint === endpoints["devnet"][serverIndex])){
+      if(server !== filteredGames[i].activeGame.endpoint){
+        preNewGame.activeGame.isLoaded = false;
+        preMergedGames[i] = preNewGame;
+        filteredGames = preMergedGames;
+        activeGamesRef.current[i] = preNewGame;
+        setActiveGamesLoaded(preMergedGames);
+        continue;
+      } 
       console.log("engine", engine);
       try {
-        const preNewGame: FetchedGame = {
-          activeGame: {
-            ...filteredGames[i].activeGame,
-            isLoaded: true,
-            active_players: -1,
-          } as ActiveGame,
-          playerInfo: {
-            ...filteredGames[i].playerInfo,
-          } as PlayerInfo,
-        };
-
-        const preMergedGames = [...filteredGames];
         preMergedGames[i] = preNewGame;
         filteredGames = preMergedGames;
         setActiveGamesLoaded(preMergedGames);
 
         let activeGameCopy = filteredGames[i].activeGame;
-        const { gameInfo: updateGameInfo, anteroomData } = await getGameData(engine, activeGameCopy.worldId, activeGameCopy.endpoint, activeGameCopy);
+        const { gameInfo: updateGameInfo } = await getGameData(engine, activeGameCopy.worldId, activeGameCopy.endpoint, activeGameCopy);
         activeGameCopy = updateGameInfo;
         let max_players = getMaxPlayers(activeGameCopy.size);
         let updatedPlayerInfo = await updatePlayerInfo(engine, activeGameCopy.worldId, max_players, 
           filteredGames[i].playerInfo.playerStatus, filteredGames[i].playerInfo.newplayerEntityPda, activeGameCopy.active_players,  
-          filteredGames[i].playerInfo.need_to_delegate, filteredGames[i].playerInfo.need_to_undelegate, activeGameCopy.endpoint);
+          activeGameCopy.endpoint);
         const newgame: FetchedGame = {
           activeGame: {
             ...activeGameCopy,
-            max_players: updatedPlayerInfo.max_players,
             active_players: updatedPlayerInfo.activeplayers,
           } as ActiveGame,
           playerInfo: {
             playerStatus: updatedPlayerInfo.playerStatus,
-            need_to_delegate: updatedPlayerInfo.need_to_delegate,
-            need_to_undelegate: updatedPlayerInfo.need_to_undelegate,
             newplayerEntityPda: updatedPlayerInfo.newPlayerEntityPda,
           } as PlayerInfo,
         };
@@ -263,8 +258,8 @@ const Home = ({
         });
       let max_players = getMaxPlayers(game.activeGame.size);
       let updatedPlayerInfo = await updatePlayerInfo(engine, game.activeGame.worldId, max_players, game.playerInfo.playerStatus, 
-        game.playerInfo.newplayerEntityPda, game.activeGame.active_players, 
-        game.playerInfo.need_to_delegate, game.playerInfo.need_to_undelegate, game.activeGame.endpoint);
+        game.playerInfo.newplayerEntityPda, game.activeGame.active_players, game.activeGame.endpoint);
+      //console.log("updatedPlayerInfo", updatedPlayerInfo);
       if (updatedPlayerInfo.playerStatus == "Game Full" || updatedPlayerInfo.playerStatus == "error"){
         const exitAlertId = NotificationService.addAlert({
           type: "error",
@@ -277,8 +272,6 @@ const Home = ({
       }
       game.playerInfo = {
         playerStatus: updatedPlayerInfo.playerStatus,
-        need_to_delegate: updatedPlayerInfo.need_to_delegate,
-        need_to_undelegate: updatedPlayerInfo.need_to_undelegate,
         newplayerEntityPda: updatedPlayerInfo.newPlayerEntityPda,
       };
       const { tokenBalance, hasInsufficientTokenBalance } = await fetchTokenBalance(engine, game.activeGame, networkType == "devnet");
@@ -309,77 +302,7 @@ const Home = ({
       }
       NotificationService.updateAlert(alertId, { shouldExit: true });
     }
-    if (game.playerInfo.playerStatus === "cashing_out") {
-      try {
-        const anteEntityPda = FindEntityPda({
-          worldId: game.activeGame.worldId,
-          entityId: new anchor.BN(0),
-          seed: stringToUint8Array("ante"),
-        });
-        const cashoutAlertId = NotificationService.addAlert({
-          type: "success",
-          message: "Cashing out...",
-          shouldExit: false,
-        });
-        const cashoutFeedback = await gameSystemCashOut(
-          engine,
-          game.activeGame,
-          anteEntityPda,
-          game.playerInfo.newplayerEntityPda,
-          networkType == "devnet" || sessionWalletInUse,
-        );
-        NotificationService.updateAlert(cashoutAlertId, { shouldExit: true });
-        if (cashoutFeedback.success) {
-          const cashoutSuccessAlertId = NotificationService.addAlert({
-            type: "success",
-            message: "Cashing out successful",
-            shouldExit: false,
-          });
-          setTimeout(() => {
-            NotificationService.updateAlert(cashoutSuccessAlertId, { shouldExit: true });
-          }, 3000);
-        }else{
-          const cashoutFailedAlertId = NotificationService.addAlert({
-            type: "error",
-            message: cashoutFeedback.error || "Error cashing out",
-            shouldExit: false,
-          });
-          setTimeout(() => {
-            NotificationService.updateAlert(cashoutFailedAlertId, { shouldExit: true });
-          }, 3000);
-        }
-      } catch (cashoutError) {
-        const cashoutFailedAlertId = NotificationService.addAlert({
-          type: "error",
-          message: "Error cashing out",
-          shouldExit: false,
-        });
-        setTimeout(() => {
-          NotificationService.updateAlert(cashoutFailedAlertId, { shouldExit: true });
-        }, 3000);
-        console.log("error", cashoutError);
-      }
-    }
     if (game.playerInfo.playerStatus === "in_game") {
-      if (game.playerInfo.need_to_delegate) {
-        try {
-          const playerComponentPda = FindComponentPda({
-            componentId: COMPONENT_PLAYER_ID,
-            entity: game.playerInfo.newplayerEntityPda,
-          });
-          const playerdelegateIx = createDelegateInstruction({
-            entity: game.playerInfo.newplayerEntityPda,
-            account: playerComponentPda,
-            ownerProgram: COMPONENT_PLAYER_ID,
-            payer: engine.getWalletPayer(),
-          });
-          const deltx = new Transaction().add(playerdelegateIx);
-          const playerdelsignature = await engine.processWalletTransaction("playerdelegate", deltx);
-          console.log(`delegation signature: ${playerdelsignature}`);
-        } catch (error) {
-          console.log("Error delegating:", error);
-        }
-      }
       setMyPlayerEntityPda(game.playerInfo.newplayerEntityPda);
       navigate(`/game`);
     }
@@ -398,30 +321,6 @@ const Home = ({
     );
     setIsLoadingCurrentGames(false);
   };
-
-  useEffect(() => {
-    const fetchUserTokenBalance = async () => {
-      let connection = engine.getConnectionChainDevnet();
-      const tokenMint = new PublicKey("AsoX43Q5Y87RPRGFkkYUvu8CSksD9JXNEqWVGVsr8UEp");
-      let balance = 0;
-        const tokenAccounts = await connection.getTokenAccountsByOwner(engine.getSessionPayer(), {
-          mint: tokenMint,
-        });
-        console.log("tokenAccounts", tokenAccounts);
-        if (tokenAccounts.value.length > 0) {
-          const accountInfo = tokenAccounts.value[0].pubkey;
-          const balanceInfo = await connection.getTokenAccountBalance(accountInfo);
-          console.log("balanceInfo", balanceInfo.value.amount);
-          balance = parseInt(balanceInfo.value.amount) || 0;
-          setGemBalance(balance / 10 ** 9);
-        }
-        else{
-          setGemBalance(0);
-        }
-    }
-
-    fetchUserTokenBalance();
-  }, [engine.getSessionPayer()]);
 
   useEffect(() => {
     const fetchPingData = async () => {
@@ -608,51 +507,31 @@ const Home = ({
           players={[]}
           visibleFood={randomFood}
           currentPlayer={{
-            name: "unnamed",
+            name: "",
             authority: null,
-            x: 2000,
-            y: 2000,
-            radius: 0,
-            mass: 0,
             score: 0,
-            speed: 0,
+            circles: [{x: 5000, y: 5000, radius: 0, size: 0, speed: 0}],
             removal: new BN(0),
-            target_x: 0,
-            target_y: 0,
+            x: 5000,
+            y: 5000,
+            target_x: 5000,
+            target_y: 5000,
+            timestamp: 0,
           }}
           screenSize={{width: window.innerWidth, height: window.innerHeight }}
-          newTarget={{ x: 0, y: 0, boost: false }}
-          gameSize={4000}
+          newTarget={{ x: 0, y: 0}}
+          gameSize={10000}
+          buyIn={0}
         />
       </div>
       <MenuBar />
-      <div style={{ position: "fixed", top: "3.5em", right: "3em", display: gemBalance > 0 ? "flex" : "none", flexDirection: "row" }}>
-          <img  style={{ width: "20px", height: "20px", marginRight: "5px", marginTop: "1px" }} src={cachedTokenMetadata["AsoX43Q5Y87RPRGFkkYUvu8CSksD9JXNEqWVGVsr8UEp"].image} alt="Token Image" /> {gemBalance.toFixed(2)}
-      </div>
 
-      <div className="banner" style={{ position: "relative" }}>
-      <svg width="160" height="160" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="64" cy="64" r="64" fill="#1f67e0" />
-      <circle cx="38.4" cy="51.2" r="12.8" fill="white" stroke="black" strokeWidth="2" />
-      <circle cx="46.08" cy="51.2" r="5.12" fill="black" />
-      <circle cx="89.6" cy="51.2" r="12.8" fill="white" stroke="black" strokeWidth="2" />
-      <circle cx="97.28" cy="51.2" r="5.12" fill="black" />
-      <path d="M 32 83.2 Q 64 89.6, 96 83.2" fill="none" stroke="black" strokeWidth="2" />
-      </svg>
-
-        <div className="banner-text">
-          <h1 className="banner-title">Play Supersize, win <span style={{ color: "#00d37d" }}>SOL</span></h1>
-          <p className="banner-description">
-            Eat tokens and grow your blob. Eat other players to steal their tokens. Cash out your tokens anytime.{" "}
-            <button
-              onClick={() => navigate("/about")}
-              style={{ textDecoration: "underline", color: "#00d37d" }}
-            >
-               <span className="desktop-only">Learn more</span>
-               <span className="mobile-only">Learn more</span>            
-              </button>
-          </p>
-        </div>
+      <div className="banner" style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+          <h1 className="banner-title">blob.cash</h1>
+          <div style={{ position: "absolute", display: "none", flexDirection: "column", alignItems: "flex-end", justifyContent: "center", right: "-2em", top: "3em"}}>
+            <img src={`${process.env.PUBLIC_URL}/snake.png`} alt="Banner" style={{ width: "200px", height: "auto" }} />
+          </div>
+          <h1 className="banner-text">Grow your blob to get money!</h1>
       </div>
       <div className="home-container" style={{ position: "relative" }}> 
         <div className="mobile-only mobile-alert">For the best experience, use a desktop or laptop.</div>

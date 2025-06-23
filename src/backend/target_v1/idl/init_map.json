@@ -1,0 +1,210 @@
+{
+  "address": "NrQkd31YsAWX6qyuLgktt4VPG4Q2DY94rBq7fWdRgo7",
+  "metadata": {
+    "name": "init_map",
+    "version": "0.2.0",
+    "spec": "0.1.0",
+    "description": "Created with Bolt"
+  },
+  "instructions": [
+    {
+      "name": "bolt_execute",
+      "discriminator": [
+        75,
+        206,
+        62,
+        210,
+        52,
+        215,
+        104,
+        109
+      ],
+      "accounts": [
+        {
+          "name": "authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": "bytes"
+        }
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
+    },
+    {
+      "name": "execute",
+      "discriminator": [
+        130,
+        221,
+        242,
+        154,
+        13,
+        193,
+        189,
+        29
+      ],
+      "accounts": [
+        {
+          "name": "map"
+        },
+        {
+          "name": "authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "_args",
+          "type": "bytes"
+        }
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Map",
+      "discriminator": [
+        182,
+        30,
+        142,
+        151,
+        42,
+        241,
+        180,
+        244
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "NotAuthorized",
+      "msg": "Wallet not authorized."
+    },
+    {
+      "code": 6001,
+      "name": "MapFrozen",
+      "msg": "Map settings frozen."
+    },
+    {
+      "code": 6002,
+      "name": "EntryFeeNotSupported",
+      "msg": "Entry fee size not supported."
+    },
+    {
+      "code": 6003,
+      "name": "BadMapSize",
+      "msg": "Map size not supported."
+    },
+    {
+      "code": 6004,
+      "name": "AccountNotFound",
+      "msg": "Account not found."
+    }
+  ],
+  "types": [
+    {
+      "name": "BoltMetadata",
+      "docs": [
+        "Metadata for the component."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Food",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "data",
+            "type": {
+              "array": [
+                "u8",
+                4
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Map",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "authority",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "width",
+            "type": "u16"
+          },
+          {
+            "name": "height",
+            "type": "u16"
+          },
+          {
+            "name": "buy_in",
+            "type": "u64"
+          },
+          {
+            "name": "token",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "token_decimals",
+            "type": "u32"
+          },
+          {
+            "name": "max_players",
+            "type": "u8"
+          },
+          {
+            "name": "wallet_balance",
+            "type": "u64"
+          },
+          {
+            "name": "next_food",
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "Food"
+                }
+              }
+            }
+          },
+          {
+            "name": "bolt_metadata",
+            "type": {
+              "defined": {
+                "name": "BoltMetadata"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

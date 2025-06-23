@@ -2,7 +2,7 @@
   "address": "BEox2GnPkZ1upBAdUi7FVqTstjsC4tDjsbTpTiE17bah",
   "metadata": {
     "name": "section",
-    "version": "0.2.0",
+    "version": "0.2.3",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -92,7 +92,19 @@
         },
         {
           "name": "component",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": []
+              },
+              {
+                "kind": "account",
+                "path": "entity"
+              }
+            ]
+          }
         },
         {
           "name": "component_program_data"
@@ -128,7 +140,19 @@
         },
         {
           "name": "data",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": []
+              },
+              {
+                "kind": "account",
+                "path": "entity"
+              }
+            ]
+          }
         },
         {
           "name": "entity"
@@ -363,7 +387,7 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "data",
+            "name": "food_data",
             "type": {
               "array": [
                 "u8",

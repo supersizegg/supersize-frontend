@@ -8,7 +8,7 @@ export type BuyIn = {
   "address": "CLC46PuyXnSuZGmUrqkFbAh7WwzQm8aBPjSQ3HMP56kp",
   "metadata": {
     "name": "buyIn",
-    "version": "0.2.0",
+    "version": "0.2.3",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -57,7 +57,7 @@ export type BuyIn = {
           "name": "player"
         },
         {
-          "name": "anteroom"
+          "name": "map"
         },
         {
           "name": "authority"
@@ -72,61 +72,20 @@ export type BuyIn = {
       "returns": {
         "vec": "bytes"
       }
-    },
-    {
-      "name": "initExtraAccounts",
-      "discriminator": [
-        58,
-        71,
-        119,
-        115,
-        48,
-        174,
-        40,
-        177
-      ],
-      "accounts": [
-        {
-          "name": "vaultTokenAccount",
-          "writable": true
-        },
-        {
-          "name": "playerAccount",
-          "writable": true
-        },
-        {
-          "name": "payoutTokenAccount",
-          "writable": true
-        },
-        {
-          "name": "signer",
-          "writable": true
-        },
-        {
-          "name": "systemProgram"
-        },
-        {
-          "name": "tokenProgram"
-        },
-        {
-          "name": "rent"
-        }
-      ],
-      "args": []
     }
   ],
   "accounts": [
     {
-      "name": "anteroom",
+      "name": "map",
       "discriminator": [
-        155,
-        119,
-        131,
-        251,
-        168,
-        75,
-        38,
-        134
+        182,
+        30,
+        142,
+        151,
+        42,
+        241,
+        180,
+        244
       ]
     },
     {
@@ -151,86 +110,21 @@ export type BuyIn = {
     },
     {
       "code": 6001,
-      "name": "invalidGameVault",
-      "msg": "Invalid game vault."
+      "name": "mapKeyMismatch",
+      "msg": "Player component doesn't belong to map."
     },
     {
       "code": 6002,
-      "name": "invalidGameVaultOwner",
-      "msg": "Invalid game vault owner."
+      "name": "wrongToken",
+      "msg": "Incorrect token address."
     },
     {
       "code": 6003,
-      "name": "invalidMint",
-      "msg": "Token mint mismatch."
-    },
-    {
-      "code": 6004,
-      "name": "mapKeyMismatch",
-      "msg": "Player component doesn't belong to map."
+      "name": "maxPlayers",
+      "msg": "Game at max players."
     }
   ],
   "types": [
-    {
-      "name": "anteroom",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "map",
-            "type": {
-              "option": "pubkey"
-            }
-          },
-          {
-            "name": "width",
-            "type": "u16"
-          },
-          {
-            "name": "height",
-            "type": "u16"
-          },
-          {
-            "name": "buyIn",
-            "type": "u64"
-          },
-          {
-            "name": "token",
-            "type": {
-              "option": "pubkey"
-            }
-          },
-          {
-            "name": "tokenDecimals",
-            "type": "u32"
-          },
-          {
-            "name": "vaultTokenAccount",
-            "type": {
-              "option": "pubkey"
-            }
-          },
-          {
-            "name": "gamemasterTokenAccount",
-            "type": {
-              "option": "pubkey"
-            }
-          },
-          {
-            "name": "totalActiveBuyins",
-            "type": "u64"
-          },
-          {
-            "name": "boltMetadata",
-            "type": {
-              "defined": {
-                "name": "boltMetadata"
-              }
-            }
-          }
-        ]
-      }
-    },
     {
       "name": "boltMetadata",
       "docs": [
@@ -247,10 +141,124 @@ export type BuyIn = {
       }
     },
     {
+      "name": "circle",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "x",
+            "type": "u16"
+          },
+          {
+            "name": "y",
+            "type": "u16"
+          },
+          {
+            "name": "size",
+            "type": "u16"
+          },
+          {
+            "name": "radius",
+            "type": "u16"
+          },
+          {
+            "name": "speed",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "map",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "gameType",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "authority",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "size",
+            "type": "u16"
+          },
+          {
+            "name": "buyIn",
+            "type": "u64"
+          },
+          {
+            "name": "token",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "activePlayers",
+            "type": "u8"
+          },
+          {
+            "name": "valueOnMap",
+            "type": "u64"
+          },
+          {
+            "name": "nextFood",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "mapFood"
+                }
+              }
+            }
+          },
+          {
+            "name": "boltMetadata",
+            "type": {
+              "defined": {
+                "name": "boltMetadata"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "mapFood",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "x",
+            "type": "u16"
+          },
+          {
+            "name": "y",
+            "type": "u16"
+          },
+          {
+            "name": "foodValue",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
       "name": "player",
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "gameType",
+            "type": "string"
+          },
           {
             "name": "name",
             "type": "string"
@@ -268,26 +276,8 @@ export type BuyIn = {
             }
           },
           {
-            "name": "status",
-            "type": "string"
-          },
-          {
-            "name": "payoutTokenAccount",
-            "type": {
-              "option": "pubkey"
-            }
-          },
-          {
-            "name": "currentGameWalletBalance",
+            "name": "buyIn",
             "type": "u64"
-          },
-          {
-            "name": "x",
-            "type": "u16"
-          },
-          {
-            "name": "y",
-            "type": "u16"
           },
           {
             "name": "targetX",
@@ -306,35 +296,33 @@ export type BuyIn = {
             "type": "u64"
           },
           {
-            "name": "mass",
-            "type": "u64"
-          },
-          {
-            "name": "foodEaten",
-            "type": "u64"
-          },
-          {
-            "name": "playersEaten",
-            "type": "u16"
-          },
-          {
-            "name": "speed",
-            "type": "f32"
-          },
-          {
             "name": "joinTime",
             "type": "i64"
           },
           {
-            "name": "scheduledRemovalTime",
+            "name": "cooldownTimer",
             "type": {
               "option": "i64"
             }
           },
           {
-            "name": "boostClickTime",
+            "name": "removalTime",
             "type": {
               "option": "i64"
+            }
+          },
+          {
+            "name": "exitLocked",
+            "type": "bool"
+          },
+          {
+            "name": "circles",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "circle"
+                }
+              }
             }
           },
           {

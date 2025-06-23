@@ -8,7 +8,7 @@ export type Section = {
   "address": "BEox2GnPkZ1upBAdUi7FVqTstjsC4tDjsbTpTiE17bah",
   "metadata": {
     "name": "section",
-    "version": "0.2.0",
+    "version": "0.2.3",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -98,7 +98,19 @@ export type Section = {
         },
         {
           "name": "component",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": []
+              },
+              {
+                "kind": "account",
+                "path": "entity"
+              }
+            ]
+          }
         },
         {
           "name": "componentProgramData"
@@ -134,7 +146,19 @@ export type Section = {
         },
         {
           "name": "data",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": []
+              },
+              {
+                "kind": "account",
+                "path": "entity"
+              }
+            ]
+          }
         },
         {
           "name": "entity"
@@ -369,7 +393,7 @@ export type Section = {
         "kind": "struct",
         "fields": [
           {
-            "name": "data",
+            "name": "foodData",
             "type": {
               "array": [
                 "u8",

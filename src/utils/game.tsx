@@ -26,8 +26,6 @@ export function createUnloadedGame(
     },
     playerInfo: {
       playerStatus: "new_player",
-      need_to_delegate: false,
-      need_to_undelegate: false,
       newplayerEntityPda: new PublicKey(0),
     },
   };

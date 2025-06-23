@@ -12,9 +12,7 @@ type launchProps = {
 
 const GameLauncher: React.FC<launchProps> = ({ activeGamesLoaded, setActiveGamesLoaded }) => {
   const options = [
-    { id: 0, size: 4000, players: 10, cost: "0.4 SOL" },
-    { id: 1, size: 6000, players: 20, cost: "1.0 SOL" },
-    { id: 2, size: 8000, players: 40, cost: "1.6 SOL" },
+    { id: 0, size: 10000, players: 100, cost: "2.0 SOL" },
   ];
 
   const [selectedOption, setSelectedOption] = useState(0);
@@ -36,7 +34,7 @@ const GameLauncher: React.FC<launchProps> = ({ activeGamesLoaded, setActiveGames
   return (
     <div className="launch-game-container">
       <div className="launch-game-content">
-        <p className="launch-game-description">Select game size:</p>
+        <p className="launch-game-description">Game size:</p>
         <div className="options-container">
           {options.map((option) => (
             <div

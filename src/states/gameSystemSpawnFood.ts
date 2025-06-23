@@ -1,5 +1,5 @@
 import { PublicKey } from "@solana/web3.js";
-import { ApplySystem } from "@magicblock-labs/bolt-sdk";
+import { ApplySystem, FindComponentPda } from "@magicblock-labs/bolt-sdk";
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
 import { COMPONENT_MAP_ID, SYSTEM_SPAWN_FOOD_ID, COMPONENT_SECTION_ID } from "./gamePrograms";
 import { ActiveGame } from "@utils/types";
@@ -15,6 +15,10 @@ export async function gameSystemSpawnFood(
   foodEntities: PublicKey[],
 ) {
   const currentSection = getSectionIndex(foodX, foodY, gameInfo.size, 1);
+  const foodComponentPda = FindComponentPda({
+    componentId: COMPONENT_SECTION_ID,
+    entity:  foodEntities[currentSection],
+  });
   const newFoodTx = await ApplySystem({
     authority: engine.getSessionPayer(),
     world: gameInfo.worldPda,

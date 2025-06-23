@@ -80,7 +80,6 @@ const CreateGameForm: React.FC<gameProps> = ({ game_size, activeGamesLoaded, set
     engine.setEndpointEphemRpc(selectedServer);
     gameExecuteNewGame(
       engine,
-      formData[0],
       formData[1],
       formData[2],
       formData[3],

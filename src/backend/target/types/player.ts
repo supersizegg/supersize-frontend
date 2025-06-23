@@ -8,7 +8,7 @@ export type Player = {
   "address": "2ewyq31Atu7yLcYMg51CEa22HmcCSJwM4jjHH8kKVAJw",
   "metadata": {
     "name": "player",
-    "version": "0.2.0",
+    "version": "0.2.3",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -98,7 +98,19 @@ export type Player = {
         },
         {
           "name": "component",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": []
+              },
+              {
+                "kind": "account",
+                "path": "entity"
+              }
+            ]
+          }
         },
         {
           "name": "componentProgramData"
@@ -134,7 +146,19 @@ export type Player = {
         },
         {
           "name": "data",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": []
+              },
+              {
+                "kind": "account",
+                "path": "entity"
+              }
+            ]
+          }
         },
         {
           "name": "entity"
@@ -352,6 +376,34 @@ export type Player = {
       }
     },
     {
+      "name": "circle",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "x",
+            "type": "u16"
+          },
+          {
+            "name": "y",
+            "type": "u16"
+          },
+          {
+            "name": "size",
+            "type": "u16"
+          },
+          {
+            "name": "radius",
+            "type": "u16"
+          },
+          {
+            "name": "speed",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
       "name": "entity",
       "type": {
         "kind": "struct",
@@ -369,6 +421,10 @@ export type Player = {
         "kind": "struct",
         "fields": [
           {
+            "name": "gameType",
+            "type": "string"
+          },
+          {
             "name": "name",
             "type": "string"
           },
@@ -385,26 +441,8 @@ export type Player = {
             }
           },
           {
-            "name": "status",
-            "type": "string"
-          },
-          {
-            "name": "payoutTokenAccount",
-            "type": {
-              "option": "pubkey"
-            }
-          },
-          {
-            "name": "currentGameWalletBalance",
+            "name": "buyIn",
             "type": "u64"
-          },
-          {
-            "name": "x",
-            "type": "u16"
-          },
-          {
-            "name": "y",
-            "type": "u16"
           },
           {
             "name": "targetX",
@@ -423,35 +461,33 @@ export type Player = {
             "type": "u64"
           },
           {
-            "name": "mass",
-            "type": "u64"
-          },
-          {
-            "name": "foodEaten",
-            "type": "u64"
-          },
-          {
-            "name": "playersEaten",
-            "type": "u16"
-          },
-          {
-            "name": "speed",
-            "type": "f32"
-          },
-          {
             "name": "joinTime",
             "type": "i64"
           },
           {
-            "name": "scheduledRemovalTime",
+            "name": "cooldownTimer",
             "type": {
               "option": "i64"
             }
           },
           {
-            "name": "boostClickTime",
+            "name": "removalTime",
             "type": {
               "option": "i64"
+            }
+          },
+          {
+            "name": "exitLocked",
+            "type": "bool"
+          },
+          {
+            "name": "circles",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "circle"
+                }
+              }
             }
           },
           {

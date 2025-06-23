@@ -14,24 +14,21 @@ import {
   stepCreateMap,
   stepCreateFoodEntities,
   stepCreatePlayerEntities,
-  stepCreateAnteroom,
   stepInitMapComponent,
   stepInitFoodComponents,
   stepInitPlayerComponents,
-  stepInitAnteroomComponent,
   stepSetupVault,
   stepInitializeGame,
   stepInitPlayers,
-  stepInitAnteroom,
   stepDelegateMap,
   stepDelegateFood,
   stepInitFoodPositions,
   stepReclaimSOL,
+  stepDelegatePlayers,
 } from "./gameSteps";
 
 export async function gameExecuteNewGame(
   engine: MagicBlockEngine,
-  game_size: number,
   buy_in: number,
   game_owner_wallet_string: string,
   game_token_string: string,
@@ -43,12 +40,6 @@ export async function gameExecuteNewGame(
   setNewGameId: React.Dispatch<React.SetStateAction<string>>,
   setGameCreated: React.Dispatch<React.SetStateAction<boolean>>,
 ) {
-  const gameParams = {
-    4000: { maxplayer: 10, foodcomponents: 32, cost: 0.4 },
-    6000: { maxplayer: 20, foodcomponents: 72, cost: 1.0 },
-    8000: { maxplayer: 40, foodcomponents: 128, cost: 1.6 },
-  }[game_size];
-  if (!gameParams) throw new Error("Invalid game size.");
   const gameOwnerWallet = new PublicKey(game_owner_wallet_string);
   const mint_of_token = new PublicKey(game_token_string);
   const owner_token_account = await getAssociatedTokenAddress(mint_of_token, gameOwnerWallet);
@@ -73,23 +64,20 @@ export async function gameExecuteNewGame(
     // @ts-ignore
     anteroomEntityPda: null,
     foodComponentPdas: [],
-    gameParams,
     buy_in,
+    gameParams: { maxplayer: 100, foodcomponents: 100, cost: 2.0 },
   };
 
-  await stepTransferSOL(context, gameParams.cost, setTransactions, showPrompt);
+  await stepTransferSOL(context, context.gameParams.cost, setTransactions, showPrompt);
   await stepInitWorld(context, setTransactions, setNewGameId, showPrompt);
   await stepCreateMap(context, setTransactions, showPrompt);
   await stepCreateFoodEntities(context, setTransactions, showPrompt);
-  await stepCreatePlayerEntities(context, gameParams.maxplayer, setTransactions, showPrompt);
-  await stepCreateAnteroom(context, setTransactions, showPrompt);
+  await stepCreatePlayerEntities(context, context.gameParams.maxplayer, setTransactions, showPrompt);
   await stepInitMapComponent(context, setTransactions, showPrompt);
   await stepInitFoodComponents(context, setTransactions, showPrompt);
   await stepInitPlayerComponents(context, setTransactions, showPrompt);
-  await stepInitAnteroomComponent(context, setTransactions, showPrompt);
   await stepSetupVault(context, mint_of_token, gameOwnerWallet, setTransactions, showPrompt);
-  await stepInitializeGame(context, game_name, game_size, buy_in, mint_of_token.toString(), decimals, setTransactions, showPrompt);
-  await stepInitPlayers(context, setTransactions, showPrompt);
+  await stepInitializeGame(context, game_name, buy_in, mint_of_token.toString(), decimals, setTransactions, showPrompt);
 
   // Compute tokenVault (needed for initializing the anteroom).
   const mapComponentPda = await (async () => {
@@ -104,16 +92,11 @@ export async function gameExecuteNewGame(
   );
   const tokenVault = await getAssociatedTokenAddress(mint_of_token, tokenAccountOwnerPda, true);
 
-  await stepInitAnteroom(
-    context,
-    tokenVault,
-    owner_token_account,
-    setTransactions,
-    showPrompt,
-  );
   await stepDelegateMap(context, setTransactions, showPrompt);
   await stepDelegateFood(context, setTransactions, showPrompt);
-  await stepInitFoodPositions(context, game_size, setTransactions, showPrompt);
+  await stepDelegatePlayers(context, setTransactions, showPrompt);
+  await stepInitPlayers(context, setTransactions, showPrompt);
+  await stepInitFoodPositions(context, 10000, setTransactions, showPrompt);
   await stepReclaimSOL(context, gameOwnerWallet, setTransactions, showPrompt);
 
   // Finalize: update active games.
@@ -125,8 +108,8 @@ export async function gameExecuteNewGame(
       worldPda: context.world.worldPda,
       name: game_name,
       active_players: 0,
-      max_players: gameParams.maxplayer,
-      size: game_size,
+      max_players: 100,
+      size: 10000,
       image: tokenMetadata.image || `${process.env.PUBLIC_URL}/default.png`,
       token: tokenMetadata.name || "TOKEN",
       buy_in: buy_in,

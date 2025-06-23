@@ -166,12 +166,12 @@ export class MagicBlockEngine {
   }
 
   async processSessionEphemTransaction(name: string, transaction: Transaction): Promise<string> {
-    log(name, "sending");
+    //log(name, "sending");
     // transaction.compileMessage;
     const signature = await this.connectionEphem.sendTransaction(transaction, [this.sessionKey], {
       skipPreflight: true,
     });
-    await this.waitSignatureConfirmation(name, signature, this.connectionEphem, "confirmed");
+    await this.waitSignatureConfirmation(name, signature, this.connectionEphem, "confirmed", 1000);
     return signature;
   }
 
@@ -183,18 +183,34 @@ export class MagicBlockEngine {
     return signature;
   }
 
+  async processSessionEphemTransactionHard(name: string, transaction: Transaction): Promise<string> {
+    //log(name, "sending");
+    // transaction.compileMessage;
+    const signature = await this.connectionEphem.sendTransaction(transaction, [this.sessionKey], {
+      skipPreflight: true,
+      preflightCommitment: "processed",
+    });
+    await this.waitSignatureConfirmation(name, signature, this.connectionEphem, "confirmed", 1000, true);
+    return signature;
+  }
+
   async waitSignatureConfirmation(
     name: string,
     signature: string,
     connection: Connection,
     commitment: Commitment,
     timeoutMs = 60000,
+    doFallbackCheck: boolean = false,
   ): Promise<void> {
-    log(name, "sent", signature);
+    //log(name, "sent", signature);
 
     return new Promise((resolve, reject) => {
       let timeoutHandle: ReturnType<typeof setTimeout>;
       let done = false;
+
+      const origWarn = console.warn;    
+      // Override to no-op or filter
+      console.warn = () => {};
 
       const subscriptionId = connection.onSignature(
         signature,
@@ -202,10 +218,13 @@ export class MagicBlockEngine {
           if (done) return;
           done = true;
           clearTimeout(timeoutHandle);
-          connection.removeSignatureListener(subscriptionId);
-          log(name, commitment, signature, result.err);
+          try {
+            connection.removeSignatureListener(subscriptionId);
+          } catch (error) {
+          }
+          //log(name, commitment, signature, result.err);
           if (result.err) {
-            this.debugError(name, signature, connection);
+            //this.debugError(name, signature, connection);
             reject(new Error(JSON.stringify(result.err)));  
           } else {
             resolve();
@@ -217,9 +236,42 @@ export class MagicBlockEngine {
       timeoutHandle = setTimeout(() => {
         if (done) return;
         done = true;
-        connection.removeSignatureListener(subscriptionId);
-        reject(new Error(`Timeout waiting for transaction ${signature} confirmation`));
+        try {
+          connection.removeSignatureListener(subscriptionId);
+        } catch (error) {
+        }
+        if(doFallbackCheck) {
+          doSingleFallbackCheck();
+        }else{
+          reject(new Error(`Timeout waiting for transaction ${signature} confirmation`));
+        }
       }, timeoutMs);
+
+      const doSingleFallbackCheck = async () => {
+        try {
+          const resp = await connection.getSignatureStatuses([signature]);
+          const statusInfo = resp && resp.value && resp.value[0];
+          if (statusInfo) {
+            const { confirmationStatus, err } = statusInfo;
+            log(name, `fallback check: confirmationStatus=${confirmationStatus}`, `err=${err}`);
+            if (err) {
+              this.debugError(name, signature, connection);
+              reject(new Error(`Transaction ${signature} failed on-chain: ${JSON.stringify(err)}`));
+              return;
+            }
+            log(name, `fallback: found status with err null, resolving without checking exact confirmation level`);
+            resolve();
+            return;
+          } else {
+            log(name, `fallback check: no status info found`);
+            reject(new Error(`Transaction ${signature} not found on-chain in fallback check`));
+            return;
+          }
+        } catch (pollErr) {
+          console.warn(`${name}: error during fallback getSignatureStatuses`, pollErr);
+          reject(new Error(`Error during fallback status check for ${signature}: ${pollErr}`));
+        }
+      };
     });
   }
 

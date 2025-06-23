@@ -1,0 +1,318 @@
+{
+  "address": "wdH5MUvXcyKM58yffCxhRQfB5jLQHpnWZhhdYhLCThf",
+  "metadata": {
+    "name": "exit_game",
+    "version": "0.2.0",
+    "spec": "0.1.0",
+    "description": "Created with Bolt"
+  },
+  "instructions": [
+    {
+      "name": "bolt_execute",
+      "discriminator": [
+        75,
+        206,
+        62,
+        210,
+        52,
+        215,
+        104,
+        109
+      ],
+      "accounts": [
+        {
+          "name": "authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": "bytes"
+        }
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
+    },
+    {
+      "name": "execute",
+      "discriminator": [
+        130,
+        221,
+        242,
+        154,
+        13,
+        193,
+        189,
+        29
+      ],
+      "accounts": [
+        {
+          "name": "player"
+        },
+        {
+          "name": "map"
+        },
+        {
+          "name": "authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "_args_p",
+          "type": "bytes"
+        }
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Map",
+      "discriminator": [
+        182,
+        30,
+        142,
+        151,
+        42,
+        241,
+        180,
+        244
+      ]
+    },
+    {
+      "name": "Player",
+      "discriminator": [
+        205,
+        222,
+        112,
+        7,
+        165,
+        155,
+        206,
+        218
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "NotOwner",
+      "msg": "Not owner of this player."
+    },
+    {
+      "code": 6001,
+      "name": "NotInGame",
+      "msg": "Player not in game."
+    },
+    {
+      "code": 6002,
+      "name": "MapKeyMismatch",
+      "msg": "Component doesn't belong to map."
+    }
+  ],
+  "types": [
+    {
+      "name": "BoltMetadata",
+      "docs": [
+        "Metadata for the component."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Food",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "data",
+            "type": {
+              "array": [
+                "u8",
+                4
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Map",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "authority",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "width",
+            "type": "u16"
+          },
+          {
+            "name": "height",
+            "type": "u16"
+          },
+          {
+            "name": "buy_in",
+            "type": "u64"
+          },
+          {
+            "name": "token",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "token_decimals",
+            "type": "u32"
+          },
+          {
+            "name": "max_players",
+            "type": "u8"
+          },
+          {
+            "name": "wallet_balance",
+            "type": "u64"
+          },
+          {
+            "name": "next_food",
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "Food"
+                }
+              }
+            }
+          },
+          {
+            "name": "bolt_metadata",
+            "type": {
+              "defined": {
+                "name": "BoltMetadata"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Player",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "authority",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "map",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "status",
+            "type": "string"
+          },
+          {
+            "name": "payout_token_account",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "current_game_wallet_balance",
+            "type": "u64"
+          },
+          {
+            "name": "x",
+            "type": "u16"
+          },
+          {
+            "name": "y",
+            "type": "u16"
+          },
+          {
+            "name": "target_x",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "target_y",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "score",
+            "type": "u64"
+          },
+          {
+            "name": "mass",
+            "type": "u64"
+          },
+          {
+            "name": "food_eaten",
+            "type": "u64"
+          },
+          {
+            "name": "players_eaten",
+            "type": "u16"
+          },
+          {
+            "name": "speed",
+            "type": "f32"
+          },
+          {
+            "name": "join_time",
+            "type": "i64"
+          },
+          {
+            "name": "scheduled_removal_time",
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "boost_click_time",
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "bolt_metadata",
+            "type": {
+              "defined": {
+                "name": "BoltMetadata"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

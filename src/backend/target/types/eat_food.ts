@@ -8,7 +8,7 @@ export type EatFood = {
   "address": "EdLga9mFADH4EjPY6RsG1LF7w8utVuWDgyLVRrA8YzzN",
   "metadata": {
     "name": "eatFood",
-    "version": "0.2.0",
+    "version": "0.2.3",
     "spec": "0.1.0",
     "description": "Created with Bolt"
   },
@@ -60,15 +60,12 @@ export type EatFood = {
           "name": "section"
         },
         {
-          "name": "map"
-        },
-        {
           "name": "authority"
         }
       ],
       "args": [
         {
-          "name": "argsP",
+          "name": "args",
           "type": "bytes"
         }
       ],
@@ -78,19 +75,6 @@ export type EatFood = {
     }
   ],
   "accounts": [
-    {
-      "name": "map",
-      "discriminator": [
-        182,
-        30,
-        142,
-        151,
-        42,
-        241,
-        180,
-        244
-      ]
-    },
     {
       "name": "player",
       "discriminator": [
@@ -152,66 +136,45 @@ export type EatFood = {
       }
     },
     {
-      "name": "map",
+      "name": "circle",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "name",
-            "type": "string"
-          },
-          {
-            "name": "authority",
-            "type": {
-              "option": "pubkey"
-            }
-          },
-          {
-            "name": "width",
+            "name": "x",
             "type": "u16"
           },
           {
-            "name": "height",
+            "name": "y",
             "type": "u16"
           },
           {
-            "name": "buyIn",
-            "type": "u64"
+            "name": "size",
+            "type": "u16"
           },
           {
-            "name": "token",
-            "type": {
-              "option": "pubkey"
-            }
+            "name": "radius",
+            "type": "u16"
           },
           {
-            "name": "tokenDecimals",
-            "type": "u32"
-          },
-          {
-            "name": "maxPlayers",
+            "name": "speed",
             "type": "u8"
-          },
+          }
+        ]
+      }
+    },
+    {
+      "name": "food",
+      "type": {
+        "kind": "struct",
+        "fields": [
           {
-            "name": "walletBalance",
-            "type": "u64"
-          },
-          {
-            "name": "nextFood",
+            "name": "foodData",
             "type": {
-              "option": {
-                "defined": {
-                  "name": "map::Food"
-                }
-              }
-            }
-          },
-          {
-            "name": "boltMetadata",
-            "type": {
-              "defined": {
-                "name": "boltMetadata"
-              }
+              "array": [
+                "u8",
+                4
+              ]
             }
           }
         ]
@@ -222,6 +185,10 @@ export type EatFood = {
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "gameType",
+            "type": "string"
+          },
           {
             "name": "name",
             "type": "string"
@@ -239,26 +206,8 @@ export type EatFood = {
             }
           },
           {
-            "name": "status",
-            "type": "string"
-          },
-          {
-            "name": "payoutTokenAccount",
-            "type": {
-              "option": "pubkey"
-            }
-          },
-          {
-            "name": "currentGameWalletBalance",
+            "name": "buyIn",
             "type": "u64"
-          },
-          {
-            "name": "x",
-            "type": "u16"
-          },
-          {
-            "name": "y",
-            "type": "u16"
           },
           {
             "name": "targetX",
@@ -277,35 +226,33 @@ export type EatFood = {
             "type": "u64"
           },
           {
-            "name": "mass",
-            "type": "u64"
-          },
-          {
-            "name": "foodEaten",
-            "type": "u64"
-          },
-          {
-            "name": "playersEaten",
-            "type": "u16"
-          },
-          {
-            "name": "speed",
-            "type": "f32"
-          },
-          {
             "name": "joinTime",
             "type": "i64"
           },
           {
-            "name": "scheduledRemovalTime",
+            "name": "cooldownTimer",
             "type": {
               "option": "i64"
             }
           },
           {
-            "name": "boostClickTime",
+            "name": "removalTime",
             "type": {
               "option": "i64"
+            }
+          },
+          {
+            "name": "exitLocked",
+            "type": "bool"
+          },
+          {
+            "name": "circles",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "circle"
+                }
+              }
             }
           },
           {
@@ -343,7 +290,7 @@ export type EatFood = {
             "type": {
               "vec": {
                 "defined": {
-                  "name": "section::Food"
+                  "name": "food"
                 }
               }
             }
@@ -354,40 +301,6 @@ export type EatFood = {
               "defined": {
                 "name": "boltMetadata"
               }
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "map::Food",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "data",
-            "type": {
-              "array": [
-                "u8",
-                4
-              ]
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "section::Food",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "data",
-            "type": {
-              "array": [
-                "u8",
-                4
-              ]
             }
           }
         ]
