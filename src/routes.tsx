@@ -15,13 +15,14 @@ import { createUnloadedGame } from "@utils/game";
 
 const AppRoutes = () => {
   const [selectedGame, setSelectedGame] = useState<ActiveGame | null>(null);
-  const [sessionWalletInUse, setSessionWalletInUse] = useState<boolean>(NETWORK === 'mainnet' ? false : true);
+  const [sessionWalletInUse, setSessionWalletInUse] = useState<boolean>(true); //(NETWORK === 'mainnet' ? false : true);
   const [username, setUsername] = useState<string>("");
   const [activeGamesLoaded, setActiveGamesLoaded] = useState<FetchedGame[]>(
-    (NETWORK === 'mainnet' 
+    /*(NETWORK === 'mainnet' 
       ? [...activeGamesList[NETWORK], ...activeGamesList['devnet']]
       : [...activeGamesList[NETWORK]]
-    ).map((world) =>
+    )*/
+   [...activeGamesList[NETWORK]].map((world) =>
       createUnloadedGame(world.worldId, world.worldPda, world.endpoint, world.permissionless),
     ),
   );

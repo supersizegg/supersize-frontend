@@ -516,7 +516,8 @@ export function isPlayerStatus(
 }
 
 export const getNetwork = (thisEndpoint: string): string => {
-  if(NETWORK !== "mainnet")return "devnet";
+  let network = NETWORK;
+  if(network !== "mainnet")return "devnet";
   let serverIndex = endpoints["devnet"].indexOf(thisEndpoint);
   return serverIndex >= 0 ? "devnet" : "mainnet";
 };

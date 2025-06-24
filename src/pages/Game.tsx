@@ -579,6 +579,14 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
         </div>
       </div>
 
+      <div className={`fixed bottom-0 right-0 m-2 z-[9999] text-white text-base font-[terminus] flex flex-col text-xl`}>
+        <div>
+          <span className="opacity-100">
+            Press space to split!
+          </span>
+        </div>
+      </div>
+
       <div
         className="game"
         style={{
