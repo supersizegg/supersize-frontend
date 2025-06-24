@@ -2,13 +2,13 @@ import { PublicKey } from "@solana/web3.js";
 
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
 
-import { Snake } from "../backend/target/types/snake";
+//import { Snake } from "../backend/target/types/snake";
 import { Map } from "../backend/target/types/map";
 import { Player } from "../backend/target/types/player";
 import { Section } from "../backend/target/types/section";
 
 import { BuyIn } from "../backend/target/types/buy_in";
-import { MoveSnake } from "../backend/target/types/move_snake";
+//import { MoveSnake } from "../backend/target/types/move_snake";
 import { EatFood } from "../backend/target/types/eat_food";
 import { EatBlob } from "../backend/target/types/eat_blob";
 import { ExitGame } from "../backend/target/types/exit_game";
@@ -23,7 +23,7 @@ import { KillSnake } from "../backend/target/types/kill_snake";
 import { JoinTemp } from "../backend/target/types/join_temp";
 import { ExitTemp } from "../backend/target/types/exit_temp";
 
-import * as SnakeIdl from "../backend/target/idl/snake.json";
+//import * as SnakeIdl from "../backend/target/idl/snake.json";
 import * as MapIdl from "../backend/target/idl/map.json";
 import * as PlayerIdl from "../backend/target/idl/player.json";
 import * as SectionIdl from "../backend/target/idl/section.json";
@@ -44,13 +44,13 @@ import * as KillSnakeIdl from "../backend/target/idl/kill_snake.json";
 import * as JoinTempIdl from "../backend/target/idl/join_temp.json";
 import * as ExitTempIdl from "../backend/target/idl/exit_temp.json";
 
-const componentSnake = SnakeIdl as Snake;
+//const componentSnake = SnakeIdl as Snake;
 const componentMap = MapIdl as Map;
 const componentPlayer = PlayerIdl as Player;
 const componentSection = SectionIdl as Section;
 
 const systemBuyIn = BuyInIdl as BuyIn;
-const systemMoveSnake = MoveSnakeIdl as MoveSnake;
+//const systemMoveSnake = MoveSnakeIdl as MoveSnake;
 const systemEatFood = EatFoodIdl as EatFood;
 const systemEatBlob = EatBlobIdl as EatBlob;
 const systemExitGame = ExitGameIdl as ExitGame;
@@ -64,13 +64,13 @@ const systemSplitBlob = SplitBlobIdl as SplitBlob;
 const systemJoinTemp = JoinTempIdl as JoinTemp;
 const systemExitTemp = ExitTempIdl as ExitTemp;
 
-export const COMPONENT_SNAKE_ID = new PublicKey(componentSnake.address);
+//export const COMPONENT_SNAKE_ID = new PublicKey(componentSnake.address);
 export const COMPONENT_MAP_ID = new PublicKey(componentMap.address);
 export const COMPONENT_PLAYER_ID = new PublicKey(componentPlayer.address);
 export const COMPONENT_SECTION_ID = new PublicKey(componentSection.address);
 
 export const SYSTEM_BUY_IN_ID = new PublicKey(systemBuyIn.address);
-export const SYSTEM_MOVE_SNAKE_ID = new PublicKey(systemMoveSnake.address);
+//export const SYSTEM_MOVE_SNAKE_ID = new PublicKey(systemMoveSnake.address);
 export const SYSTEM_EAT_FOOD_ID = new PublicKey(systemEatFood.address);
 export const SYSTEM_EAT_BLOB_ID = new PublicKey(systemEatBlob.address);
 export const SYSTEM_EXIT_GAME_ID = new PublicKey(systemExitGame.address);
@@ -83,7 +83,7 @@ export const SYSTEM_SPAWN_FOOD_ID = new PublicKey(systemSpawnFood.address);
 export const SYSTEM_SPLIT_BLOB_ID = new PublicKey(systemSplitBlob.address);
 export const SYSTEM_JOIN_TEMP_ID = new PublicKey(systemJoinTemp.address);
 export const SYSTEM_EXIT_TEMP_ID = new PublicKey(systemExitTemp.address);
-
+/*
 export function getComponentSnakeOnChain(engine: MagicBlockEngine) {
   return engine.getProgramOnChain<Snake>(componentSnake);
 }
@@ -95,7 +95,7 @@ export function getComponentSnakeOnSpecificChain(engine: MagicBlockEngine, thisN
 export function getComponentSnakeOnEphem(engine: MagicBlockEngine) {
   return engine.getProgramOnEphem<Snake>(componentSnake);
 }
-
+*/
 export function getComponentMapOnChain(engine: MagicBlockEngine) {
   return engine.getProgramOnChain<Map>(componentMap);
 }
