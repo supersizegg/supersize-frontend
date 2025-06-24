@@ -2,7 +2,7 @@ import { PublicKey } from "@solana/web3.js";
 import { ApplySystem } from "@magicblock-labs/bolt-sdk";
 
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
-import { COMPONENT_PLAYER_ID, COMPONENT_MAP_ID, SYSTEM_BUY_IN_ID } from "./gamePrograms";
+import { COMPONENT_PLAYER_ID, COMPONENT_MAP_ID, SYSTEM_BUY_IN_ID, SYSTEM_JOIN_TEMP_ID } from "./gamePrograms";
 
 import { ActiveGame } from "@utils/types";
 
@@ -26,7 +26,7 @@ export async function gameSystemJoin(
         components: [{ componentId: COMPONENT_MAP_ID }],
       },
     ],
-    systemId: SYSTEM_BUY_IN_ID,
+    systemId: SYSTEM_JOIN_TEMP_ID, //SYSTEM_BUY_IN_ID,
     args: {
       name: playerName,
     },
