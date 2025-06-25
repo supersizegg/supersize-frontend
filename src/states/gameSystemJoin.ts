@@ -26,7 +26,7 @@ export async function gameSystemJoin(
         components: [{ componentId: COMPONENT_MAP_ID }],
       },
     ],
-    systemId: SYSTEM_JOIN_TEMP_ID, //SYSTEM_BUY_IN_ID,
+    systemId: SYSTEM_BUY_IN_ID, //SYSTEM_JOIN_TEMP_ID
     args: {
       name: playerName,
     },

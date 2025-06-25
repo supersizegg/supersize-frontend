@@ -259,7 +259,11 @@ const Home = ({
       let max_players = getMaxPlayers(game.activeGame.size);
       let updatedPlayerInfo = await updatePlayerInfo(engine, game.activeGame.worldId, max_players, game.playerInfo.playerStatus, 
         game.playerInfo.newplayerEntityPda, game.activeGame.active_players, game.activeGame.endpoint);
-      //console.log("updatedPlayerInfo", updatedPlayerInfo);
+      const myplayerComponent = FindComponentPda({
+          componentId: COMPONENT_PLAYER_ID,
+        entity: updatedPlayerInfo.newPlayerEntityPda,
+      });
+      console.log("updatedPlayerInfo", updatedPlayerInfo.newPlayerEntityPda.toString(), myplayerComponent.toString());
       if (updatedPlayerInfo.playerStatus == "Game Full" || updatedPlayerInfo.playerStatus == "error"){
         const exitAlertId = NotificationService.addAlert({
           type: "error",
