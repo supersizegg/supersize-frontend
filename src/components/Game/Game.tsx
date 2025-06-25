@@ -74,10 +74,10 @@ const GameComponent: React.FC<GameComponentProps> = ({
       const updatedPlayer = players.find(player => player.authority?.toString() === existingPlayer.authority?.toString());
       if (updatedPlayer && updatedPlayer.circles.length > 0) {
         if(existingPlayer.circles.length != updatedPlayer.circles.length) {
-          existingPlayer.circles = updatedPlayer.circles.map(c => ({ ...c }));
-          /*
+          //existingPlayer.circles = updatedPlayer.circles.map(c => ({ ...c }));
           if(existingPlayer.circles.length > updatedPlayer.circles.length) {
-            const newCircles = existingPlayer.circles.filter((_, idx) => idx !== 1).map(c => ({ ...c }));
+            const index = existingPlayer.circles.length - 1;
+            const newCircles = existingPlayer.circles.filter((_, idx) => idx !== index).map(c => ({ ...c }));
             existingPlayer.circles = newCircles;
           }
           if(existingPlayer.circles.length < updatedPlayer.circles.length) {
@@ -85,7 +85,6 @@ const GameComponent: React.FC<GameComponentProps> = ({
             newCircles.push({ ...updatedPlayer.circles[updatedPlayer.circles.length - 1] });
             existingPlayer.circles = newCircles; 
           }
-          */
         }
 
         existingPlayer.circles.forEach((circle, index) => {
@@ -106,10 +105,10 @@ const GameComponent: React.FC<GameComponentProps> = ({
     }
     if(currentPlayerRef.current && currentPlayer &&
       currentPlayerRef.current.circles.length != currentPlayer.circles.length) {
-      currentPlayerRef.current.circles = currentPlayer.circles.map(c => ({ ...c }));
-      /*
+      //currentPlayerRef.current.circles = currentPlayer.circles.map(c => ({ ...c }));
       if(currentPlayer.circles.length < currentPlayerRef.current.circles.length) {
-        const newCircles = currentPlayerRef.current.circles.filter((_, idx) => idx !== 1).map(c => ({ ...c }));
+        const index = currentPlayerRef.current.circles.length - 1;
+        const newCircles = currentPlayerRef.current.circles.filter((_, idx) => idx !== index).map(c => ({ ...c }));
         currentPlayerRef.current.circles = newCircles;
       }
       if(currentPlayer.circles.length > currentPlayerRef.current.circles.length) {
@@ -117,7 +116,6 @@ const GameComponent: React.FC<GameComponentProps> = ({
         newCircles.push({ ...currentPlayer.circles[currentPlayer.circles.length - 1] });
         currentPlayerRef.current.circles = newCircles; 
       }
-      */
     }
     if (currentPlayerRef.current && currentPlayer && currentPlayer.circles.length > 0) {
       currentPlayerRef.current.circles.forEach((circle, index) => {
@@ -186,48 +184,6 @@ const GameComponent: React.FC<GameComponentProps> = ({
       x: avgX,
       y: avgY,
     };
-  };
-
-  const updatePlayerPosition = (player: Blob, target_x: number, target_y: number) => {
-    let x_sum = 0;
-    let y_sum = 0;
-
-    for (let i = 0; i < player.circles.length; i++) {
-      const circle = player.circles[i];
-      const player_x = circle.x;
-      const player_y = circle.y;
-      const player_speed = circle.speed * 0.1;
-
-      const dx = target_x - player_x;
-      const dy = target_y - player_y;
-      const deg = Math.atan2(dy, dx);
-
-      let effective_mass = circle.size;
-      let slow_down = 1.0;
-      if (player_speed <= 6.3) {
-        slow_down = Math.log(effective_mass / 10) / 1.504 - 0.531;
-      }
-
-      const delta_y = (player_speed * Math.sin(deg)) / slow_down;
-      const delta_x = (player_speed * Math.cos(deg)) / slow_down;
-
-      circle.y = Math.round(player_y + delta_y);
-      circle.x = Math.round(player_x + delta_x);
-
-      circle.y = Math.max(0, Math.min(circle.y, gameSize));
-      circle.x = Math.max(0, Math.min(circle.x, gameSize));
-
-      x_sum += circle.x;
-      y_sum += circle.y;
-
-      player.circles[i].x = circle.x;
-      player.circles[i].y = circle.y;
-    }
-
-    player.x =  x_sum / player.circles.length;
-    player.y =  y_sum / player.circles.length;
-
-    return player;
   };
 
   const loop = (time: number) => {
@@ -328,10 +284,11 @@ const GameComponent: React.FC<GameComponentProps> = ({
 
           const interpolatedX = prevPos.x + (currPos.x - prevPos.x) * alpha;
           const interpolatedY = prevPos.y + (currPos.y - prevPos.y) * alpha;
-          /*
+          
           if (currPos.circles.length != prevPos.circles.length) {
             if(currPos.circles.length < prevPos.circles.length) {
-              const newMyCircles = prevPos.circles.filter((_, idx) => idx !== 1).map(c => ({ ...c }));
+              const index = prevPos.circles.length - 1;
+              const newMyCircles = prevPos.circles.filter((_, idx) => idx !== index).map(c => ({ ...c }));
               prevPos.circles = newMyCircles;
             }
             if(currPos.circles.length > prevPos.circles.length) {
@@ -339,17 +296,17 @@ const GameComponent: React.FC<GameComponentProps> = ({
               newCircles.push({ ...currPos.circles[currPos.circles.length - 1] });
               prevPos.circles = newCircles; 
             }
-          } */  
-          let interpolatedCircles : Circle[] = currPos.circles;       
-          if(prevPos.circles.length == currPos.circles.length) {
-            interpolatedCircles = prevPos.circles.map((circle, index) => {
+          } 
+          //let interpolatedCircles : Circle[] = currPos.circles;       
+          //if(prevPos.circles.length == currPos.circles.length) {
+          let interpolatedCircles = prevPos.circles.map((circle, index) => {
               return {
                 ...circle,
                 x: circle.x + (currPos.circles[index].x - circle.x) * alpha,
                 y: circle.y + (currPos.circles[index].y - circle.y) * alpha,
               };
             });
-          }
+          //}
           drawBackground(ctx, { x: interpolatedX, y: interpolatedY }, screenSize);
           
           playersRef.current.forEach((blob, index) => {
@@ -357,10 +314,11 @@ const GameComponent: React.FC<GameComponentProps> = ({
             const prevBlob = previousPlayersRef.current[index] || blob;
             const interpolatedBlobX = prevBlob.x + (blob.x - prevBlob.x) * alpha;
             const interpolatedBlobY = prevBlob.y + (blob.y - prevBlob.y) * alpha;
-            /*
+            
             if (prevBlob.circles.length != blob.circles.length) {
               if(prevBlob.circles.length > blob.circles.length) {
-                const newCircles = prevBlob.circles.filter((_, idx) => idx !== 1).map(c => ({ ...c }));
+                const index = prevBlob.circles.length - 1;
+                const newCircles = prevBlob.circles.filter((_, idx) => idx !== index).map(c => ({ ...c }));
                 prevBlob.circles = newCircles;
               }
               if(prevBlob.circles.length < blob.circles.length) {
@@ -368,17 +326,17 @@ const GameComponent: React.FC<GameComponentProps> = ({
                 newCircles.push({ ...blob.circles[blob.circles.length - 1] });
                 prevBlob.circles = newCircles; 
               }
-            }*/
-            let interpolatedBlobCircles : Circle[] = blob.circles;
-            if(prevBlob.circles.length == blob.circles.length) {
-              interpolatedBlobCircles = prevBlob.circles.map((circle, index) => {
+            }
+            //let interpolatedBlobCircles : Circle[] = blob.circles;
+            //if(prevBlob.circles.length == blob.circles.length) {
+            let interpolatedBlobCircles = prevBlob.circles.map((circle, index) => {
                 return {
                   ...circle,
                   x: circle.x + (blob.circles[index].x - circle.x) * alpha,
                   y: circle.y + (blob.circles[index].y - circle.y) * alpha,
                 };
               });
-            }
+            //}
   
             const adjustedX =
               interpolatedBlobX - interpolatedX + screenSize.width / 2;
