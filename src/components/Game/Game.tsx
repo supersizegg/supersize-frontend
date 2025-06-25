@@ -82,9 +82,12 @@ const GameComponent: React.FC<GameComponentProps> = ({
           }
           if(existingPlayer.circles.length < updatedPlayer.circles.length) {
             let newCircles = existingPlayer.circles.map(c => ({ ...c }));
-            newCircles.push({ ...updatedPlayer.circles[updatedPlayer.circles.length - 1] });
+            const diff = updatedPlayer.circles.length - existingPlayer.circles.length;
+            const lastItems = updatedPlayer.circles.slice(-diff); 
+            newCircles.push(...lastItems);
             existingPlayer.circles = newCircles; 
           }
+          
         }
 
         existingPlayer.circles.forEach((circle, index) => {
@@ -113,7 +116,9 @@ const GameComponent: React.FC<GameComponentProps> = ({
       }
       if(currentPlayer.circles.length > currentPlayerRef.current.circles.length) {
         let newCircles = currentPlayerRef.current.circles.map(c => ({ ...c }));
-        newCircles.push({ ...currentPlayer.circles[currentPlayer.circles.length - 1] });
+        const diff = currentPlayer.circles.length - currentPlayerRef.current.circles.length;
+        const lastItems = currentPlayer.circles.slice(-diff); 
+        newCircles.push(...lastItems);
         currentPlayerRef.current.circles = newCircles; 
       }
     }
@@ -285,6 +290,7 @@ const GameComponent: React.FC<GameComponentProps> = ({
           const interpolatedX = prevPos.x + (currPos.x - prevPos.x) * alpha;
           const interpolatedY = prevPos.y + (currPos.y - prevPos.y) * alpha;
           
+          
           if (currPos.circles.length != prevPos.circles.length) {
             if(currPos.circles.length < prevPos.circles.length) {
               const index = prevPos.circles.length - 1;
@@ -293,7 +299,9 @@ const GameComponent: React.FC<GameComponentProps> = ({
             }
             if(currPos.circles.length > prevPos.circles.length) {
               let newCircles = prevPos.circles.map(c => ({ ...c }));
-              newCircles.push({ ...currPos.circles[currPos.circles.length - 1] });
+              const diff = currPos.circles.length - prevPos.circles.length;
+              const lastItems = currPos.circles.slice(-diff); 
+              newCircles.push(...lastItems);
               prevPos.circles = newCircles; 
             }
           } 
@@ -323,10 +331,13 @@ const GameComponent: React.FC<GameComponentProps> = ({
               }
               if(prevBlob.circles.length < blob.circles.length) {
                 let newCircles = prevBlob.circles.map(c => ({ ...c }));
-                newCircles.push({ ...blob.circles[blob.circles.length - 1] });
+                const diff = blob.circles.length - prevBlob.circles.length;
+                const lastItems = blob.circles.slice(-diff); 
+                newCircles.push(...lastItems);
                 prevBlob.circles = newCircles; 
               }
             }
+            
             //let interpolatedBlobCircles : Circle[] = blob.circles;
             //if(prevBlob.circles.length == blob.circles.length) {
             let interpolatedBlobCircles = prevBlob.circles.map((circle, index) => {
