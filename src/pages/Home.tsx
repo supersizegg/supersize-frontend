@@ -527,7 +527,7 @@ const Home = ({
       <MenuBar />
 
       <div className="banner" style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-          <h1 className="banner-title">blob.cash</h1>
+          <h1 className="banner-title">SuperBlob</h1>
           <div style={{ position: "absolute", display: "none", flexDirection: "column", alignItems: "flex-end", justifyContent: "center", right: "-2em", top: "3em"}}>
             <img src={`${process.env.PUBLIC_URL}/snake.png`} alt="Banner" style={{ width: "200px", height: "auto" }} />
           </div>
