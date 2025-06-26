@@ -1,20 +1,35 @@
 import { Idl, Program, AnchorProvider } from "@coral-xyz/anchor";
 import { WalletContextState } from "@solana/wallet-adapter-react";
-import { AccountInfo, Commitment, Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
+import {
+  AccountInfo,
+  Commitment,
+  Connection,
+  Keypair,
+  LAMPORTS_PER_SOL,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+} from "@solana/web3.js";
 import { WalletName } from "@solana/wallet-adapter-base";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
 import * as anchor from "@coral-xyz/anchor";
 import { endpoints, NETWORK, RPC_CONNECTION } from "@utils/constants";
 import { log, warn } from "../utils/logger";
+import {
+  createAssociatedTokenAccountInstruction as ixCreateATA,
+  createTransferInstruction as ixTokenTransfer,
+  getAssociatedTokenAddressSync,
+  getMint,
+} from "@solana/spl-token";
 
-const ENDPOINT_CHAIN_RPC = RPC_CONNECTION[NETWORK]; 
-const ENDPOINT_CHAIN_WS = ENDPOINT_CHAIN_RPC.replace("http", "ws"); 
+const ENDPOINT_CHAIN_RPC = RPC_CONNECTION[NETWORK];
+const ENDPOINT_CHAIN_WS = ENDPOINT_CHAIN_RPC.replace("http", "ws");
 const connectionChain = new Connection(ENDPOINT_CHAIN_RPC, {
   wsEndpoint: ENDPOINT_CHAIN_WS,
 });
 
-const ENDPOINT_CHAIN_RPC_DEVNET = RPC_CONNECTION["devnet"]; 
-const ENDPOINT_CHAIN_WS_DEVNET = ENDPOINT_CHAIN_RPC_DEVNET.replace("http", "ws"); 
+const ENDPOINT_CHAIN_RPC_DEVNET = RPC_CONNECTION["devnet"];
+const ENDPOINT_CHAIN_WS_DEVNET = ENDPOINT_CHAIN_RPC_DEVNET.replace("http", "ws");
 const connectionChainDevnet = new Connection(ENDPOINT_CHAIN_RPC_DEVNET, {
   wsEndpoint: ENDPOINT_CHAIN_WS_DEVNET,
 });
@@ -44,7 +59,7 @@ export class MagicBlockEngine {
     this.walletContext = walletContext;
     this.sessionKey = sessionKey;
     this.sessionConfig = sessionConfig;
-    this.endpointEphemRpc = endpoints[NETWORK][0]; 
+    this.endpointEphemRpc = endpoints[NETWORK][0];
     this.connectionEphem = new Connection(this.endpointEphemRpc, {
       wsEndpoint: this.endpointEphemRpc.replace("http", "ws"),
     });
@@ -60,10 +75,10 @@ export class MagicBlockEngine {
   }
 
   public setChain(network: string): void {
-    let NEW_ENDPOINT_CHAIN_RPC : string = RPC_CONNECTION[NETWORK];
-    if (network == "mainnet" || network == "devnet"){
+    let NEW_ENDPOINT_CHAIN_RPC: string = RPC_CONNECTION[NETWORK];
+    if (network == "mainnet" || network == "devnet") {
       NEW_ENDPOINT_CHAIN_RPC = RPC_CONNECTION[network];
-    }    
+    }
     const newConnectionChain = new Connection(NEW_ENDPOINT_CHAIN_RPC, {
       wsEndpoint: NEW_ENDPOINT_CHAIN_RPC.replace("http", "ws"),
     });
@@ -90,10 +105,10 @@ export class MagicBlockEngine {
     return new Program<T>(idl as T, this.provider);
   }
   getProgramOnSpecificChain<T extends Idl>(idl: object, thisNework: string): Program<T> {
-    let NEW_ENDPOINT_CHAIN_RPC : string = RPC_CONNECTION[NETWORK];
-    if (thisNework == "mainnet" || thisNework == "devnet"){
+    let NEW_ENDPOINT_CHAIN_RPC: string = RPC_CONNECTION[NETWORK];
+    if (thisNework == "mainnet" || thisNework == "devnet") {
       NEW_ENDPOINT_CHAIN_RPC = RPC_CONNECTION[thisNework];
-    }    
+    }
     const thisConnection = new Connection(NEW_ENDPOINT_CHAIN_RPC, {
       wsEndpoint: NEW_ENDPOINT_CHAIN_RPC.replace("http", "ws"),
     });
@@ -160,7 +175,9 @@ export class MagicBlockEngine {
 
   async processSessionChainTransaction(name: string, transaction: Transaction): Promise<string> {
     log(name, "sending");
-    const signature = await this.provider.connection.sendTransaction(transaction, [this.sessionKey], { skipPreflight: true });
+    const signature = await this.provider.connection.sendTransaction(transaction, [this.sessionKey], {
+      skipPreflight: true,
+    });
     await this.waitSignatureConfirmation(name, signature, this.provider.connection, "confirmed");
     return signature;
   }
@@ -208,7 +225,7 @@ export class MagicBlockEngine {
       let timeoutHandle: ReturnType<typeof setTimeout>;
       let done = false;
 
-      const origWarn = console.warn;    
+      const origWarn = console.warn;
       // Override to no-op or filter
       console.warn = () => {};
 
@@ -220,12 +237,11 @@ export class MagicBlockEngine {
           clearTimeout(timeoutHandle);
           try {
             connection.removeSignatureListener(subscriptionId);
-          } catch (error) {
-          }
+          } catch (error) {}
           //log(name, commitment, signature, result.err);
           if (result.err) {
             //this.debugError(name, signature, connection);
-            reject(new Error(JSON.stringify(result.err)));  
+            reject(new Error(JSON.stringify(result.err)));
           } else {
             resolve();
           }
@@ -238,11 +254,10 @@ export class MagicBlockEngine {
         done = true;
         try {
           connection.removeSignatureListener(subscriptionId);
-        } catch (error) {
-        }
-        if(doFallbackCheck) {
+        } catch (error) {}
+        if (doFallbackCheck) {
           doSingleFallbackCheck();
-        }else{
+        } else {
           reject(new Error(`Timeout waiting for transaction ${signature} confirmation`));
         }
       }, timeoutMs);
@@ -297,22 +312,25 @@ export class MagicBlockEngine {
   }
 
   async fundSessionFromWallet(amount: number) {
-      await this.processWalletTransaction(
-        "FundSessionFromWallet",
-        new Transaction().add(
-          SystemProgram.transfer({
-            fromPubkey: this.getWalletPayer(),
-            toPubkey: this.getSessionPayer(),
-            lamports: amount * LAMPORTS_PER_SOL,
-          }),
-        ),
-      );
+    await this.processWalletTransaction(
+      "FundSessionFromWallet",
+      new Transaction().add(
+        SystemProgram.transfer({
+          fromPubkey: this.getWalletPayer(),
+          toPubkey: this.getSessionPayer(),
+          lamports: amount * LAMPORTS_PER_SOL,
+        }),
+      ),
+    );
   }
 
   async defundSessionBackToWallet(amount: number, recipient: PublicKey = this.getWalletPayer()) {
     const accountInfo = await this.provider.connection.getAccountInfo(this.getSessionPayer());
     if (accountInfo && accountInfo.lamports > 0) {
-      const transferableLamports = Math.min(accountInfo.lamports - TRANSACTION_COST_LAMPORTS, amount * LAMPORTS_PER_SOL);
+      const transferableLamports = Math.min(
+        accountInfo.lamports - TRANSACTION_COST_LAMPORTS,
+        amount * LAMPORTS_PER_SOL,
+      );
       await this.processSessionChainTransaction(
         "DefundSessionBackToWallet",
         new Transaction().add(
@@ -326,16 +344,58 @@ export class MagicBlockEngine {
     }
   }
 
+  async fundSessionTokenFromWallet(mint: PublicKey, uiAmount: number) {
+    const conn = this.provider.connection;
+    const payer = this.getWalletPayer();
+    const toAuth = this.getSessionPayer();
+
+    const mintInfo = await getMint(conn, mint);
+    const factor = 10 ** mintInfo.decimals;
+    const lamports = BigInt(Math.round(uiAmount * factor));
+
+    const fromAta = getAssociatedTokenAddressSync(mint, payer);
+    const toAta = getAssociatedTokenAddressSync(mint, toAuth, true);
+
+    const ixCreate = (await conn.getAccountInfo(toAta)) ? null : ixCreateATA(payer, toAta, toAuth, mint);
+
+    const tx = new Transaction().add(...(ixCreate ? [ixCreate] : []), ixTokenTransfer(fromAta, toAta, payer, lamports));
+    await this.processWalletTransaction("FundSessionToken", tx);
+  }
+
+  async defundSessionTokenBackToWallet(
+    mint: PublicKey,
+    uiAmount: number,
+    recipient: PublicKey = this.getWalletPayer(),
+  ) {
+    const conn = this.provider.connection;
+    const fromAuth = this.getSessionPayer();
+
+    const mintInfo = await getMint(conn, mint);
+    const factor = 10 ** mintInfo.decimals;
+    const lamports = BigInt(Math.round(uiAmount * factor));
+
+    const fromAta = getAssociatedTokenAddressSync(mint, fromAuth, true);
+    const toAta = getAssociatedTokenAddressSync(mint, recipient);
+
+    const ixCreate = (await conn.getAccountInfo(toAta)) ? null : ixCreateATA(fromAuth, toAta, recipient, mint);
+
+    const tx = new Transaction().add(
+      ...(ixCreate ? [ixCreate] : []),
+      ixTokenTransfer(fromAta, toAta, fromAuth, lamports),
+    );
+    await this.processSessionChainTransaction("DefundSessionToken", tx);
+  }
+
   getChainAccountInfo(address: PublicKey) {
     //return connectionChain.getAccountInfo(address);
     return this.provider.connection.getAccountInfo(address);
   }
-  
+
   getChainAccountInfoProcessed(address: PublicKey, thisNework: string) {
-    let NEW_ENDPOINT_CHAIN_RPC : string = RPC_CONNECTION[NETWORK];
-    if (thisNework == "mainnet" || thisNework == "devnet"){
+    let NEW_ENDPOINT_CHAIN_RPC: string = RPC_CONNECTION[NETWORK];
+    if (thisNework == "mainnet" || thisNework == "devnet") {
       NEW_ENDPOINT_CHAIN_RPC = RPC_CONNECTION[thisNework];
-    }    
+    }
     const thisConnection = new Connection(NEW_ENDPOINT_CHAIN_RPC, {
       wsEndpoint: NEW_ENDPOINT_CHAIN_RPC.replace("http", "ws"),
     });
