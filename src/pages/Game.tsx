@@ -15,7 +15,7 @@ import { mapFetchOnEphem, playerFetchOnEphem } from "../states/gameFetch";
 import { subscribeToGame, updateLeaderboard, updateMyPlayer } from "../states/gameListen";
 import { gameSystemMove } from "../states/gameSystemMove";
 import { gameSystemSpawnFood } from "../states/gameSystemSpawnFood";
-import { decodeFood, stringToUint8Array } from "@utils/helper";
+import { decodeFood, stringToUint8Array, calculateWindowSize } from "@utils/helper";
 import { useSoundManager } from "../hooks/useSoundManager";
 
 import "./game.scss";
@@ -83,6 +83,15 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
       playerRemovalTimeRef.current = currentPlayer.removal;
     }
     currentPlayerRef.current = currentPlayer;
+    if (currentPlayer?.circles[0].radius) {
+      let scoreSum = 0;
+      for (let i = 0; i < currentPlayer.circles.length; i++) {
+        scoreSum += currentPlayer.circles[i].size;
+      }
+      const windowSize = calculateWindowSize(scoreSum, window.innerWidth, window.innerHeight);
+      setScreenSize(windowSize);
+    }
+    //console.log("screenSize", screenSize);
   }, [currentPlayer]);
 
   useEffect(() => {
@@ -387,7 +396,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
     window.addEventListener("keydown", handleSpaceDown);
     window.addEventListener("keyup", handleSpaceUp);
     window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("resize", handleResize);
+    //window.addEventListener("resize", handleResize);
 
     return () => {
       console.log("Remove mouse listeners");
@@ -395,7 +404,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
       cancelAnimationFrame(animationFrame.current);
       window.removeEventListener("keydown", handleSpaceDown);
       window.removeEventListener("keyup", handleSpaceUp);
-      window.removeEventListener("resize", handleResize);
+      //window.removeEventListener("resize", handleResize);
     };
   }, []);
 
@@ -489,6 +498,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
           currentMousePositionRef.current.y,
           currentIsSpaceDownRef.current,
           { width: currentGameSizeRef.current, height: currentGameSizeRef.current },
+          screenSize,
         );
         const newX = Math.max(
           0,

@@ -160,6 +160,18 @@ export const getMaxPlayers = (size: number): number => {
   return 0;
 }
 
+export function calculateWindowSize(score: number, baseWidth: number, baseHeight: number): { width: number; height: number } {
+  const maxSize = 5000;
+  const minSize = 100;
+  const t = (score - minSize) / (maxSize - minSize);
+  const clamped = Math.min(Math.max(t, 0), 1);
+  const scale = 1 + clamped * (2 - 1);
+  return {
+    width:  baseWidth  * scale,
+    height: baseHeight * scale,
+  };
+}
+
 export const deriveSeedFromPublicKey = (userPublicKey: PublicKey): Uint8Array => {
   const salt = "supersizeSalt";
   const hash = crypto.SHA256(userPublicKey.toBuffer().toString() + salt);

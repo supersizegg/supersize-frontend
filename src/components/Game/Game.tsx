@@ -25,6 +25,7 @@ const GameComponent: React.FC<GameComponentProps> = ({
   newTarget,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const screenSizeRef = useRef(screenSize);
   const gameSizeRef = useRef(gameSize);
   const foodRef = useRef(visibleFood);
   const newTargetRef = useRef(newTarget);
@@ -41,7 +42,19 @@ const GameComponent: React.FC<GameComponentProps> = ({
   const playersRef = useRef<Blob[]>([]);
   const previousPlayersRef = useRef<Blob[]>(playersRef.current);
   const playersOnchainRef = useRef<Blob[]>([]);
-
+  
+  useEffect(() => {
+    /*
+    console.log("screenSize in game", screenSize);
+    const canvas = document.getElementById('gamecanvas');
+    if (canvas) {
+      canvas.style.width  = `${screenSize.width}px`;
+      canvas.style.height = `${screenSize.height}px`;
+    }
+    */
+    screenSizeRef.current = screenSize;
+  }, [screenSize]);
+  
   useEffect(() => {
     gameSizeRef.current = gameSize;
   }, [gameSize]);
@@ -282,8 +295,9 @@ const GameComponent: React.FC<GameComponentProps> = ({
       if (canvas) {
         const ctx = canvas.getContext("2d");
         if (ctx) {
-          canvas.width = screenSize.width;
-          canvas.height = screenSize.height;
+          console.log(canvas.width, canvas.height, screenSizeRef.current.width, screenSizeRef.current.height)
+          canvas.width = screenSizeRef.current.width;
+          canvas.height = screenSizeRef.current.height;
 
           ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -315,7 +329,7 @@ const GameComponent: React.FC<GameComponentProps> = ({
               };
             });
           //}
-          drawBackground(ctx, { x: interpolatedX, y: interpolatedY }, screenSize);
+          drawBackground(ctx, { x: interpolatedX, y: interpolatedY }, screenSizeRef.current);
           
           playersRef.current.forEach((blob, index) => {
 
@@ -350,14 +364,14 @@ const GameComponent: React.FC<GameComponentProps> = ({
             //}
   
             const adjustedX =
-              interpolatedBlobX - interpolatedX + screenSize.width / 2;
+              interpolatedBlobX - interpolatedX + screenSizeRef.current.width / 2;
             const adjustedY =
-              interpolatedBlobY - interpolatedY + screenSize.height / 2;
+              interpolatedBlobY - interpolatedY + screenSizeRef.current.height / 2;
             const adjustedCircles = interpolatedBlobCircles.map((circle, index) => {
               return {
                 ...circle,
-                x: circle.x - interpolatedX + screenSize.width / 2,
-                y: circle.y - interpolatedY + screenSize.height / 2,
+                x: circle.x - interpolatedX + screenSizeRef.current.width / 2,
+                y: circle.y - interpolatedY + screenSizeRef.current.height / 2,
               };
             });
             
@@ -373,24 +387,25 @@ const GameComponent: React.FC<GameComponentProps> = ({
           foodRef.current.forEach((food) => {
             drawFood(ctx, {
               ...food,
-              x: food.x - interpolatedX + screenSize.width / 2,
-              y: food.y - interpolatedY + screenSize.height / 2,
+              x: food.x - interpolatedX + screenSizeRef.current.width / 2,
+              y: food.y - interpolatedY + screenSizeRef.current.height / 2,
             });
           });
 
           const centeredPlayer = {
             ...currentPlayerRef.current,
-            x: screenSize.width / 2,
-            y: screenSize.height / 2,
+            x: screenSizeRef.current.width / 2,
+            y: screenSizeRef.current.height / 2,
           };
 
           drawMyPlayer(
             ctx,
             { ...centeredPlayer, x: centeredPlayer.x, y: centeredPlayer.y, circles: centeredPlayer.circles },
             { ...currentPlayerRef.current, x: interpolatedX, y: interpolatedY, circles: interpolatedCircles },
-            buyIn
+            buyIn,
+            screenSizeRef.current
           );
-          drawBorder(ctx, { ...currentPlayerRef.current, x: interpolatedX, y: interpolatedY }, screenSize, gameSizeRef.current);
+          drawBorder(ctx, { ...currentPlayerRef.current, x: interpolatedX, y: interpolatedY }, screenSizeRef.current, gameSizeRef.current);
         }
       }
     }
@@ -453,7 +468,7 @@ const GameComponent: React.FC<GameComponentProps> = ({
     ctx.restore();
   };
 
-  const drawMyPlayer = (ctx: CanvasRenderingContext2D, blob: Blob, currentblob: Blob, buyIn: number) => {
+  const drawMyPlayer = (ctx: CanvasRenderingContext2D, blob: Blob, currentblob: Blob, buyIn: number, screenSize: { width: number; height: number }) => {
     for (const circle of currentblob.circles) {
       const circle_x = circle.x - currentblob.x + screenSize.width / 2;
       const circle_y = circle.y - currentblob.y + screenSize.height / 2;

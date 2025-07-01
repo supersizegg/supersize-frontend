@@ -28,17 +28,18 @@ export async function gameSystemMove(
   mousePositionX: number,
   mousePositionY: number,
   isMouseDown: boolean,
+  gameSize: { width: number; height: number },
   screenSize: { width: number; height: number },
 ) {
   try {
 
     const newX = Math.max(
       0,
-      Math.min(screenSize.width, Math.floor(currentPlayer.x + mousePositionX - window.innerWidth / 2)),
+      Math.min(gameSize.width, Math.floor(currentPlayer.x + mousePositionX - screenSize.width / 2)),
     );
     const newY = Math.max(
       0,
-      Math.min(screenSize.height, Math.floor(currentPlayer.y + mousePositionY - window.innerHeight / 2)),
+      Math.min(gameSize.height, Math.floor(currentPlayer.y + mousePositionY - screenSize.height / 2)),
     );
 
     const alltransaction = new anchor.web3.Transaction();
