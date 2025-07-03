@@ -1,0 +1,334 @@
+{
+  "address": "BTFE5qReHt1bLn3FqtYJXvD8pkAfPLReLaMdQTWsGsiJ",
+  "metadata": {
+    "name": "join_temp",
+    "version": "0.2.3",
+    "spec": "0.1.0",
+    "description": "Created with Bolt"
+  },
+  "instructions": [
+    {
+      "name": "bolt_execute",
+      "discriminator": [
+        75,
+        206,
+        62,
+        210,
+        52,
+        215,
+        104,
+        109
+      ],
+      "accounts": [
+        {
+          "name": "authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": "bytes"
+        }
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
+    },
+    {
+      "name": "execute",
+      "discriminator": [
+        130,
+        221,
+        242,
+        154,
+        13,
+        193,
+        189,
+        29
+      ],
+      "accounts": [
+        {
+          "name": "player"
+        },
+        {
+          "name": "map"
+        },
+        {
+          "name": "authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "_args",
+          "type": "bytes"
+        }
+      ],
+      "returns": {
+        "vec": "bytes"
+      }
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Map",
+      "discriminator": [
+        182,
+        30,
+        142,
+        151,
+        42,
+        241,
+        180,
+        244
+      ]
+    },
+    {
+      "name": "Player",
+      "discriminator": [
+        205,
+        222,
+        112,
+        7,
+        165,
+        155,
+        206,
+        218
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "AlreadyInGame",
+      "msg": "Player already in game."
+    },
+    {
+      "code": 6001,
+      "name": "MapKeyMismatch",
+      "msg": "Player component doesn't belong to map."
+    },
+    {
+      "code": 6002,
+      "name": "WrongToken",
+      "msg": "Incorrect token address."
+    },
+    {
+      "code": 6003,
+      "name": "MaxPlayers",
+      "msg": "Game at max players."
+    }
+  ],
+  "types": [
+    {
+      "name": "BoltMetadata",
+      "docs": [
+        "Metadata for the component."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Circle",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "x",
+            "type": "u16"
+          },
+          {
+            "name": "y",
+            "type": "u16"
+          },
+          {
+            "name": "size",
+            "type": "u16"
+          },
+          {
+            "name": "radius",
+            "type": "u16"
+          },
+          {
+            "name": "speed",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Map",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "game_type",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "authority",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "size",
+            "type": "u16"
+          },
+          {
+            "name": "buy_in",
+            "type": "u64"
+          },
+          {
+            "name": "token",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "active_players",
+            "type": "u8"
+          },
+          {
+            "name": "value_on_map",
+            "type": "u64"
+          },
+          {
+            "name": "next_food",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "MapFood"
+                }
+              }
+            }
+          },
+          {
+            "name": "bolt_metadata",
+            "type": {
+              "defined": {
+                "name": "BoltMetadata"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "MapFood",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "x",
+            "type": "u16"
+          },
+          {
+            "name": "y",
+            "type": "u16"
+          },
+          {
+            "name": "food_value",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Player",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "game_type",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "authority",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "map",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "buy_in",
+            "type": "u64"
+          },
+          {
+            "name": "target_x",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "target_y",
+            "type": {
+              "option": "u16"
+            }
+          },
+          {
+            "name": "score",
+            "type": "u64"
+          },
+          {
+            "name": "join_time",
+            "type": "i64"
+          },
+          {
+            "name": "cooldown_timer",
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "removal_time",
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "exit_locked",
+            "type": "bool"
+          },
+          {
+            "name": "circles",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "Circle"
+                }
+              }
+            }
+          },
+          {
+            "name": "bolt_metadata",
+            "type": {
+              "defined": {
+                "name": "BoltMetadata"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

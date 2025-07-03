@@ -25,7 +25,7 @@ export async function gameSystemExit(
         components: [{ componentId: COMPONENT_MAP_ID }],
       },
     ],
-    systemId: SYSTEM_EXIT_TEMP_ID, //SYSTEM_EXIT_GAME_ID,
+    systemId: SYSTEM_EXIT_GAME_ID,
     args: {
       timestamp: performance.now(),
     },
