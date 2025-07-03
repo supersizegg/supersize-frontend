@@ -225,7 +225,6 @@ export class MagicBlockEngine {
       let timeoutHandle: ReturnType<typeof setTimeout>;
       let done = false;
 
-      const origWarn = console.warn;
       // Override to no-op or filter
       console.warn = () => {};
 
@@ -237,7 +236,10 @@ export class MagicBlockEngine {
           clearTimeout(timeoutHandle);
           try {
             connection.removeSignatureListener(subscriptionId);
-          } catch (error) {}
+            // eslint-disable-next-line
+          } catch (error) {
+            // Ignore errors from removing listener
+          }
           //log(name, commitment, signature, result.err);
           if (result.err) {
             //this.debugError(name, signature, connection);
@@ -254,7 +256,10 @@ export class MagicBlockEngine {
         done = true;
         try {
           connection.removeSignatureListener(subscriptionId);
-        } catch (error) {}
+          // eslint-disable-next-line
+        } catch (error) {
+          // Ignore errors from removing listener
+        }
         if (doFallbackCheck) {
           doSingleFallbackCheck();
         } else {

@@ -175,13 +175,13 @@ function GeneralTab({
   return (
     <div className="general-tab">
       <MenuSession
-        username={username}
-        sessionWalletInUse={sessionWalletInUse}
-        setSessionWalletInUse={setSessionWalletInUse}
-        setIsDepositModalOpen={setIsDepositModalOpen}
-        setIsWithdrawalModalOpen={setIsWithdrawalModalOpen}
-        setSessionLamports={setSessionLamports}
-        sessionLamports={sessionLamports}
+      // username={username}
+      // sessionWalletInUse={sessionWalletInUse}
+      // setSessionWalletInUse={setSessionWalletInUse}
+      // setIsDepositModalOpen={setIsDepositModalOpen}
+      // setIsWithdrawalModalOpen={setIsWithdrawalModalOpen}
+      // setSessionLamports={setSessionLamports}
+      // sessionLamports={sessionLamports}
       />
 
       <hr className="divider" />

@@ -19,9 +19,9 @@ import { InitSection } from "../backend/target/types/init_section";
 import { MoveBlob } from "../backend/target/types/move_blob";
 import { SpawnFood } from "../backend/target/types/spawn_food";
 import { SplitBlob } from "../backend/target/types/split_blob";
-import { KillSnake } from "../backend/target/types/kill_snake";
-import { JoinTemp } from "../backend/target/types/join_temp";
-import { ExitTemp } from "../backend/target/types/exit_temp";
+// import { KillSnake } from "../backend/target/types/kill_snake";
+// import * as JoinTemp from "../backend/target/types/buy_in";
+// import * as ExitTemp from "../backend/target/types/exit_game";
 
 import * as SnakeIdl from "../backend/target/idl/snake.json";
 import * as MapIdl from "../backend/target/idl/map.json";
@@ -40,9 +40,9 @@ import * as InitSectionIdl from "../backend/target/idl/init_section.json";
 import * as MoveBlobIdl from "../backend/target/idl/move_blob.json";
 import * as SpawnFoodIdl from "../backend/target/idl/spawn_food.json";
 import * as SplitBlobIdl from "../backend/target/idl/split_blob.json";
-import * as KillSnakeIdl from "../backend/target/idl/kill_snake.json";
-import * as JoinTempIdl from "../backend/target/idl/join_temp.json";
-import * as ExitTempIdl from "../backend/target/idl/exit_temp.json";
+// import * as KillSnakeIdl from "../backend/target/idl/kill_snake.json";
+import * as JoinTempIdl from "../backend/target/idl/buy_in.json";
+import * as ExitTempIdl from "../backend/target/idl/exit_game.json";
 
 const componentSnake = SnakeIdl as Snake;
 const componentMap = MapIdl as Map;
@@ -61,8 +61,8 @@ const systemInitSection = InitSectionIdl as InitSection;
 const systemMoveBlob = MoveBlobIdl as MoveBlob;
 const systemSpawnFood = SpawnFoodIdl as SpawnFood;
 const systemSplitBlob = SplitBlobIdl as SplitBlob;
-const systemJoinTemp = JoinTempIdl as JoinTemp;
-const systemExitTemp = ExitTempIdl as ExitTemp;
+const systemJoinTemp = JoinTempIdl as BuyIn;
+const systemExitTemp = ExitTempIdl as ExitGame;
 
 export const COMPONENT_SNAKE_ID = new PublicKey(componentSnake.address);
 export const COMPONENT_MAP_ID = new PublicKey(componentMap.address);

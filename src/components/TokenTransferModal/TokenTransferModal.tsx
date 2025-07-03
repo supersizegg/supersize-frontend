@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { PublicKey } from "@solana/web3.js";
-import { useMagicBlockEngine } from "../../engine/MagicBlockEngineProvider";
 import { SupersizeVaultClient } from "@engine/SupersizeVaultClient";
 import "./Modal.css";
 
 type Props = {
-  engine: ReturnType<typeof useMagicBlockEngine>;
   vaultClient: SupersizeVaultClient;
   kind: "deposit" | "withdraw";
   token: { mint: string; symbol: string; decimals: number };
@@ -13,10 +11,10 @@ type Props = {
   fetchWalletBalance: (mint: string) => Promise<number>;
   onClose: () => void;
   onDone: () => void;
+  handleWithdraw: (mint: string, uiAmount: number) => Promise<void>;
 };
 
 const TokenTransferModal: React.FC<Props> = ({
-  engine,
   vaultClient,
   kind,
   token,
@@ -24,6 +22,7 @@ const TokenTransferModal: React.FC<Props> = ({
   fetchWalletBalance,
   onClose,
   onDone,
+  handleWithdraw,
 }) => {
   const [max, setMax] = useState<number>(0);
   const [value, setValue] = useState<number>(0);
@@ -49,19 +48,14 @@ const TokenTransferModal: React.FC<Props> = ({
     setIsProcessing(true);
     try {
       if (kind === "deposit") {
-        await vaultClient.deposit({
-          mint: new PublicKey(token.mint),
-          uiAmount: value,
-        });
+        await vaultClient.deposit(new PublicKey(token.mint), value);
+        onDone();
       } else {
-        await vaultClient.withdraw({
-          mint: new PublicKey(token.mint),
-          uiAmount: value,
-        });
+        await handleWithdraw(token.mint, value);
       }
-      onDone();
     } catch (error) {
       console.error(`Failed to ${kind}:`, error);
+      alert(`The ${kind} transaction failed.`);
     } finally {
       setIsProcessing(false);
     }
@@ -73,7 +67,7 @@ const TokenTransferModal: React.FC<Props> = ({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-container" onClick={(e) => e.stopPropagation()}>
         <h3 style={{ marginBottom: "0.5rem" }}>
-          {kind === "deposit" ? "Deposit to Game Wallet" : "Withdraw to Main Wallet"}
+          {kind === "deposit" ? "Deposit to Game Vault" : "Withdraw to Main Wallet"}
         </h3>
 
         <p style={{ fontSize: "0.9rem", marginBottom: "0.5rem" }}>
@@ -91,8 +85,8 @@ const TokenTransferModal: React.FC<Props> = ({
         />
 
         <div style={{ textAlign: "center", marginTop: "0.5rem" }}>
-          {value.toLocaleString(undefined, { maximumFractionDigits: token.decimals })} {token.symbol}
-          &nbsp;({pct.toFixed(0)}%)
+          {value.toLocaleString(undefined, { maximumFractionDigits: token.decimals })} {token.symbol} ({pct.toFixed(0)}
+          %)
         </div>
 
         <button
