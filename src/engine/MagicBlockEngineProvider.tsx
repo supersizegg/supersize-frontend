@@ -1,6 +1,8 @@
 import * as React from "react";
-import { WalletProvider, useWallet } from "@solana/wallet-adapter-react";
-import { Keypair, PublicKey } from "@solana/web3.js";
+import { Keypair, PublicKey, Transaction, Connection } from "@solana/web3.js";
+import { WalletContextState } from "@solana/wallet-adapter-react";
+import { usePrivy } from "@privy-io/react-auth";
+import { useSolanaWallets, useSendTransaction } from "@privy-io/react-auth/solana";
 import { MagicBlockEngine } from "./MagicBlockEngine";
 import { deriveKeypairFromPublicKey } from "@utils/helper";
 const SESSION_LOCAL_STORAGE = "magicblock-session-key";
@@ -14,15 +16,29 @@ export function useMagicBlockEngine(): MagicBlockEngine {
 }
 
 export function MagicBlockEngineProvider({ children }: { children: React.ReactNode }) {
-  return (
-    <WalletProvider wallets={[]} autoConnect>
-      <MagicBlockEngineProviderInner>{children}</MagicBlockEngineProviderInner>
-    </WalletProvider>
-  );
+  return <MagicBlockEngineProviderInner>{children}</MagicBlockEngineProviderInner>;
 }
 
 function MagicBlockEngineProviderInner({ children }: { children: React.ReactNode }) {
-  const walletContext = useWallet();
+  const { ready, authenticated, login, logout } = usePrivy();
+  const { wallets } = useSolanaWallets();
+  const { sendTransaction } = useSendTransaction();
+
+  const walletContext = React.useMemo(() => {
+    const pk = wallets && wallets[0] ? new PublicKey(wallets[0].address) : null;
+    return {
+      connected: ready && authenticated && !!pk,
+      connecting: !ready,
+      publicKey: pk,
+      sendTransaction: async (tx: Transaction, connection: Connection) => {
+        const receipt = await sendTransaction({ transaction: tx, connection });
+        return receipt.signature;
+      },
+      wallets: pk ? [{ adapter: { name: "Privy", icon: "" } }] : [],
+      select: () => login(),
+      disconnect: logout,
+    } as unknown as WalletContextState;
+  }, [ready, authenticated, wallets, sendTransaction, login, logout]);
 
   const engine = React.useMemo(() => {
     let sessionKey = deriveKeypairFromPublicKey(new PublicKey("11111111111111111111111111111111"));

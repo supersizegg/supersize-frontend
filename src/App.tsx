@@ -2,16 +2,20 @@ import React from "react";
 import { BrowserRouter } from "react-router-dom";
 import AppRoutes from "./routes";
 import { MagicBlockEngineProvider } from "./engine/MagicBlockEngineProvider";
+import { PrivyProvider } from "@privy-io/react-auth";
 
-// eslint-disable-next-line
-require("@solana/wallet-adapter-react-ui/styles.css");
 
 function App() {
   return (
     <BrowserRouter>
-      <MagicBlockEngineProvider>
-        <AppRoutes />
-      </MagicBlockEngineProvider>
+      <PrivyProvider
+        appId={process.env.REACT_APP_PRIVY_APP_ID || ""}
+        config={{ embeddedWallets: { createOnLogin: "all-users" } }}
+      >
+        <MagicBlockEngineProvider>
+          <AppRoutes />
+        </MagicBlockEngineProvider>
+      </PrivyProvider>
     </BrowserRouter>
   );
 }
