@@ -5,7 +5,7 @@ const NotFound = () => {
   const navigate = useNavigate();
 
   const handleClickHome = useCallback(() => {
-    navigate("/");
+    navigate("/home");
   }, []);
 
   return (

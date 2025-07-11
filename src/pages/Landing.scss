@@ -1,0 +1,239 @@
+.landing-page {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: #191919;
+  color: #fff;
+  font-family: sans-serif;
+}
+
+.game-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #100e14;
+}
+
+.top-nav {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px;
+}
+
+.branding {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  padding: 4px 8px;
+  border: 2px solid #777;
+  border-radius: 6px;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.help-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: #2a2a2a;
+  color: #fff;
+  border: none;
+}
+
+.coin-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #2a2a2a;
+  border-radius: 14px;
+  width: 60px;
+  height: 28px;
+  padding: 0 6px;
+  position: relative;
+  overflow: hidden;
+}
+
+.coin-pill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, #ffffff, #6c6c6c);
+  opacity: 0.3;
+}
+
+.coin-icon {
+  width: 16px;
+  height: 16px;
+  background: gray;
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.coin-pill span {
+  z-index: 1;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #2a2a2a;
+}
+
+.username-pill {
+  background: #2a2a2a;
+  border-radius: 12px;
+  padding: 2px 8px;
+  position: relative;
+  overflow: hidden;
+  color: #cccccc;
+}
+
+.username-pill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, #ffffff, #6c6c6c);
+  opacity: 0.3;
+}
+
+.follow-btn {
+  position: absolute;
+  left: 24px;
+  top: 72px;
+  background: #2a2a2a;
+  border: none;
+  color: #fff;
+  border-radius: 16px;
+  padding: 4px 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.x-icon {
+  width: 16px;
+  height: 16px;
+  background: gray;
+  border-radius: 4px;
+}
+
+.panels {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 32px;
+}
+
+.panel {
+  width: 350px;
+  height: 240px;
+  border: 12px solid #3a3a3a;
+  border-radius: 12px;
+  background: #222;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+}
+
+.panel.disabled {
+  cursor: default;
+}
+
+.panel-title {
+  font-size: 32px;
+  font-weight: 700;
+  position: relative;
+  z-index: 1;
+}
+
+.panel-title::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, #ffffff, #6c6c6c);
+  opacity: 0.3;
+}
+
+.panel-subtitle {
+  color: #cccccc;
+  margin-top: 8px;
+}
+
+.utility-column {
+  position: absolute;
+  right: 24px;
+  top: 40%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.utility-btn {
+  width: 48px;
+  height: 48px;
+  background: #2a2a2a;
+  border: none;
+}
+
+.promo-callout {
+  position: absolute;
+  left: 24px;
+  bottom: 24px;
+  background: #2a2a2a;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+}
+
+.promo-icon {
+  width: 56px;
+  height: 56px;
+  background: gray;
+  border-radius: 8px;
+}
+
+.promo-text {
+  line-height: 1.2;
+}
+
+.live-feed {
+  position: absolute;
+  right: 24px;
+  bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.feed-item {
+  background: rgba(0, 0, 0, 0.6);
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.feed-item span {
+  color: #888;
+  margin-left: 8px;
+  font-size: 12px;
+}

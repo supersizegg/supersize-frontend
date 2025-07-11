@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { Route, Routes } from "react-router-dom";
+import Landing from "@pages/Landing";
 import Home from "@pages/Home";
 import NotFound from "@pages/NotFound";
 import CreateGame from "@pages/CreateGame";
@@ -47,8 +48,9 @@ const AppRoutes = () => {
 
   return (
     <Routes>
+      <Route index element={<Landing />} />
       <Route
-        index
+        path="/home"
         element={
           <Home
             selectedGame={selectedGame}

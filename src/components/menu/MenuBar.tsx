@@ -40,7 +40,7 @@ export function MenuBar() {
 
       <div className="menu-bar-right">
         <nav className="nav-links">
-          <NavLink to="/" end>
+          <NavLink to="/home" end>
             Lobby
           </NavLink>
           <NavLink to="/leaderboard">Leaderboard</NavLink>
@@ -56,7 +56,7 @@ export function MenuBar() {
 
       <div className={`mobile-nav-backdrop ${isMobileMenuOpen ? "open" : ""}`} onClick={closeMobileMenu}>
         <nav className={`mobile-nav ${isMobileMenuOpen ? "open" : ""}`} onClick={(e) => e.stopPropagation()}>
-          <NavLink to="/" end onClick={closeMobileMenu}>
+          <NavLink to="/home" end onClick={closeMobileMenu}>
             Lobby
           </NavLink>
           <NavLink to="/about" onClick={closeMobileMenu}>

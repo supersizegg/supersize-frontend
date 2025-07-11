@@ -623,7 +623,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
               <p className=" p-0 m-1 text-center text-white text-xl inline">
                 <b>Game over.</b> You got eaten!
               </p>
-              <button id="returnButton" onClick={() => (window.location.href = "/")}>
+              <button id="returnButton" onClick={() => (window.location.href = "/home")}>
                 Return home
               </button>
             </div>
@@ -655,7 +655,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
                     </>
                 </pre>
               </div>
-              <button id="returnButton" onClick={() => (window.location.href = "/")}>
+              <button id="returnButton" onClick={() => (window.location.href = "/home")}>
                 Return home
               </button>
             </div>
@@ -674,7 +674,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
                 <br />
                 Txn Receipt:
               </p>
-              <button id="returnButton" onClick={() => navigate("/")}>
+              <button id="returnButton" onClick={() => navigate("/home")}>
                 Return home
               </button>
             </div>
