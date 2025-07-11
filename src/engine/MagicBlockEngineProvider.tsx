@@ -31,6 +31,9 @@ function MagicBlockEngineProviderInner({ children }: { children: React.ReactNode
       connecting: !ready,
       publicKey: pk,
       sendTransaction: async (tx: Transaction, connection: Connection) => {
+        const latestBlockhash = await connection.getLatestBlockhash();
+        tx.recentBlockhash = latestBlockhash.blockhash;
+        tx.feePayer = new PublicKey(wallets[0].address); 
         const receipt = await sendTransaction({ transaction: tx, connection });
         return receipt.signature;
       },

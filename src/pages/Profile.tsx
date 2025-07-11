@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { MenuBar } from "@components/menu/MenuBar";
 import { MenuSession } from "@components/menu/MenuSession";
+import { MenuWallet } from "@components/menu/MenuWallet";
 import FooterLink from "@components/Footer/Footer";
 import "./Profile.scss";
 import {
@@ -54,7 +55,7 @@ type profileProps = {
 
 export default function Profile({ randomFood, username, setUsername, sessionWalletInUse, setSessionWalletInUse }: profileProps ) {
   const engine = useMagicBlockEngine();
-  const [activeTab, setActiveTab] = useState<"general" | "quests" | "admin">("general");
+  const [activeTab, setActiveTab] = useState<"wallet" | "profile" | "admin">("wallet");
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
   const [isWithdrawalModalOpen, setIsWithdrawalModalOpen] = useState(false);
   const [sessionLamports, setSessionLamports] = useState<number | undefined>(0);
@@ -96,11 +97,11 @@ export default function Profile({ randomFood, username, setUsername, sessionWall
       <MenuBar />
       <div className="profile-container" style={{ position: "relative", zIndex: 1 }}>
         <div className="profile-tabs">
-          <button className={activeTab === "general" ? "active" : ""} onClick={() => setActiveTab("general")}>
-            General
+          <button className={activeTab === "wallet" ? "active" : ""} onClick={() => setActiveTab("wallet")}>
+            Wallet
           </button>
-          <button className={activeTab === "quests" ? "active" : ""} onClick={() => setActiveTab("quests")}>
-            Quests
+          <button className={activeTab === "profile" ? "active" : ""} onClick={() => setActiveTab("profile")}>
+            Profile
           </button>
           <button className={activeTab === "admin" ? "active" : ""} onClick={() => setActiveTab("admin")}>
             Admin panel
@@ -108,11 +109,11 @@ export default function Profile({ randomFood, username, setUsername, sessionWall
         </div>
 
         <div className="profile-content">
-          {activeTab === "general" && 
+          {activeTab === "wallet" && 
           <GeneralTab sessionWalletInUse={sessionWalletInUse} username={username} setUsername={setUsername}
           setSessionWalletInUse={setSessionWalletInUse} setIsDepositModalOpen={setIsDepositModalOpen} setIsWithdrawalModalOpen={setIsWithdrawalModalOpen}
           setSessionLamports={setSessionLamports} sessionLamports={sessionLamports}/>}
-          {activeTab === "quests" && <QuestsTab />}
+          {activeTab === "profile" && <ProfileTab />}
           {activeTab === "admin" && <AdminTab engine={engine} />}
         </div>
       </div>
@@ -154,6 +155,8 @@ function GeneralTab({ sessionWalletInUse, username, sessionLamports, setSessionW
 
   return (
     <div className="general-tab">
+      <MenuWallet />
+
       <MenuSession username={username} sessionWalletInUse={sessionWalletInUse} setSessionWalletInUse={setSessionWalletInUse} setIsDepositModalOpen={setIsDepositModalOpen} 
       setIsWithdrawalModalOpen={setIsWithdrawalModalOpen} setSessionLamports={setSessionLamports} sessionLamports={sessionLamports}/>
       
@@ -175,7 +178,7 @@ function GeneralTab({ sessionWalletInUse, username, sessionLamports, setSessionW
   );
 }
 
-function QuestsTab() {
+function ProfileTab() {
 
   return (
     <div className="quests-tab">

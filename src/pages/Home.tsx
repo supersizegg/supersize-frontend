@@ -281,7 +281,7 @@ const Home = ({
       const { tokenBalance, hasInsufficientTokenBalance } = await fetchTokenBalance(engine, game.activeGame, networkType == "devnet");
       setTokenBalance(tokenBalance);
       setHasInsufficientTokenBalance(hasInsufficientTokenBalance);
-
+      
       const result = await gameExecuteJoin(
         engine,
         game.activeGame,
@@ -531,11 +531,10 @@ const Home = ({
       <MenuBar />
 
       <div className="banner" style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-          <h1 className="banner-title">SuperBlob</h1>
+          <img src="/superblob-oneword.png" alt="SUPER BLOB" className="banner-title" style={{ width: "100%", height: "100%", marginTop: "10%"}}/>
           <div style={{ position: "absolute", display: "none", flexDirection: "column", alignItems: "flex-end", justifyContent: "center", right: "-2em", top: "3em"}}>
             <img src={`${process.env.PUBLIC_URL}/snake.png`} alt="Banner" style={{ width: "200px", height: "auto" }} />
           </div>
-          <h1 className="banner-text">Grow your blob to get money!</h1>
       </div>
       <div className="home-container" style={{ position: "relative" }}> 
         <div className="mobile-only mobile-alert">For the best experience, use a desktop or laptop.</div>

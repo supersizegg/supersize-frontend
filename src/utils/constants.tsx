@@ -54,7 +54,7 @@ export const FOOD_COLORS = [
 
 export const SOL_USDC_POOL_ID = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2";
 
-export const NETWORK = process.env.NODE_ENV === "production" ? "mainnet" : "devnet";
+export const NETWORK = "mainnet";//process.env.NODE_ENV === "production" ? "mainnet" : "devnet";
 
 export const RPC_CONNECTION = {
   mainnet: "https://staked.helius-rpc.com?api-key=cba33294-aa96-414c-9a26-03d5563aa676",

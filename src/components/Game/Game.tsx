@@ -295,7 +295,7 @@ const GameComponent: React.FC<GameComponentProps> = ({
       if (canvas) {
         const ctx = canvas.getContext("2d");
         if (ctx) {
-          console.log(canvas.width, canvas.height, screenSizeRef.current.width, screenSizeRef.current.height)
+          //console.log(canvas.width, canvas.height, screenSizeRef.current.width, screenSizeRef.current.height)
           canvas.width = screenSizeRef.current.width;
           canvas.height = screenSizeRef.current.height;
 

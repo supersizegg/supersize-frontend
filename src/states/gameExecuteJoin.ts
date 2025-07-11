@@ -50,7 +50,7 @@ export async function gameExecuteJoin(
     componentId: COMPONENT_PLAYER_ID,
     entity: newplayerEntityPda,
   });
-
+  
   try {
     let buyInResult = await gameSystemJoin(engine, selectGameId, newplayerEntityPda, mapEntityPda, playerName);
     if (!buyInResult.success) {
