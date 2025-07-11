@@ -5,6 +5,7 @@ import { BN } from "@coral-xyz/anchor";
 import * as anchor from "@coral-xyz/anchor";
 import GameComponent from "@components/Game/Game";
 import GameLeaderboard from "@components/Game/GameLeaderboard";
+import BackButton from "@components/util/BackButton";
 import { endpoints, MAP_COMPONENT } from "@utils/constants";
 import { ActiveGame, Blob, Food } from "@utils/types";
 import { createUndelegateInstruction, FindComponentPda, FindEntityPda } from "@magicblock-labs/bolt-sdk";
@@ -681,6 +682,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
           </div>
         )}
       </div>
+      <BackButton />
     </div>
   );
 };

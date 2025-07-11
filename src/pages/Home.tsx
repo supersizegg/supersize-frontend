@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import FooterLink from "@components/Footer/Footer";
 import "./Home.scss";
 import { ActiveGame, Food } from "@utils/types";
 import { cachedTokenMetadata, NETWORK, options } from "@utils/constants";
@@ -11,6 +10,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { Tooltip } from "react-tooltip";
 import { MenuBar } from "@components/menu/MenuBar";
 import { Spinner } from "@components/util/Spinner";
+import BackButton from "@components/util/BackButton";
 import { gameExecuteJoin } from "@states/gameExecuteJoin";
 import { COMPONENT_PLAYER_ID } from "../states/gamePrograms";
 import { FetchedGame, PlayerInfo } from "@utils/types";
@@ -332,8 +332,15 @@ const Home = ({
       try {
         const pingResults = await pingEndpoints();
         pingResultsRef.current = pingResults.pingResults;
-        selectedServer.current = pingResults.lowestPingEndpoint.region;
-        setSelectedEndpoint(pingResults.lowestPingEndpoint.endpoint);
+        const stored = localStorage.getItem("preferredRegion");
+        const storedResult = pingResults.pingResults.find((p) => p.region === stored);
+        if (storedResult) {
+          selectedServer.current = storedResult.region;
+          setSelectedEndpoint(storedResult.endpoint);
+        } else {
+          selectedServer.current = pingResults.lowestPingEndpoint.region;
+          setSelectedEndpoint(pingResults.lowestPingEndpoint.endpoint);
+        }
         setIsLoadingCurrentGames(false);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -413,85 +420,6 @@ const Home = ({
     fetchGameData();
   }, [selectedEndpoint]);
 
-  const renderRegionButtons = () => {
-    const selected = pingResultsRef.current.find(
-      (item) => item.region === selectedServer.current
-    );
-    const others = pingResultsRef.current.filter(
-      (item) => item.region !== selectedServer.current
-    );
-  
-    return (
-      <div>
-        <div className="relative flex flex-col items-center group/hoverzone pb-8">
-          <div className="flex flex-col-reverse gap-2 mb-2 z-10">
-            {others.map((item, index) => (
-              <button
-                key={`region-${item.region}`}
-                className={`
-                  region-button text-white px-4 py-2 rounded-md border border-white/20
-                  bg-[#444] hover:bg-[#555] transition-all duration-300 ease-out
-                  transform translate-y-5 opacity-0
-                  group-hover/hoverzone:translate-y-0 group-hover/hoverzone:opacity-100
-                  ${isLoadingCurrentGames ? "cursor-not-allowed" : "cursor-pointer"}
-                `}
-                style={{ transitionDelay: `${index * 50}ms` }}
-                onClick={async () => {
-                  const clearPingGames = [...activeGamesRef.current];
-                  for (let i = 0; i < clearPingGames.length; i++) {
-                    clearPingGames[i] = {
-                      ...clearPingGames[i],
-                      activeGame: {
-                        ...clearPingGames[i].activeGame,
-                        active_players: -1,
-                        isLoaded: false,
-                      },
-                    };
-                  }
-                  activeGamesRef.current = clearPingGames;
-                  setActiveGamesLoaded(clearPingGames);
-                  selectedServer.current = item.region;
-                  setSelectedEndpoint(item.endpoint);
-                }}
-                disabled={isLoadingCurrentGames}
-              >
-                <div className="flex flex-row items-center gap-1">
-                  <span>{item.region}</span>
-                  <span
-                    style={{
-                      fontSize: "10px",
-                      color: getPingColor(item.pingTime),
-                    }}
-                  >
-                    ({item.pingTime}ms)
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
-  
-          <button
-            className={`region-button text-white px-4 py-2 rounded-md border border-white/20 bg-[#666] hover:bg-[#555] transition-colors ${
-              isLoadingCurrentGames ? "cursor-not-allowed" : "cursor-pointer"
-            }`}
-            disabled={isLoadingCurrentGames}
-          >
-            <div className="flex flex-row items-center gap-1">
-              <span>{selected?.region}</span>
-              <span
-                style={{
-                  fontSize: "10px",
-                  color: getPingColor(selected?.pingTime || 0),
-                }}
-              >
-                ({selected?.pingTime}ms)
-              </span>
-            </div>
-          </button>
-        </div>
-      </div>
-    );
-  };
   
   return (
     <div className="main-container">
@@ -705,13 +633,8 @@ const Home = ({
         setHasInsufficientTokenBalance={setHasInsufficientTokenBalance}
         setTokenBalance={setTokenBalance}/>}
       <NotificationContainer />
+      <BackButton />
 
-      <div className="footerContainer" style={{ bottom: "5rem"}}>
-        <div className="desktop-only" style={{ position: "fixed", right: "20px", width: "fit-content", height: "fit-content" }}>
-          {renderRegionButtons()}
-        </div>
-        <FooterLink />
-      </div>
     </div>
   );
 };

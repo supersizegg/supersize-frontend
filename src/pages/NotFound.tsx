@@ -1,5 +1,6 @@
 import React, { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import BackButton from "@components/util/BackButton";
 
 const NotFound = () => {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ const NotFound = () => {
           Go back to Games{" "}
         </button>
       </div>
+      <BackButton />
     </div>
   );
 };

@@ -4,6 +4,7 @@ import EarnFees from "@components/InfoPanel/EarnFees";
 import ModGame from "@components/InfoPanel/ModGame";
 import { MenuBar } from "@components/menu/MenuBar";
 import FooterLink from "@components/Footer/Footer";
+import BackButton from "@components/util/BackButton";
 import { FetchedGame, Food } from "@utils/types";
 import "./CreateGame.scss";
 import GameComponent from "@components/Game/Game";
@@ -76,6 +77,7 @@ const CreateGame: React.FC<CreateGameProps> = ({ activeGamesLoaded, setActiveGam
         </div>
       </div>
       <FooterLink />
+      <BackButton />
     </div>
   );
 };

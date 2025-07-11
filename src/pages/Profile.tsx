@@ -42,6 +42,8 @@ import DepositInput from '@components/util/DepositInput';
 import CollapsiblePanel from '@components/util/CollapsiblePanel';
 import DepositModal from "@components/util/DepositModal";
 import WithdrawalModal from "@components/util/WithdrawalModal";
+import RegionSelector from "@components/util/RegionSelector";
+import BackButton from "@components/util/BackButton";
 
 Chart.register(LineElement, PointElement, LinearScale, Title, Tooltip, Legend);
 
@@ -109,11 +111,13 @@ export default function Profile({ randomFood, username, setUsername, sessionWall
         </div>
 
         <div className="profile-content">
-          {activeTab === "wallet" && 
-          <GeneralTab sessionWalletInUse={sessionWalletInUse} username={username} setUsername={setUsername}
+          {activeTab === "wallet" &&
+          <GeneralTab sessionWalletInUse={sessionWalletInUse} username={username}
           setSessionWalletInUse={setSessionWalletInUse} setIsDepositModalOpen={setIsDepositModalOpen} setIsWithdrawalModalOpen={setIsWithdrawalModalOpen}
           setSessionLamports={setSessionLamports} sessionLamports={sessionLamports}/>}
-          {activeTab === "profile" && <ProfileTab />}
+          {activeTab === "profile" && (
+            <ProfileTab username={username} setUsername={setUsername} sessionWalletInUse={sessionWalletInUse} />
+          )}
           {activeTab === "admin" && <AdminTab engine={engine} />}
         </div>
       </div>
@@ -130,6 +134,7 @@ export default function Profile({ randomFood, username, setUsername, sessionWall
         }
         }} />
       <FooterLink />
+      <BackButton />
     </div>
   );
 }
@@ -142,16 +147,9 @@ type GeneralTabProps = {
   setIsDepositModalOpen: (isDepositModalOpen: boolean) => void;
   setIsWithdrawalModalOpen: (isWithdrawalModalOpen: boolean) => void;
   setSessionLamports: (sessionLamports: number | undefined) => void;
-  setUsername: (username: string) => void;
 };
 
-function GeneralTab({ sessionWalletInUse, username, sessionLamports, setSessionWalletInUse, setIsDepositModalOpen, setIsWithdrawalModalOpen, setSessionLamports, setUsername }: GeneralTabProps) {
-
-  const setInputUsername = (inputUsername: string) => {
-    const user = { name: inputUsername, use_session: sessionWalletInUse };
-    localStorage.setItem("user", JSON.stringify(user));
-    setUsername(inputUsername);
-  };
+function GeneralTab({ sessionWalletInUse, username, sessionLamports, setSessionWalletInUse, setIsDepositModalOpen, setIsWithdrawalModalOpen, setSessionLamports }: GeneralTabProps) {
 
   return (
     <div className="general-tab">
@@ -160,31 +158,41 @@ function GeneralTab({ sessionWalletInUse, username, sessionLamports, setSessionW
       <MenuSession username={username} sessionWalletInUse={sessionWalletInUse} setSessionWalletInUse={setSessionWalletInUse} setIsDepositModalOpen={setIsDepositModalOpen} 
       setIsWithdrawalModalOpen={setIsWithdrawalModalOpen} setSessionLamports={setSessionLamports} sessionLamports={sessionLamports}/>
       
-      <hr className="divider" />
+    </div>
+  );
+}
 
+type ProfileTabProps = {
+  username: string;
+  setUsername: (username: string) => void;
+  sessionWalletInUse: boolean;
+};
+
+function ProfileTab({ username, setUsername, sessionWalletInUse }: ProfileTabProps) {
+  const [input, setInput] = useState(username);
+
+  const handleSave = () => {
+    const user = { name: input, use_session: sessionWalletInUse };
+    localStorage.setItem("user", JSON.stringify(user));
+    setUsername(input);
+  };
+
+  return (
+    <div className="quests-tab">
       <label className="input-label">Username</label>
       <div className="row-inline input-group">
         <input
           type="text"
           placeholder="Enter your username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
         />
-        <button className="btn-save" onClick={() => setInputUsername(username)}>
+        <button className="btn-save" onClick={handleSave}>
           Save
         </button>
       </div>
-    </div>
-  );
-}
-
-function ProfileTab() {
-
-  return (
-    <div className="quests-tab">
-      <div className="quest-item">
-        <span>Coming soon!</span>
-        <button>{"Pending"}</button>
+      <div style={{ marginTop: "1rem" }}>
+        <RegionSelector />
       </div>
     </div>
   );
