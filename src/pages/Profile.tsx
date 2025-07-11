@@ -178,7 +178,7 @@ function ProfileTab({ username, setUsername, sessionWalletInUse }: ProfileTabPro
   };
 
   return (
-    <div className="quests-tab">
+    <div className="general-tab">
       <label className="input-label">Username</label>
       <div className="row-inline input-group">
         <input

@@ -5,12 +5,26 @@ import "../../pages/Landing.scss";
 
 export function MenuBar() {
   const [isMobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const [username, setUsername] = React.useState<string>("");
   const navigate = useNavigate();
   const toggleMobileMenu = () => setMobileMenuOpen(!isMobileMenuOpen);
   const closeMobileMenu = () => setMobileMenuOpen(false);
   const openX = () => {
     window.open("https://x.com/SUPERSIZEgg", "_blank");
   };
+
+  React.useEffect(() => {
+    const stored = localStorage.getItem("user");
+    if (stored) {
+      setUsername(JSON.parse(stored).name);
+    }
+    const onStorage = () => {
+      const u = localStorage.getItem("user");
+      setUsername(u ? JSON.parse(u).name : "");
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   return (
     <header className="menu-bar">
@@ -38,9 +52,6 @@ export function MenuBar() {
 
       <div className="menu-bar-right">
         <nav className="nav-links">
-          <NavLink to="/home" end>
-            Lobby
-          </NavLink>
           <div className="nav-right">
           <div className="coin-icon">
             <img src="/slime.png" alt="SUPER BLOB" className="coin-image" />
@@ -55,8 +66,12 @@ export function MenuBar() {
             <img src="/chick.png" alt="SUPER BLOB" className="avatar" />
             <div className="username-pill">
               <div className="overlay-panel" style={{borderRadius: "18px", border: "3px solid transparent"}}/>
-              <span style={{position: "absolute", zIndex: "1", transform: "translateY(-120%) translateX(15%)"}}>username</span>
-              </div>
+              <span
+                style={{ position: "absolute", zIndex: "1", transform: "translateY(-120%) translateX(15%)" }}
+              >
+                {username || "sign up"}
+              </span>
+            </div>
           </div>
           </NavLink>
         </div>
@@ -94,9 +109,6 @@ export function MenuBar() {
 
       <div className={`mobile-nav-backdrop ${isMobileMenuOpen ? "open" : ""}`} onClick={closeMobileMenu}>
         <nav className={`mobile-nav ${isMobileMenuOpen ? "open" : ""}`} onClick={(e) => e.stopPropagation()}>
-          <NavLink to="/home" end onClick={closeMobileMenu}>
-            Lobby
-          </NavLink>
           <NavLink to="/about" onClick={closeMobileMenu}>
             About Supersize
           </NavLink>

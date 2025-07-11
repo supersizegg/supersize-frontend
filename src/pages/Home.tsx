@@ -10,7 +10,6 @@ import * as anchor from "@coral-xyz/anchor";
 import { Tooltip } from "react-tooltip";
 import { MenuBar } from "@components/menu/MenuBar";
 import { Spinner } from "@components/util/Spinner";
-import BackButton from "@components/util/BackButton";
 import { gameExecuteJoin } from "@states/gameExecuteJoin";
 import { COMPONENT_PLAYER_ID } from "../states/gamePrograms";
 import { FetchedGame, PlayerInfo } from "@utils/types";
@@ -633,7 +632,6 @@ const Home = ({
         setHasInsufficientTokenBalance={setHasInsufficientTokenBalance}
         setTokenBalance={setTokenBalance}/>}
       <NotificationContainer />
-      <BackButton />
 
     </div>
   );

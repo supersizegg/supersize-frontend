@@ -8,7 +8,9 @@ type AlertProps = {
 };
 
 const Alert: React.FC<AlertProps> = ({ type, message, onClose, shouldExit }) => {
-  const [slideClass, setSlideClass] = useState("-translate-x-[calc(100%+3em)]");
+  const [slideClass, setSlideClass] = useState(
+    "translate-x-[calc(100%+3em)]"
+  );
 
   useEffect(() => {
     setSlideClass("translate-x-0");
@@ -16,7 +18,7 @@ const Alert: React.FC<AlertProps> = ({ type, message, onClose, shouldExit }) => 
 
   useEffect(() => {
     if (shouldExit) {
-      setSlideClass("-translate-x-[calc(100%+3em)]");
+      setSlideClass("translate-x-[calc(100%+3em)]");
       const timer = setTimeout(() => onClose(), 350);
       return () => clearTimeout(timer);
     }
@@ -25,7 +27,7 @@ const Alert: React.FC<AlertProps> = ({ type, message, onClose, shouldExit }) => 
   useEffect(() => {
     if (shouldExit === undefined) {
       const slideOutTimer = setTimeout(
-        () => setSlideClass("-translate-x-[calc(100%+3em)]"),
+        () => setSlideClass("translate-x-[calc(100%+3em)]"),
         3000
       );
       const removeTimer = setTimeout(() => onClose(), 3500);
