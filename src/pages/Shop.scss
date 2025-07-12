@@ -1,18 +1,22 @@
 .shop-page {
   min-height: 100vh;
-  background-color: #121212;
-  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-  background-size: 16px 16px;
   position: relative;
   color: #fff;
 }
 
-.shop-panel {
+.shop-content {
   position: absolute;
-  left: 100px;
-  top: 80px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 80px;
+}
+
+.shop-panel {
   width: 560px;
-  height: 360px;
+  height: 432px;
   background: rgba(30, 30, 30, 0.9);
   border-radius: 12px;
   padding: 24px;
@@ -20,7 +24,7 @@
 }
 
 .shop-title {
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   font-size: 28px;
   font-weight: 600;
   line-height: 1.2;
@@ -34,12 +38,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 70%;
   height: 56px;
   background: #111;
   border-radius: 8px;
   padding: 0 16px;
   gap: 40px;
-  margin-bottom: 24px;
+  margin: 0 auto 24px;
 }
 .conversion-widget .left,
 .conversion-widget .right {
@@ -60,7 +65,7 @@
 .arrow-icon {
   width: 16px;
   height: 16px;
-  color: #BBBBBB;
+  color: #bbbbbb;
   margin: 0 12px;
 }
 .price {
@@ -76,18 +81,15 @@
   font-size: 14px;
 }
 .chart-container {
-  width: 512px;
+  width: 100%;
   height: 200px;
-  background: #E0E0E0;
-  border: 1px solid #CCCCCC;
+  background: #e0e0e0;
+  border: 1px solid #cccccc;
   border-radius: 8px;
   overflow: hidden;
 }
 
 .action-column {
-  position: absolute;
-  left: 740px;
-  top: 160px;
   width: 240px;
   display: flex;
   flex-direction: column;
@@ -97,28 +99,28 @@
 .buy-button {
   width: 240px;
   height: 52px;
-  background: #28A745;
+  background: #28a745;
   border: none;
   border-radius: 8px;
   color: #fff;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   font-size: 18px;
   font-weight: 600;
   text-transform: lowercase;
-  box-shadow: inset 0px 2px 4px rgba(0,0,0,0.2);
+  box-shadow: inset 0px 2px 4px rgba(0, 0, 0, 0.2);
   cursor: pointer;
 }
 .buy-button:hover {
   background: #218838;
 }
 .buy-button:active {
-  box-shadow: inset 0 2px 6px rgba(0,0,0,0.3);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 .sell-link {
   margin-top: 8px;
   text-align: center;
-  color: #AAAAAA;
-  font-family: 'Inter', sans-serif;
+  color: #aaaaaa;
+  font-family: "Inter", sans-serif;
   font-size: 14px;
   text-decoration: underline;
 }
