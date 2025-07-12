@@ -36,31 +36,18 @@ export function MenuSession({ username, sessionWalletInUse, sessionLamports, set
 
   const handleSetSessionWalletInUse = async (currentStatus: boolean) => {
     setSessionWalletInUse(currentStatus)
-    const user = { name: username, use_session: currentStatus };
+    const stored = localStorage.getItem("user");
+    const parsed = stored ? JSON.parse(stored) : {};
+    const user = { ...parsed, name: username, use_session: currentStatus };
     localStorage.setItem("user", JSON.stringify(user));
+    window.dispatchEvent(new Event("storage"));
   };
 
-  const solBalance = sessionLamports !== undefined ? (sessionLamports / 1_000_000_000).toFixed(3) : "0";
 
   return (
     <div className="menu-session">
       <div className="session-bottom">
-        <div className="session-top row-inline">
-          <div className="network-switch" style={{ display: "flex", alignItems: "center" }}>
-            <span className="session-label" style={{marginRight: '10px'}}>Game wallet:</span>
-            <label className="switch" style={{ marginRight: "10px", marginTop: '3px' }}>
-              <input
-                type="checkbox"
-                checked={sessionWalletInUse}
-                onChange={() => handleSetSessionWalletInUse(!sessionWalletInUse)}
-              />
-              <span className="slider round"></span>
-            </label>
-            <span className="network-label">{sessionWalletInUse ? "use for all tokens" : "use only for gems"}</span>
-          </div>
-          
-          <span className="session-balance">Balance: {solBalance} SOL</span>
-        </div>
+        <div className="session-top row-inline"></div>
 
         <input className="session-address" type="text" readOnly value={sessionPayer.toBase58()} />
 

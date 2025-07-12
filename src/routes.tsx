@@ -8,6 +8,7 @@ import Game from "@pages/Game";
 import Leaderboard from "@pages/Leaderboard";
 import Profile from "@pages/Profile";
 import HowToPlay from "@pages/HowToPlay";
+import Shop from "@pages/Shop";
 import { ActiveGame, FetchedGame, Food } from "@utils/types";
 import { useState } from "react";
 import { PublicKey } from "@solana/web3.js";
@@ -73,6 +74,7 @@ const AppRoutes = () => {
       )}
       <Route path="/leaderboard" element={<Leaderboard randomFood={randomFood} />} />
       <Route path="/about" element={<HowToPlay randomFood={randomFood}/>} />
+      <Route path="/shop" element={<Shop />} />
       <Route path="/profile" element={<Profile randomFood={randomFood} username={username} setUsername={setUsername}
       sessionWalletInUse={sessionWalletInUse} setSessionWalletInUse={setSessionWalletInUse}/>} />
       <Route path="*" element={<NotFound />} />

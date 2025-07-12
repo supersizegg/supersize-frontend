@@ -6,6 +6,7 @@ import "../../pages/Landing.scss";
 export function MenuBar() {
   const [isMobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [username, setUsername] = React.useState<string>("");
+  const [avatar, setAvatar] = React.useState<string>("/chick.png");
   const navigate = useNavigate();
   const toggleMobileMenu = () => setMobileMenuOpen(!isMobileMenuOpen);
   const closeMobileMenu = () => setMobileMenuOpen(false);
@@ -16,11 +17,20 @@ export function MenuBar() {
   React.useEffect(() => {
     const stored = localStorage.getItem("user");
     if (stored) {
-      setUsername(JSON.parse(stored).name);
+      const user = JSON.parse(stored);
+      setUsername(user.name);
+      setAvatar(user.icon || "/chick.png");
     }
     const onStorage = () => {
       const u = localStorage.getItem("user");
-      setUsername(u ? JSON.parse(u).name : "");
+      if (u) {
+        const user = JSON.parse(u);
+        setUsername(user.name);
+        setAvatar(user.icon || "/chick.png");
+      } else {
+        setUsername("");
+        setAvatar("/chick.png");
+      }
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
@@ -74,7 +84,7 @@ export function MenuBar() {
             }
           }}>
             <div className="overlay-panel" style={{ borderRadius: "18px", border: "3px solid transparent"}}/>
-            <img src="/chick.png" alt="SUPER BLOB" style={{ width: "48px", height: "48px", position: "absolute", zIndex: "1", marginLeft: "10px"}}/>
+            <img src={avatar} alt="avatar" style={{ width: "48px", height: "48px", position: "absolute", zIndex: "1", marginLeft: "10px"}}/>
             <div className="username-pill" 
             style={{ position: "absolute", zIndex: "1", transform: "translateX(65px)",
               display: "flex",
@@ -110,16 +120,18 @@ export function MenuBar() {
           />
         </div>
         </NavLink>
+        <NavLink to="/shop">
         <div className="utility-btn">
-          <img 
-            src="/shop.png" 
-            alt="store" 
-            className="utility-image" 
+          <img
+            src="/shop.png"
+            alt="store"
+            className="utility-image"
             style={{ transition: "transform 0.2s", cursor: "pointer" }}
             onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05) rotate(5deg)")}
             onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1) rotate(0deg)")}
           />
-        </div>  
+        </div>
+        </NavLink>
       </div>
       </div>
 
