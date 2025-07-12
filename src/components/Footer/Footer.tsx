@@ -1,5 +1,6 @@
 import React from "react";
 import "./Footer.css";
+import "../../pages/Landing.scss";
 import { useNavigate } from "react-router-dom";
 
 const Footer: React.FC = () => {
@@ -10,14 +11,13 @@ const Footer: React.FC = () => {
       <span className="footerCopyright">{/* © Supersize Inc. 2025 */}</span>
 
       <div className="footerIcons">
-
         <button
-            className={`region-button text-white px-4 py-0 rounded-md border border-white/20 bg-[#666] hover:bg-[#555] transition-colors cursor-pointer`}
             onClick={() => navigate("/create-game")}
           >
-            <div className="flex flex-row items-center gap-1 text-sm">
-              <span>+ Create Game</span>
-            </div>
+          <div className="coin-pill" style={{ position: "fixed", zIndex: "1", bottom: "2rem", right: "2.5rem", width: "170px", height: "50px"}}>
+            <div className="overlay-panel" style={{ borderRadius: "10px", border: "3px solid transparent"}}/>
+            <span style={{ position: "absolute", zIndex: "1", fontSize: "18px", fontWeight: "bold", margin: "auto"}}>+ Create Game</span>
+          </div>
           </button>
       </div>
     </footer>

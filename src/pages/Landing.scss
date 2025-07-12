@@ -127,10 +127,11 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  width: 220px;
+  height: 60px;
   background: #303030;
   border-radius: 18px;
   border: 1px solid #454545;
-  padding: 3px 12px;
   position: relative;
   color: #cccccc;
 }
@@ -147,7 +148,7 @@
 
 .username-pill {
   background: #000000;
-  opacity: 0.8;
+  opacity: 1.0;
   border-radius: 18px;
   position: relative;
   color: #cccccc;

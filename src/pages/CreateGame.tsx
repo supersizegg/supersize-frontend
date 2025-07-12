@@ -76,7 +76,6 @@ const CreateGame: React.FC<CreateGameProps> = ({ activeGamesLoaded, setActiveGam
           ))}
         </div>
       </div>
-      <FooterLink />
       <BackButton />
     </div>
   );

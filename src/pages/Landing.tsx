@@ -81,7 +81,7 @@ const Landing = () => {
           <img src="/slimeicon.png" alt="slime icon" className="promo-image" />
         </div>
 
-        <div className="promo-text">download<br />the app!</div>
+        <div className="promo-text">Sign up for the <br/>app wishlist!</div>
       </div>
     </div>
   );

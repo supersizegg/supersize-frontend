@@ -176,7 +176,6 @@ const HowToPlay: React.FC<HowToPlayProps> = ({ randomFood }) => {
       >
         <EyeSvg />
       </div>
-      <Footer />
       <BackButton />
     </div>
   );

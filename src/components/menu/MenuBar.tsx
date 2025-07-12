@@ -62,12 +62,28 @@ export function MenuBar() {
             <span style={{ position: "absolute", zIndex: "1", marginLeft: "10px"}}>0</span>
           </div>
           <NavLink to="/profile">
-          <div className="user-panel">
-            <img src="/chick.png" alt="SUPER BLOB" className="avatar" />
-            <div className="username-pill">
-              <div className="overlay-panel" style={{borderRadius: "18px", border: "3px solid transparent"}}/>
+          <div className="user-panel" onMouseEnter={(e) => {
+            const usernamePill = e.currentTarget.querySelector<HTMLElement>('.username-pill');
+            if (usernamePill) {
+              usernamePill.style.opacity = '0.8';
+            }
+          }} onMouseLeave={(e) => {
+            const usernamePill = e.currentTarget.querySelector<HTMLElement>('.username-pill');
+            if (usernamePill) {
+              usernamePill.style.opacity = '1';
+            }
+          }}>
+            <div className="overlay-panel" style={{ borderRadius: "18px", border: "3px solid transparent"}}/>
+            <img src="/chick.png" alt="SUPER BLOB" style={{ width: "48px", height: "48px", position: "absolute", zIndex: "1", marginLeft: "10px"}}/>
+            <div className="username-pill" 
+            style={{ position: "absolute", zIndex: "1", transform: "translateX(65px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "none",
+            }}>
               <span
-                style={{ position: "absolute", zIndex: "1", transform: "translateY(-120%) translateX(15%)" }}
+              style={{ fontSize: "24px", fontWeight: "bold", margin: "auto"}}
               >
                 {username || "sign up"}
               </span>
