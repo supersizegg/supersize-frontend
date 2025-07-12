@@ -45,7 +45,7 @@ function MagicBlockEngineProviderInner({ children }: { children: React.ReactNode
 
   const engine = React.useMemo(() => {
     let sessionKey = deriveKeypairFromPublicKey(new PublicKey("11111111111111111111111111111111"));
-    /*
+    
     const sessionKeyString = localStorage.getItem(SESSION_LOCAL_STORAGE);
     if (sessionKeyString) {
       sessionKey = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(sessionKeyString)));
@@ -53,10 +53,11 @@ function MagicBlockEngineProviderInner({ children }: { children: React.ReactNode
       sessionKey = Keypair.generate();
       localStorage.setItem(SESSION_LOCAL_STORAGE, JSON.stringify(Array.from(sessionKey.secretKey)));
     }
-    */
+    /*
     if (walletContext.publicKey) {
       sessionKey = deriveKeypairFromPublicKey(walletContext.publicKey);
     }
+    */
 
     return new MagicBlockEngine(walletContext, sessionKey, {
       minLamports: SESSION_MIN_LAMPORTS,

@@ -176,7 +176,7 @@ function ProfileTab({ username, setUsername, sessionWalletInUse }: ProfileTabPro
     localStorage.setItem("user", JSON.stringify(user));
     setUsername(input);
   };
-
+  
   return (
     <div className="general-tab">
       <label className="input-label">Username</label>
