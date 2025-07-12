@@ -233,13 +233,49 @@ export const pingEndpoint = async (url: string): Promise<number> => {
 export const pingEndpoints = async () => {
   const pingResults = await Promise.all(
     endpoints[NETWORK].map(async (endpoint) => {
-      const pingTimes = await Promise.all([pingEndpoint(endpoint), pingEndpoint(endpoint), pingEndpoint(endpoint)]);
+      const pingTimes = await Promise.all([
+        pingEndpoint(endpoint),
+        pingEndpoint(endpoint),
+        pingEndpoint(endpoint),
+      ]);
       const bestPingTime = Math.min(...pingTimes);
-      return { endpoint: endpoint, pingTime: bestPingTime, region: options[endpoints[NETWORK].indexOf(endpoint)] };
+      return {
+        endpoint: endpoint,
+        pingTime: bestPingTime,
+        region: options[endpoints[NETWORK].indexOf(endpoint)],
+      };
     }),
   );
-  const lowestPingEndpoint = pingResults.reduce((a, b) => (a.pingTime < b.pingTime ? a : b));
+  const lowestPingEndpoint = pingResults.reduce((a, b) =>
+    a.pingTime < b.pingTime ? a : b,
+  );
   return { pingResults: pingResults, lowestPingEndpoint: lowestPingEndpoint };
+};
+
+export const pingEndpointsStream = async (
+  onResult: (result: { endpoint: string; pingTime: number; region: string }) => void,
+) => {
+  const promises = endpoints[NETWORK].map(async (endpoint) => {
+    const pingTimes = await Promise.all([
+      pingEndpoint(endpoint),
+      pingEndpoint(endpoint),
+      pingEndpoint(endpoint),
+    ]);
+    const bestPingTime = Math.min(...pingTimes);
+    const res = {
+      endpoint,
+      pingTime: bestPingTime,
+      region: options[endpoints[NETWORK].indexOf(endpoint)],
+    };
+    onResult(res);
+    return res;
+  });
+
+  const pingResults = await Promise.all(promises);
+  const lowestPingEndpoint = pingResults.reduce((a, b) =>
+    a.pingTime < b.pingTime ? a : b,
+  );
+  return { pingResults, lowestPingEndpoint };
 };
 
 export const pingSpecificEndpoint = async (endpoint: string) => {

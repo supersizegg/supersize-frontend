@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "./Home.scss";
 import { ActiveGame, Food } from "@utils/types";
 import { cachedTokenMetadata, NETWORK, options } from "@utils/constants";
-import { formatBuyIn, fetchTokenBalance, pingEndpoints, pingSpecificEndpoint, getMaxPlayers, getNetwork } from "@utils/helper";
+import { formatBuyIn, fetchTokenBalance, pingEndpointsStream, pingSpecificEndpoint, getMaxPlayers, getNetwork } from "@utils/helper";
 import { FindEntityPda, FindComponentPda, FindWorldPda, createDelegateInstruction, BN } from "@magicblock-labs/bolt-sdk";
 import { PublicKey, Transaction } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
@@ -328,22 +328,25 @@ const Home = ({
   useEffect(() => {
     const fetchPingData = async () => {
       setIsLoadingCurrentGames(true);
-      try {
-        const pingResults = await pingEndpoints();
-        pingResultsRef.current = pingResults.pingResults;
-        const stored = localStorage.getItem("preferredRegion");
-        const storedResult = pingResults.pingResults.find((p) => p.region === stored);
-        if (storedResult) {
-          selectedServer.current = storedResult.region;
-          setSelectedEndpoint(storedResult.endpoint);
-        } else {
-          selectedServer.current = pingResults.lowestPingEndpoint.region;
-          setSelectedEndpoint(pingResults.lowestPingEndpoint.endpoint);
-        }
+      let stored = localStorage.getItem("preferredRegion");
+      if (stored) {
+        selectedServer.current = stored;
+        setSelectedEndpoint(endpoints[NETWORK][options.indexOf(stored)]);
         setIsLoadingCurrentGames(false);
-      } catch (error) {
-        console.error("Error fetching data:", error);
+        return;
       }
+
+      await pingEndpointsStream((result) => {
+        pingResultsRef.current = pingResultsRef.current.map((r) =>
+          r.endpoint === result.endpoint ? result : r,
+        );
+        if (!selectedServer.current) {
+          selectedServer.current = result.region;
+          setSelectedEndpoint(result.endpoint);
+          localStorage.setItem("preferredRegion", result.region);
+        }
+      });
+      setIsLoadingCurrentGames(false);
     };
 
     fetchPingData();
