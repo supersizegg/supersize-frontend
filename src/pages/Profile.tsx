@@ -121,7 +121,7 @@ export default function Profile({ randomFood, username, setUsername, sessionWall
           {activeTab === "admin" && <AdminTab engine={engine} />}
         </div>
       </div>
-
+        {/*
       <DepositModal walletAddress={engine.getSessionPayer()} isOpen={isDepositModalOpen} onClose={() => setIsDepositModalOpen(false)} onDeposit={async (amount: number) => {await engine.fundSessionFromWallet(amount);}} />
       <WithdrawalModal accountBalance={sessionLamports} isOpen={isWithdrawalModalOpen} 
         onClose={() => setIsWithdrawalModalOpen(false)} 
@@ -132,7 +132,7 @@ export default function Profile({ randomFood, username, setUsername, sessionWall
         else{
           await engine.defundSessionBackToWallet(amount);
         }
-        }} />
+        }} /> */}
       <FooterLink />
       <BackButton />
     </div>
@@ -155,8 +155,15 @@ function GeneralTab({ sessionWalletInUse, username, sessionLamports, setSessionW
     <div className="general-tab">
       <MenuWallet />
 
-      <MenuSession username={username} sessionWalletInUse={sessionWalletInUse} setSessionWalletInUse={setSessionWalletInUse} setIsDepositModalOpen={setIsDepositModalOpen} 
-      setIsWithdrawalModalOpen={setIsWithdrawalModalOpen} setSessionLamports={setSessionLamports} sessionLamports={sessionLamports}/>
+      <MenuSession 
+      //username={username} 
+      //sessionWalletInUse={sessionWalletInUse} 
+      //setSessionWalletInUse={setSessionWalletInUse} 
+      //setIsDepositModalOpen={setIsDepositModalOpen} 
+      //setIsWithdrawalModalOpen={setIsWithdrawalModalOpen} 
+      //setSessionLamports={setSessionLamports} 
+      //sessionLamports={sessionLamports}
+      />
       
     </div>
   );

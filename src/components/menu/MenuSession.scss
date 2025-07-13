@@ -74,3 +74,171 @@
 }
 
 
+/* The switch container */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 30px;
+  height: 17px;
+}
+
+/* Hide the default HTML checkbox */
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* The slider */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.4s;
+}
+
+/* The knob */
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 13px;
+  width: 13px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: 0.4s;
+}
+
+/* When checked, change background color */
+input:checked + .slider {
+  background-color: #2196f3;
+}
+
+/* Move the knob when checked */
+input:checked + .slider:before {
+  transform: translateX(13px);
+}
+
+/* Rounded slider */
+.slider.round {
+  border-radius: 17px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+.token-balances {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.token-pill {
+  display: flex;
+  align-items: center;
+  background: #1e1e1e;
+  border-radius: 12px;
+  padding: 4px 8px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.token-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.no-tokens {
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.token-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #1b1b1b;
+  border: 1px solid #333;
+  border-radius: 6px;
+  overflow: hidden;
+
+  th,
+  td {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.95rem;
+  }
+
+  th {
+    background: #272727;
+    font-weight: 600;
+    text-align: left;
+    &:first-child {
+      border-top-left-radius: 6px;
+    }
+    &:last-child {
+      border-top-right-radius: 6px;
+    }
+  }
+
+  tbody tr:nth-child(even) {
+    background: #222;
+  }
+
+  .token-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    img {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+    }
+  }
+
+  .balance-cell {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .table-btn {
+    width: 100%;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    background: #0055ff;
+    transition: background 0.2s;
+
+    &:hover {
+      background: #0040d1;
+    }
+    &:active {
+      background: #0035b5;
+    }
+
+    &.outline {
+      background: transparent;
+      border: 1px solid #fff;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.15);
+      }
+      &:active {
+        background: rgba(255, 255, 255, 0.25);
+      }
+    }
+  }
+}
+
+
+
