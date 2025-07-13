@@ -37,7 +37,7 @@ export function MenuBar() {
   }, []);
 
   return (
-    <header className="menu-bar">
+    <header className="menu-bar" style={{ zIndex:2}}>
 
       <div className="menu-bar-left">
 

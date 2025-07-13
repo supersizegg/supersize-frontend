@@ -55,8 +55,8 @@ const CreateGame: React.FC<CreateGameProps> = ({ activeGamesLoaded, setActiveGam
           buyIn={0}
         />
       </div>
-      <MenuBar />
-      <div className="create-game-wrapper" style={{ position: "relative", zIndex: 1 }}>
+      <MenuBar/>
+      <div className="create-game-wrapper" style={{ position: "relative", zIndex: 1}}>
         <div className="create-game-card">
           {tab === 0 ? (
             <GameLauncher activeGamesLoaded={activeGamesLoaded} setActiveGamesLoaded={setActiveGamesLoaded} />
