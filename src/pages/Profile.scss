@@ -90,6 +90,30 @@
     }
   }
 
+  .icon-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    justify-items: center;
+  }
+
+  .icon-option {
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: filter 0.2s, opacity 0.2s;
+    object-fit: contain;
+    &.selected {
+      filter: none;
+      opacity: 1;
+    }
+    &:not(.selected) {
+      filter: grayscale(1);
+      opacity: 0.5;
+    }
+  }
+
   .referral-row {
     label {
       width: 100px;

@@ -8,7 +8,11 @@ type Props = {
 
 const RegionSelector: React.FC<Props> = ({ onSelect }) => {
   const [pingResults, setPingResults] = useState<{ endpoint: string; pingTime: number; region: string }[]>(
-    endpoints[NETWORK].map((endpoint) => ({ endpoint, pingTime: 0, region: options[endpoints[NETWORK].indexOf(endpoint)] }))
+    endpoints[NETWORK].map((endpoint) => ({
+      endpoint,
+      pingTime: 0,
+      region: options[endpoints[NETWORK].indexOf(endpoint)],
+    })),
   );
   const [selectedRegion, setSelectedRegion] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -23,9 +27,7 @@ const RegionSelector: React.FC<Props> = ({ onSelect }) => {
     const fetchPingData = async () => {
       setLoading(true);
       await pingEndpointsStream((result) => {
-        setPingResults((prev) =>
-          prev.map((r) => (r.endpoint === result.endpoint ? result : r)),
-        );
+        setPingResults((prev) => prev.map((r) => (r.endpoint === result.endpoint ? result : r)));
 
         if (!stored && !selectedRegion) {
           stored = result.region;
@@ -38,7 +40,7 @@ const RegionSelector: React.FC<Props> = ({ onSelect }) => {
     };
 
     fetchPingData();
-  }, [onSelect, selectedRegion]);
+  }, [onSelect]);
 
   return (
     <div className="flex gap-2">

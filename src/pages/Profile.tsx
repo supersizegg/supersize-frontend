@@ -44,6 +44,7 @@ import DepositModal from "@components/util/DepositModal";
 import WithdrawalModal from "@components/util/WithdrawalModal";
 import RegionSelector from "@components/util/RegionSelector";
 import BackButton from "@components/util/BackButton";
+import { endpoints, options, NETWORK } from "../utils/constants";
 
 Chart.register(LineElement, PointElement, LinearScale, Title, Tooltip, Legend);
 
@@ -57,6 +58,12 @@ type profileProps = {
 
 export default function Profile({ randomFood, username, setUsername, sessionWalletInUse, setSessionWalletInUse }: profileProps ) {
   const engine = useMagicBlockEngine();
+  useEffect(() => {
+    let stored = localStorage.getItem("preferredRegion");
+    if (stored) {
+      engine.setEndpointEphemRpc(endpoints[NETWORK][options.indexOf(stored)]);
+    }
+  }, []);
   const [activeTab, setActiveTab] = useState<"wallet" | "profile" | "admin">("wallet");
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
   const [isWithdrawalModalOpen, setIsWithdrawalModalOpen] = useState(false);
@@ -121,7 +128,7 @@ export default function Profile({ randomFood, username, setUsername, sessionWall
           {activeTab === "admin" && <AdminTab engine={engine} />}
         </div>
       </div>
-
+        {/*
       <DepositModal walletAddress={engine.getSessionPayer()} isOpen={isDepositModalOpen} onClose={() => setIsDepositModalOpen(false)} onDeposit={async (amount: number) => {await engine.fundSessionFromWallet(amount);}} />
       <WithdrawalModal accountBalance={sessionLamports} isOpen={isWithdrawalModalOpen} 
         onClose={() => setIsWithdrawalModalOpen(false)} 
@@ -132,7 +139,7 @@ export default function Profile({ randomFood, username, setUsername, sessionWall
         else{
           await engine.defundSessionBackToWallet(amount);
         }
-        }} />
+        }} /> */}
       <FooterLink />
       <BackButton />
     </div>
@@ -150,13 +157,27 @@ type GeneralTabProps = {
 };
 
 function GeneralTab({ sessionWalletInUse, username, sessionLamports, setSessionWalletInUse, setIsDepositModalOpen, setIsWithdrawalModalOpen, setSessionLamports }: GeneralTabProps) {
-
+  const engine = useMagicBlockEngine();
+  useEffect(() => {
+    let stored = localStorage.getItem("preferredRegion");
+    if (stored) {
+      engine.setEndpointEphemRpc(endpoints[NETWORK][options.indexOf(stored)]);
+    }
+  }, []);
+  
   return (
     <div className="general-tab">
       <MenuWallet />
 
-      <MenuSession username={username} sessionWalletInUse={sessionWalletInUse} setSessionWalletInUse={setSessionWalletInUse} setIsDepositModalOpen={setIsDepositModalOpen} 
-      setIsWithdrawalModalOpen={setIsWithdrawalModalOpen} setSessionLamports={setSessionLamports} sessionLamports={sessionLamports}/>
+      <MenuSession 
+      //username={username} 
+      //sessionWalletInUse={sessionWalletInUse} 
+      //setSessionWalletInUse={setSessionWalletInUse} 
+      //setIsDepositModalOpen={setIsDepositModalOpen} 
+      //setIsWithdrawalModalOpen={setIsWithdrawalModalOpen} 
+      //setSessionLamports={setSessionLamports} 
+      //sessionLamports={sessionLamports}
+      />
       
     </div>
   );
@@ -170,11 +191,40 @@ type ProfileTabProps = {
 
 function ProfileTab({ username, setUsername, sessionWalletInUse }: ProfileTabProps) {
   const [input, setInput] = useState(username);
+  const icons = [
+    "/snake.png",
+    "/goat.png",
+    "/gorilla.png",
+    "/chick.png",
+    "/pig.png",
+    "/penguin.png",
+  ];
+  const [selectedIcon, setSelectedIcon] = useState("/chick.png");
+
+  useEffect(() => {
+    const stored = localStorage.getItem("user");
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (parsed.icon) setSelectedIcon(parsed.icon);
+      setInput(parsed.name);
+    }
+  }, []);
 
   const handleSave = () => {
-    const user = { name: input, use_session: sessionWalletInUse };
+    const user = { name: input, use_session: sessionWalletInUse, icon: selectedIcon };
     localStorage.setItem("user", JSON.stringify(user));
     setUsername(input);
+  };
+
+  const handleSelectIcon = (icon: string) => {
+    setSelectedIcon(icon);
+    const stored = localStorage.getItem("user");
+    const parsed = stored ? JSON.parse(stored) : {};
+    localStorage.setItem(
+      "user",
+      JSON.stringify({ ...parsed, name: input, use_session: sessionWalletInUse, icon })
+    );
+    window.dispatchEvent(new Event("storage"));
   };
   
   return (
@@ -190,6 +240,17 @@ function ProfileTab({ username, setUsername, sessionWalletInUse }: ProfileTabPro
         <button className="btn-save" onClick={handleSave}>
           Save
         </button>
+      </div>
+      <div className="icon-grid">
+        {icons.map((icon) => (
+          <img
+            key={icon}
+            src={icon}
+            alt={icon}
+            className={`icon-option ${selectedIcon === icon ? "selected" : ""}`}
+            onClick={() => handleSelectIcon(icon)}
+          />
+        ))}
       </div>
       <div style={{ marginTop: "1rem" }}>
         <RegionSelector />

@@ -9,7 +9,6 @@ import "./MenuWallet.scss";
 export function MenuWallet() {
   const engine = useMagicBlockEngine();
   const walletConnected = engine.getWalletConnected();
-
   return <div className="menu-wallet">{walletConnected ? <MenuWalletConnected /> : <MenuWalletDisconnected />}</div>;
 }
 
