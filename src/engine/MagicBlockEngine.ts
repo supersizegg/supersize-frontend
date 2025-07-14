@@ -59,7 +59,7 @@ export class MagicBlockEngine {
     this.walletContext = walletContext;
     this.sessionKey = sessionKey;
     this.sessionConfig = sessionConfig;
-    this.endpointEphemRpc = endpoints[NETWORK][0]; 
+    this.endpointEphemRpc = endpoints[NETWORK][1]; 
     this.connectionEphem = new Connection(this.endpointEphemRpc, {
       wsEndpoint: this.endpointEphemRpc.replace("http", "ws"),
     });

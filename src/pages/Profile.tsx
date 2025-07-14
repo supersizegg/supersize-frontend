@@ -44,6 +44,7 @@ import DepositModal from "@components/util/DepositModal";
 import WithdrawalModal from "@components/util/WithdrawalModal";
 import RegionSelector from "@components/util/RegionSelector";
 import BackButton from "@components/util/BackButton";
+import { endpoints, options, NETWORK } from "../utils/constants";
 
 Chart.register(LineElement, PointElement, LinearScale, Title, Tooltip, Legend);
 
@@ -57,6 +58,12 @@ type profileProps = {
 
 export default function Profile({ randomFood, username, setUsername, sessionWalletInUse, setSessionWalletInUse }: profileProps ) {
   const engine = useMagicBlockEngine();
+  useEffect(() => {
+    let stored = localStorage.getItem("preferredRegion");
+    if (stored) {
+      engine.setEndpointEphemRpc(endpoints[NETWORK][options.indexOf(stored)]);
+    }
+  }, []);
   const [activeTab, setActiveTab] = useState<"wallet" | "profile" | "admin">("wallet");
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
   const [isWithdrawalModalOpen, setIsWithdrawalModalOpen] = useState(false);
@@ -150,7 +157,14 @@ type GeneralTabProps = {
 };
 
 function GeneralTab({ sessionWalletInUse, username, sessionLamports, setSessionWalletInUse, setIsDepositModalOpen, setIsWithdrawalModalOpen, setSessionLamports }: GeneralTabProps) {
-
+  const engine = useMagicBlockEngine();
+  useEffect(() => {
+    let stored = localStorage.getItem("preferredRegion");
+    if (stored) {
+      engine.setEndpointEphemRpc(endpoints[NETWORK][options.indexOf(stored)]);
+    }
+  }, []);
+  
   return (
     <div className="general-tab">
       <MenuWallet />

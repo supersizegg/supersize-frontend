@@ -14,6 +14,8 @@ import { useState } from "react";
 import { PublicKey } from "@solana/web3.js";
 import { activeGamesList, NETWORK } from "@utils/constants";
 import { createUnloadedGame } from "@utils/game";
+import { useMagicBlockEngine } from "./engine/MagicBlockEngineProvider";
+import { endpoints, options } from "./utils/constants";
 
 const AppRoutes = () => {
   const [selectedGame, setSelectedGame] = useState<ActiveGame | null>(null);

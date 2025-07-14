@@ -6,6 +6,7 @@ import { SupersizeVaultClient } from "../../engine/SupersizeVaultClient";
 import { cachedTokenMetadata } from "../../utils/constants";
 import TokenTransferModal from "../TokenTransferModal/TokenTransferModal";
 import "./MenuSession.scss";
+import { useSolanaWallets } from "@privy-io/react-auth/solana";
 
 type UserStatus = "loading" | "uninitialized" | "ready_to_delegate" | "delegated";
 
@@ -27,6 +28,7 @@ export function MenuSession() {
   }>(null);
 
   useEffect(() => {
+    console.log(engine)
     if (engine && engine.getWalletConnected()) {
       setVaultClient(new SupersizeVaultClient(engine));
     } else {
@@ -45,7 +47,10 @@ export function MenuSession() {
     for (const mintStr of supportedMints) {
       const mint = new PublicKey(mintStr);
       const uiAmount = await vaultClient.getVaultBalance(mint);
-      if (uiAmount >= 0) {
+      if (uiAmount == "wrong_server"){
+        balances.push({ mint: mintStr, uiAmount: -1 });
+      }
+      else if (uiAmount >= 0) {
         balances.push({ mint: mintStr, uiAmount });
       }
     }
@@ -186,7 +191,7 @@ export function MenuSession() {
                           {symbol}
                         </td>
                         <td className="balance-cell">
-                          {uiAmount.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                          {uiAmount == -1 ? "Wrong Server" : uiAmount.toLocaleString(undefined, { maximumFractionDigits: 4 })}
                         </td>
                         <td>
                           <button

@@ -10,6 +10,7 @@ const DELEGATION_PROGRAM_ID = new PublicKey("DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaA
 export class SupersizeVaultClient {
   private readonly engine: any;
   private readonly program: Program<SupersizeVault>;
+  private readonly programEphem: Program<SupersizeVault>;
   private readonly wallet: PublicKey | null;
   private readonly mainChainConnection: Connection;
   private readonly ephemConnection: Connection;
@@ -17,6 +18,7 @@ export class SupersizeVaultClient {
   constructor(engine: any) {
     this.engine = engine;
     this.program = engine.getProgramOnChain(supersizeVaultIdl as Idl);
+    this.programEphem = engine.getProgramOnEphem(supersizeVaultIdl as Idl);
     this.wallet = engine.getWalletPayer();
     this.mainChainConnection = engine.getConnectionChain();
     this.ephemConnection = engine.getConnectionEphem();
@@ -154,9 +156,7 @@ export class SupersizeVaultClient {
 
   private async undelegateAll(mint: PublicKey) {
     if (!this.wallet) throw new Error("Wallet not connected.");
-
     const undelegateTx = new Transaction();
-
     undelegateTx.add(
       await this.program.methods
         .undelegateUser(this.wallet)
@@ -211,16 +211,21 @@ export class SupersizeVaultClient {
     await this.engine.processWalletTransaction("Withdraw", withdrawTx);
   }
 
-  async getVaultBalance(mint: PublicKey): Promise<number> {
+  async getVaultBalance(mint: PublicKey): Promise<number | "wrong_server"> {
     if (!this.wallet) return 0;
 
     const balPda = this.userBalancePda(this.wallet, mint);
     console.log("Fetching balance for PDA:", balPda.toBase58());
     const acc = await this.program.account.balance.fetchNullable(balPda);
     if (!acc) return 0;
-
+    const checkBalancePDA = await this.programEphem.account.balance.fetchNullable(
+      balPda
+    );
+    if (!checkBalancePDA) return "wrong_server";
     const conn = this.program.provider.connection;
     const { decimals } = await getMint(conn, mint);
+    let finalnum = Number(checkBalancePDA.balance) / 10 ** decimals;
+    console.log("finalnum",finalnum);
     return Number(acc.balance) / 10 ** decimals;
   }
 

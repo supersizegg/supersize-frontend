@@ -43,9 +43,9 @@ export function MenuBar() {
 
       <div className="branding">
           <NavLink to="/">
-          <svg width="283" height="60">
+          <svg width="305" height="60">
             <text x="0" y="40" fill="#fff" stroke="#4A4A4A" strokeWidth="8px" fontSize="48px" fontFamily="'Lexend', sans-serif" paintOrder="stroke">
-              supersize.io
+              supersize.gg
             </text>
           </svg>
           </NavLink>
@@ -64,7 +64,7 @@ export function MenuBar() {
         <nav className="nav-links">
           <div className="nav-right">
           <div className="coin-icon">
-            <img src="/slime.png" alt="SUPER BLOB" className="coin-image" />
+            <img src="/coin.png" alt="game token" className="coin-image" />
           </div>
 
           <div className="coin-pill">

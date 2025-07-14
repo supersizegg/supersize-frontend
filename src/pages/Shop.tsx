@@ -76,9 +76,8 @@ const Shop: React.FC = () => {
                 title="DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263"
                 alt="BONK"
               />
-              <svg className="arrow-icon" viewBox="0 0 16 16">
-                <path d="M5 3h6l-2 2h4v2H9l2 2H5l2-2H3V5h4L5 3z" fill="currentColor" />
-              </svg>
+              <img src="/transaction.png" style={{ width: "20px", height: "20px", marginLeft: "10px"}}/>
+
             </div>
             <div className="right">
               <span className="price">{price !== null ? `$${price.toFixed(5)}` : "--"}</span>
@@ -98,10 +97,10 @@ const Shop: React.FC = () => {
           </div>
         </div>
         <div className="action-column">
-          <button className="buy-button">buy with cash</button>
-          <button className="buy-button">buy with crypto</button>
+          <button className="buy-button">buy $1 of Bonk</button>
+          <button className="buy-button">buy $5 of Bonk</button>
           <a href="#" className="sell-link">
-            can I sell my supercoins?
+            can I sell my bonk?
           </a>
         </div>
       </div>
