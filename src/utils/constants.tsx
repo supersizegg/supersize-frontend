@@ -229,9 +229,10 @@ export const activeGamesList: {
 
 export const options = ["Europe", "America", "Asia"];
 
+
 export const cachedTokenMetadata: Record<
   string,
-  { name: string; symbol: string; image: string; network: string; raydium?: boolean }
+  { name: string; symbol: string; decimals?: number; image: string; network: string; raydium?: boolean }
 > = {
   "7dnMwS2yE6NE1PX81B9Xpm7zUhFXmQABqUiHHzWXiEBn": {
     name: "Adventure Gold (Wormhole)",
@@ -249,7 +250,8 @@ export const cachedTokenMetadata: Record<
   AsoX43Q5Y87RPRGFkkYUvu8CSksD9JXNEqWVGVsr8UEp: {
     name: "Magical Gem",
     symbol: "Magical Gem",
-    image: `https://shdw-drive.genesysgo.net/4PMP1MG5vYGkT7gnAMb7E5kqPLLjjDzTiAaZ3xRx5Czd/gem.png`,
+    decimals: 9,
+    image: `${process.env.PUBLIC_URL}/fallback-token.webp`,
     network: "devnet",
   },
   DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263: {

@@ -121,6 +121,11 @@
       "code": 6004,
       "name": "ExitLocked",
       "msg": "Can't exit."
+    },
+    {
+      "code": 6005,
+      "name": "Forbidden",
+      "msg": "Forbidden action."
     }
   ],
   "types": [

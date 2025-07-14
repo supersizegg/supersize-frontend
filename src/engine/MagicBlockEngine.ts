@@ -1,20 +1,35 @@
 import { Idl, Program, AnchorProvider } from "@coral-xyz/anchor";
 import { WalletContextState } from "@solana/wallet-adapter-react";
-import { AccountInfo, Commitment, Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
+import {
+  AccountInfo,
+  Commitment,
+  Connection,
+  Keypair,
+  LAMPORTS_PER_SOL,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+} from "@solana/web3.js";
 import { WalletName } from "@solana/wallet-adapter-base";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
 import * as anchor from "@coral-xyz/anchor";
 import { endpoints, NETWORK, RPC_CONNECTION } from "@utils/constants";
 import { log, warn } from "../utils/logger";
+import {
+  createAssociatedTokenAccountInstruction as ixCreateATA,
+  createTransferInstruction as ixTokenTransfer,
+  getAssociatedTokenAddressSync,
+  getMint,
+} from "@solana/spl-token";
 
-const ENDPOINT_CHAIN_RPC = RPC_CONNECTION[NETWORK]; 
-const ENDPOINT_CHAIN_WS = ENDPOINT_CHAIN_RPC.replace("http", "ws"); 
+const ENDPOINT_CHAIN_RPC = RPC_CONNECTION[NETWORK];
+const ENDPOINT_CHAIN_WS = ENDPOINT_CHAIN_RPC.replace("http", "ws");
 const connectionChain = new Connection(ENDPOINT_CHAIN_RPC, {
   wsEndpoint: ENDPOINT_CHAIN_WS,
 });
 
-const ENDPOINT_CHAIN_RPC_DEVNET = RPC_CONNECTION["devnet"]; 
-const ENDPOINT_CHAIN_WS_DEVNET = ENDPOINT_CHAIN_RPC_DEVNET.replace("http", "ws"); 
+const ENDPOINT_CHAIN_RPC_DEVNET = RPC_CONNECTION["devnet"];
+const ENDPOINT_CHAIN_WS_DEVNET = ENDPOINT_CHAIN_RPC_DEVNET.replace("http", "ws");
 const connectionChainDevnet = new Connection(ENDPOINT_CHAIN_RPC_DEVNET, {
   wsEndpoint: ENDPOINT_CHAIN_WS_DEVNET,
 });
@@ -44,7 +59,7 @@ export class MagicBlockEngine {
     this.walletContext = walletContext;
     this.sessionKey = sessionKey;
     this.sessionConfig = sessionConfig;
-    this.endpointEphemRpc = endpoints[NETWORK][0]; 
+    this.endpointEphemRpc = endpoints[NETWORK][1]; 
     this.connectionEphem = new Connection(this.endpointEphemRpc, {
       wsEndpoint: this.endpointEphemRpc.replace("http", "ws"),
     });
@@ -296,36 +311,48 @@ export class MagicBlockEngine {
     }
   }
 
-  async fundSessionFromWallet(amount: number) {
-      await this.processWalletTransaction(
-        "FundSessionFromWallet",
-        new Transaction().add(
-          SystemProgram.transfer({
-            fromPubkey: this.getWalletPayer(),
-            toPubkey: this.getSessionPayer(),
-            lamports: amount * LAMPORTS_PER_SOL,
-          }),
-        ),
-      );
+  async fundSessionTokenFromWallet(mint: PublicKey, uiAmount: number) {
+    const conn = this.provider.connection;
+    const payer = this.getWalletPayer();
+    const toAuth = this.getSessionPayer();
+
+    const mintInfo = await getMint(conn, mint);
+    const factor = 10 ** mintInfo.decimals;
+    const lamports = BigInt(Math.round(uiAmount * factor));
+
+    const fromAta = getAssociatedTokenAddressSync(mint, payer);
+    const toAta = getAssociatedTokenAddressSync(mint, toAuth, true);
+
+    const ixCreate = (await conn.getAccountInfo(toAta)) ? null : ixCreateATA(payer, toAta, toAuth, mint);
+
+    const tx = new Transaction().add(...(ixCreate ? [ixCreate] : []), ixTokenTransfer(fromAta, toAta, payer, lamports));
+    await this.processWalletTransaction("FundSessionToken", tx);
   }
 
-  async defundSessionBackToWallet(amount: number, recipient: PublicKey = this.getWalletPayer()) {
-    const accountInfo = await this.provider.connection.getAccountInfo(this.getSessionPayer());
-    if (accountInfo && accountInfo.lamports > 0) {
-      const transferableLamports = Math.min(accountInfo.lamports - TRANSACTION_COST_LAMPORTS, amount * LAMPORTS_PER_SOL);
-      await this.processSessionChainTransaction(
-        "DefundSessionBackToWallet",
-        new Transaction().add(
-          SystemProgram.transfer({
-            fromPubkey: this.getSessionPayer(),
-            toPubkey: recipient,
-            lamports: transferableLamports,
-          }),
-        ),
-      );
-    }
-  }
+  async defundSessionTokenBackToWallet(
+    mint: PublicKey,
+    uiAmount: number,
+    recipient: PublicKey = this.getWalletPayer(),
+  ) {
+    const conn = this.provider.connection;
+    const fromAuth = this.getSessionPayer();
 
+    const mintInfo = await getMint(conn, mint);
+    const factor = 10 ** mintInfo.decimals;
+    const lamports = BigInt(Math.round(uiAmount * factor));
+
+    const fromAta = getAssociatedTokenAddressSync(mint, fromAuth, true);
+    const toAta = getAssociatedTokenAddressSync(mint, recipient);
+
+    const ixCreate = (await conn.getAccountInfo(toAta)) ? null : ixCreateATA(fromAuth, toAta, recipient, mint);
+
+    const tx = new Transaction().add(
+      ...(ixCreate ? [ixCreate] : []),
+      ixTokenTransfer(fromAta, toAta, fromAuth, lamports),
+    );
+    await this.processSessionChainTransaction("DefundSessionToken", tx);
+  }
+  
   getChainAccountInfo(address: PublicKey) {
     //return connectionChain.getAccountInfo(address);
     return this.provider.connection.getAccountInfo(address);

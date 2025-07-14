@@ -14,11 +14,11 @@ const NotificationContainer: React.FC = () => {
   }, []);
 
   return (
-    <div className="fixed bottom-10 left-10 z-[1000]">
+    <div className="fixed bottom-10 right-10 z-[1000]">
       {alerts.map((alert, index) => (
         <div
           key={alert.id}
-          style={{ position: "absolute", left: 0, bottom: `${index * 60}px` }}
+          style={{ position: "absolute", right: 0, bottom: `${index * 60}px` }}
         >
           <Alert
             type={alert.type}

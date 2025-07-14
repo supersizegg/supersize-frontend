@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { MenuBar } from "@components/menu/MenuBar";
 import { MenuSession } from "@components/menu/MenuSession";
+import { MenuWallet } from "@components/menu/MenuWallet";
 import FooterLink from "@components/Footer/Footer";
 import "./Profile.scss";
 import {
@@ -41,6 +42,9 @@ import DepositInput from '@components/util/DepositInput';
 import CollapsiblePanel from '@components/util/CollapsiblePanel';
 import DepositModal from "@components/util/DepositModal";
 import WithdrawalModal from "@components/util/WithdrawalModal";
+import RegionSelector from "@components/util/RegionSelector";
+import BackButton from "@components/util/BackButton";
+import { endpoints, options, NETWORK } from "../utils/constants";
 
 Chart.register(LineElement, PointElement, LinearScale, Title, Tooltip, Legend);
 
@@ -54,7 +58,13 @@ type profileProps = {
 
 export default function Profile({ randomFood, username, setUsername, sessionWalletInUse, setSessionWalletInUse }: profileProps ) {
   const engine = useMagicBlockEngine();
-  const [activeTab, setActiveTab] = useState<"general" | "quests" | "admin">("general");
+  useEffect(() => {
+    let stored = localStorage.getItem("preferredRegion");
+    if (stored) {
+      engine.setEndpointEphemRpc(endpoints[NETWORK][options.indexOf(stored)]);
+    }
+  }, []);
+  const [activeTab, setActiveTab] = useState<"wallet" | "profile" | "admin">("wallet");
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
   const [isWithdrawalModalOpen, setIsWithdrawalModalOpen] = useState(false);
   const [sessionLamports, setSessionLamports] = useState<number | undefined>(0);
@@ -96,11 +106,11 @@ export default function Profile({ randomFood, username, setUsername, sessionWall
       <MenuBar />
       <div className="profile-container" style={{ position: "relative", zIndex: 1 }}>
         <div className="profile-tabs">
-          <button className={activeTab === "general" ? "active" : ""} onClick={() => setActiveTab("general")}>
-            General
+          <button className={activeTab === "wallet" ? "active" : ""} onClick={() => setActiveTab("wallet")}>
+            Wallet
           </button>
-          <button className={activeTab === "quests" ? "active" : ""} onClick={() => setActiveTab("quests")}>
-            Quests
+          <button className={activeTab === "profile" ? "active" : ""} onClick={() => setActiveTab("profile")}>
+            Profile
           </button>
           <button className={activeTab === "admin" ? "active" : ""} onClick={() => setActiveTab("admin")}>
             Admin panel
@@ -108,15 +118,17 @@ export default function Profile({ randomFood, username, setUsername, sessionWall
         </div>
 
         <div className="profile-content">
-          {activeTab === "general" && 
-          <GeneralTab sessionWalletInUse={sessionWalletInUse} username={username} setUsername={setUsername}
+          {activeTab === "wallet" &&
+          <GeneralTab sessionWalletInUse={sessionWalletInUse} username={username}
           setSessionWalletInUse={setSessionWalletInUse} setIsDepositModalOpen={setIsDepositModalOpen} setIsWithdrawalModalOpen={setIsWithdrawalModalOpen}
           setSessionLamports={setSessionLamports} sessionLamports={sessionLamports}/>}
-          {activeTab === "quests" && <QuestsTab />}
+          {activeTab === "profile" && (
+            <ProfileTab username={username} setUsername={setUsername} sessionWalletInUse={sessionWalletInUse} />
+          )}
           {activeTab === "admin" && <AdminTab engine={engine} />}
         </div>
       </div>
-
+        {/*
       <DepositModal walletAddress={engine.getSessionPayer()} isOpen={isDepositModalOpen} onClose={() => setIsDepositModalOpen(false)} onDeposit={async (amount: number) => {await engine.fundSessionFromWallet(amount);}} />
       <WithdrawalModal accountBalance={sessionLamports} isOpen={isWithdrawalModalOpen} 
         onClose={() => setIsWithdrawalModalOpen(false)} 
@@ -127,8 +139,9 @@ export default function Profile({ randomFood, username, setUsername, sessionWall
         else{
           await engine.defundSessionBackToWallet(amount);
         }
-        }} />
+        }} /> */}
       <FooterLink />
+      <BackButton />
     </div>
   );
 }
@@ -141,47 +154,106 @@ type GeneralTabProps = {
   setIsDepositModalOpen: (isDepositModalOpen: boolean) => void;
   setIsWithdrawalModalOpen: (isWithdrawalModalOpen: boolean) => void;
   setSessionLamports: (sessionLamports: number | undefined) => void;
-  setUsername: (username: string) => void;
 };
 
-function GeneralTab({ sessionWalletInUse, username, sessionLamports, setSessionWalletInUse, setIsDepositModalOpen, setIsWithdrawalModalOpen, setSessionLamports, setUsername }: GeneralTabProps) {
-
-  const setInputUsername = (inputUsername: string) => {
-    const user = { name: inputUsername, use_session: sessionWalletInUse };
-    localStorage.setItem("user", JSON.stringify(user));
-    setUsername(inputUsername);
-  };
-
+function GeneralTab({ sessionWalletInUse, username, sessionLamports, setSessionWalletInUse, setIsDepositModalOpen, setIsWithdrawalModalOpen, setSessionLamports }: GeneralTabProps) {
+  const engine = useMagicBlockEngine();
+  useEffect(() => {
+    let stored = localStorage.getItem("preferredRegion");
+    if (stored) {
+      engine.setEndpointEphemRpc(endpoints[NETWORK][options.indexOf(stored)]);
+    }
+  }, []);
+  
   return (
     <div className="general-tab">
-      <MenuSession username={username} sessionWalletInUse={sessionWalletInUse} setSessionWalletInUse={setSessionWalletInUse} setIsDepositModalOpen={setIsDepositModalOpen} 
-      setIsWithdrawalModalOpen={setIsWithdrawalModalOpen} setSessionLamports={setSessionLamports} sessionLamports={sessionLamports}/>
-      
-      <hr className="divider" />
+      <MenuWallet />
 
+      <MenuSession 
+      //username={username} 
+      //sessionWalletInUse={sessionWalletInUse} 
+      //setSessionWalletInUse={setSessionWalletInUse} 
+      //setIsDepositModalOpen={setIsDepositModalOpen} 
+      //setIsWithdrawalModalOpen={setIsWithdrawalModalOpen} 
+      //setSessionLamports={setSessionLamports} 
+      //sessionLamports={sessionLamports}
+      />
+      
+    </div>
+  );
+}
+
+type ProfileTabProps = {
+  username: string;
+  setUsername: (username: string) => void;
+  sessionWalletInUse: boolean;
+};
+
+function ProfileTab({ username, setUsername, sessionWalletInUse }: ProfileTabProps) {
+  const [input, setInput] = useState(username);
+  const icons = [
+    "/snake.png",
+    "/goat.png",
+    "/gorilla.png",
+    "/chick.png",
+    "/pig.png",
+    "/penguin.png",
+  ];
+  const [selectedIcon, setSelectedIcon] = useState("/chick.png");
+
+  useEffect(() => {
+    const stored = localStorage.getItem("user");
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (parsed.icon) setSelectedIcon(parsed.icon);
+      setInput(parsed.name);
+    }
+  }, []);
+
+  const handleSave = () => {
+    const user = { name: input, use_session: sessionWalletInUse, icon: selectedIcon };
+    localStorage.setItem("user", JSON.stringify(user));
+    setUsername(input);
+  };
+
+  const handleSelectIcon = (icon: string) => {
+    setSelectedIcon(icon);
+    const stored = localStorage.getItem("user");
+    const parsed = stored ? JSON.parse(stored) : {};
+    localStorage.setItem(
+      "user",
+      JSON.stringify({ ...parsed, name: input, use_session: sessionWalletInUse, icon })
+    );
+    window.dispatchEvent(new Event("storage"));
+  };
+  
+  return (
+    <div className="general-tab">
       <label className="input-label">Username</label>
       <div className="row-inline input-group">
         <input
           type="text"
           placeholder="Enter your username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
         />
-        <button className="btn-save" onClick={() => setInputUsername(username)}>
+        <button className="btn-save" onClick={handleSave}>
           Save
         </button>
       </div>
-    </div>
-  );
-}
-
-function QuestsTab() {
-
-  return (
-    <div className="quests-tab">
-      <div className="quest-item">
-        <span>Coming soon!</span>
-        <button>{"Pending"}</button>
+      <div className="icon-grid">
+        {icons.map((icon) => (
+          <img
+            key={icon}
+            src={icon}
+            alt={icon}
+            className={`icon-option ${selectedIcon === icon ? "selected" : ""}`}
+            onClick={() => handleSelectIcon(icon)}
+          />
+        ))}
+      </div>
+      <div style={{ marginTop: "1rem" }}>
+        <RegionSelector />
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { Route, Routes } from "react-router-dom";
+import Landing from "@pages/Landing";
 import Home from "@pages/Home";
 import NotFound from "@pages/NotFound";
 import CreateGame from "@pages/CreateGame";
@@ -7,11 +8,14 @@ import Game from "@pages/Game";
 import Leaderboard from "@pages/Leaderboard";
 import Profile from "@pages/Profile";
 import HowToPlay from "@pages/HowToPlay";
+import Shop from "@pages/Shop";
 import { ActiveGame, FetchedGame, Food } from "@utils/types";
 import { useState } from "react";
 import { PublicKey } from "@solana/web3.js";
 import { activeGamesList, NETWORK } from "@utils/constants";
 import { createUnloadedGame } from "@utils/game";
+import { useMagicBlockEngine } from "./engine/MagicBlockEngineProvider";
+import { endpoints, options } from "./utils/constants";
 
 const AppRoutes = () => {
   const [selectedGame, setSelectedGame] = useState<ActiveGame | null>(null);
@@ -47,8 +51,9 @@ const AppRoutes = () => {
 
   return (
     <Routes>
+      <Route index element={<Landing />} />
       <Route
-        index
+        path="/home"
         element={
           <Home
             selectedGame={selectedGame}
@@ -71,6 +76,7 @@ const AppRoutes = () => {
       )}
       <Route path="/leaderboard" element={<Leaderboard randomFood={randomFood} />} />
       <Route path="/about" element={<HowToPlay randomFood={randomFood}/>} />
+      <Route path="/shop" element={<Shop />} />
       <Route path="/profile" element={<Profile randomFood={randomFood} username={username} setUsername={setUsername}
       sessionWalletInUse={sessionWalletInUse} setSessionWalletInUse={setSessionWalletInUse}/>} />
       <Route path="*" element={<NotFound />} />

@@ -3,13 +3,12 @@ import { useMagicBlockEngine } from "../../engine/MagicBlockEngineProvider";
 
 import { Button } from "../util/Button";
 import { Text } from "../util/Text";
-import { ForEach } from "../util/ForEach";
+import { usePrivy } from "@privy-io/react-auth";
 import "./MenuWallet.scss";
 
 export function MenuWallet() {
   const engine = useMagicBlockEngine();
   const walletConnected = engine.getWalletConnected();
-
   return <div className="menu-wallet">{walletConnected ? <MenuWalletConnected /> : <MenuWalletDisconnected />}</div>;
 }
 
@@ -41,44 +40,15 @@ function MenuWalletConnected() {
 }
 
 function MenuWalletDisconnected() {
-  const engine = useMagicBlockEngine();
-
-  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
-
-  const openDrawer = () => setIsDrawerOpen(true);
-  const closeDrawer = () => setIsDrawerOpen(false);
+  const { login } = usePrivy();
 
   return (
     <div className="wallet-disconnected desktop-only">
-      {!isDrawerOpen && <Button text="Connect Wallet" className="connect-wallet-button" onClick={openDrawer} />}
-
-      {isDrawerOpen && (
-        <div className="wallet-drawer-backdrop" onClick={closeDrawer}>
-          <div className="wallet-drawer" onClick={(e) => e.stopPropagation()}>
-            <div className="wallet-drawer-header">
-              <Text value="Select a Wallet" />
-              <Button text="X" onClick={closeDrawer} />
-            </div>
-            <div className="wallet-drawer-body">
-              <ForEach
-                values={engine.listWalletAdapters()}
-                renderer={(walletAdapter) => (
-                  <Button
-                    key={walletAdapter.name}
-                    icon={walletAdapter.icon}
-                    text={walletAdapter.name}
-                    onClick={() => {
-                      engine.selectWalletAdapter(walletAdapter);
-                      closeDrawer();
-                    }}
-                  />
-                )}
-                placeholder={() => <Text value="No web wallet detected" />}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      <Button
+        text="Connect Wallet"
+        className="connect-wallet-button"
+        onClick={login}
+      />
     </div>
   );
 }

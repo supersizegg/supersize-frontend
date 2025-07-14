@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { MenuBar } from "@components/menu/MenuBar";
 import Footer from "@components/Footer/Footer";
+import BackButton from "@components/util/BackButton";
 import "./HowToPlay.scss";
 import { Food } from "@utils/types";
 import GameComponent from "@components/Game/Game";
@@ -175,7 +176,7 @@ const HowToPlay: React.FC<HowToPlayProps> = ({ randomFood }) => {
       >
         <EyeSvg />
       </div>
-      <Footer />
+      <BackButton />
     </div>
   );
 };

@@ -8,6 +8,7 @@ import "./Leaderboard.scss";
 import { Food } from "@utils/types";
 import GameComponent from "@components/Game/Game";
 import { BN } from "@coral-xyz/anchor";
+import BackButton from "@components/util/BackButton";
 
 interface Player {
   name: string;
@@ -291,6 +292,7 @@ const Leaderboard: React.FC<LeaderboardProps>  = ({ randomFood }) => {
           </div>
         </div>
         {totalRows > limit && <div className="pagination">{renderPagination()}</div>}
+        <BackButton />
       </div>
     </div>
   );

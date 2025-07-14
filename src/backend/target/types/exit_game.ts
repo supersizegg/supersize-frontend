@@ -127,6 +127,11 @@ export type ExitGame = {
       "code": 6004,
       "name": "exitLocked",
       "msg": "Can't exit."
+    },
+    {
+      "code": 6005,
+      "name": "forbidden",
+      "msg": "Forbidden action."
     }
   ],
   "types": [
