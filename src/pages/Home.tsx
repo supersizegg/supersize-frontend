@@ -22,6 +22,7 @@ import GameComponent from "@components/Game/Game";
 import NotificationContainer from "@components/notification/NotificationContainer";
 import NotificationService from "@components/notification/NotificationService";
 import BalanceWarning from "@components/notification/BalanceWarning";
+import SignUpBanner from "../components/util/SignUpBanner";
 
 type homeProps = {
   selectedGame: ActiveGame | null;
@@ -33,6 +34,8 @@ type homeProps = {
   sessionWalletInUse: boolean;
   username: string;
   preferredRegion: string;
+  tokenBalance: number;
+  setTokenBalance: (tokenBalance: number) => void;
 };
 
 const Home = ({
@@ -45,6 +48,8 @@ const Home = ({
   sessionWalletInUse,
   username,
   preferredRegion,
+  tokenBalance,
+  setTokenBalance,
 }: homeProps) => {
   const navigate = useNavigate();
   const engine = useMagicBlockEngine();
@@ -62,7 +67,7 @@ const Home = ({
   const checkActiveGamesLoadedWait = useRef(500);
   const [numberOfGamesInEndpoint, setNumberOfGamesInEndpoint] = useState<null | number>(null);
   const [hasInsufficientTokenBalance, setHasInsufficientTokenBalance] = useState(false);
-  const [tokenBalance, setTokenBalance] = useState(-1);
+  //const [tokenBalance, setTokenBalance] = useState(-1);
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(event.target.value);
@@ -443,7 +448,7 @@ const Home = ({
       >
         <GameComponent
           players={[]}
-          visibleFood={randomFood}
+          visibleFood={[]}
           currentPlayer={{
             name: "",
             authority: null,
@@ -462,7 +467,7 @@ const Home = ({
           buyIn={0}
         />
       </div>
-      <MenuBar />
+      <MenuBar tokenBalance={tokenBalance} />
 
       <div className="banner" style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
           <img src="/superblob-oneword.png" alt="SUPER BLOB" className="banner-title" style={{ width: "100%", height: "100%", marginTop: "10%"}}/>
@@ -639,7 +644,7 @@ const Home = ({
         setHasInsufficientTokenBalance={setHasInsufficientTokenBalance}
         setTokenBalance={setTokenBalance}/>}
       <NotificationContainer />
-
+      <SignUpBanner engine={engine} preferredRegion={preferredRegion} />
     </div>
   );
 };

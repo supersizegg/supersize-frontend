@@ -6,7 +6,11 @@ import TradingViewWidget from "@components/util/TradingViewWidget";
 import { BN } from "@coral-xyz/anchor";
 import "./Shop.scss";
 
-const Shop: React.FC = () => {
+type ShopProps = {
+  tokenBalance: number;
+};
+
+const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
   const [price, setPrice] = useState<number | null>(null);
   const [change, setChange] = useState<number | null>(null);
 
@@ -63,7 +67,7 @@ const Shop: React.FC = () => {
           buyIn={0}
         />
       </div>
-      <MenuBar />
+      <MenuBar tokenBalance={tokenBalance} />
       <div className="shop-content" style={{ position: "relative", zIndex: 1 }}>
         <div className="shop-panel">
           <h1 className="shop-title">supermarket</h1>

@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { endpoints, NETWORK, options } from "@utils/constants";
 import { pingEndpointsStream, getPingColor } from "@utils/helper";
+import { MagicBlockEngine } from "../../engine/MagicBlockEngine";
 
 type Props = {
   onSelect?: (endpoint: string) => void;
   preferredRegion: string;
   setPreferredRegion: (region: string) => void;
+  engine: MagicBlockEngine;
 };
 
-const RegionSelector: React.FC<Props> = ({ onSelect, preferredRegion, setPreferredRegion }) => {
+const RegionSelector: React.FC<Props> = ({ onSelect, preferredRegion, setPreferredRegion, engine }) => {
   const [pingResults, setPingResults] = useState<{ endpoint: string; pingTime: number; region: string }[]>(
     endpoints[NETWORK].map((endpoint) => ({
       endpoint,
@@ -55,7 +57,8 @@ const RegionSelector: React.FC<Props> = ({ onSelect, preferredRegion, setPreferr
         <button
           key={item.region}
           className={`region-button text-white px-4 py-2 rounded-md border border-white/20 ${
-            selectedRegion.toLowerCase() === item.region.toLowerCase() ? "bg-[#666]" : "bg-[#444] hover:bg-[#555]"
+            engine.getWalletConnected() ? (selectedRegion.toLowerCase() === item.region.toLowerCase() ? "bg-[#666]" : "bg-[#444] hover:bg-[#555]") 
+            : "bg-[#444] hover:bg-[#555]"
           }`}
           disabled={loading}
           onClick={() => {

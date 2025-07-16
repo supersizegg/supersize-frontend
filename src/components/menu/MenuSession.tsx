@@ -144,9 +144,11 @@ export function MenuSession() {
     <div className="menu-session">
       <div className="session-bottom">
 
-        {status === "loading" && <div className="loading-overlay">Loading...</div>}
+        {!engine.getWalletConnected() && <div className="loading-overlay">Sign in to play!</div>}
+
+        {(status === "loading" && engine.getWalletConnected()) && <div className="loading-overlay">Loading...</div>}
     
-        {status === "uninitialized" && (
+        {(status === "uninitialized" && engine.getWalletConnected()) && (
           <div className="session-prompt">
             <p style={{ padding: "20px 0" }}>
               To play, you need to enable the game wallet. This requires one-time approval.
@@ -157,7 +159,7 @@ export function MenuSession() {
           </div>
         )}
 
-        {(status === "ready_to_delegate" || status === "delegated") && (
+        {(engine.getWalletConnected() && (status === "ready_to_delegate" || status === "delegated")) && (
           <>
             <div className="session-top row-inline">
               <div className="network-switch" style={{ display: "flex", alignItems: "center" }}>

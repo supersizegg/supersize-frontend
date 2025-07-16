@@ -56,9 +56,10 @@ type profileProps = {
   setSessionWalletInUse: (sessionWalletInUse: boolean) => void;
   preferredRegion: string;
   setPreferredRegion: (region: string) => void;
+  tokenBalance: number;
 };
 
-export default function Profile({ randomFood, username, setUsername, sessionWalletInUse, setSessionWalletInUse, preferredRegion, setPreferredRegion }: profileProps ) {
+export default function Profile({ randomFood, username, setUsername, sessionWalletInUse, setSessionWalletInUse, preferredRegion, setPreferredRegion, tokenBalance }: profileProps ) {
   const engine = useMagicBlockEngine();
   const [activeTab, setActiveTab] = useState<"wallet" | "profile" | "admin">("wallet");
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
@@ -80,7 +81,7 @@ export default function Profile({ randomFood, username, setUsername, sessionWall
       >
         <GameComponent
           players={[]}
-          visibleFood={randomFood}
+          visibleFood={[]}
           currentPlayer={{
             name: "",
             authority: null,
@@ -99,7 +100,7 @@ export default function Profile({ randomFood, username, setUsername, sessionWall
           buyIn={0}
         />
       </div>
-      <MenuBar />
+      <MenuBar tokenBalance={tokenBalance} />
       <div className="profile-container" style={{ position: "relative", zIndex: 1 }}>
         <div className="profile-tabs">
           <button className={activeTab === "wallet" ? "active" : ""} onClick={() => setActiveTab("wallet")}>
@@ -117,9 +118,9 @@ export default function Profile({ randomFood, username, setUsername, sessionWall
           {activeTab === "wallet" &&
           <GeneralTab sessionWalletInUse={sessionWalletInUse} username={username}
           setSessionWalletInUse={setSessionWalletInUse} setIsDepositModalOpen={setIsDepositModalOpen} setIsWithdrawalModalOpen={setIsWithdrawalModalOpen}
-          setSessionLamports={setSessionLamports} sessionLamports={sessionLamports}/>}
+          setSessionLamports={setSessionLamports} sessionLamports={sessionLamports} setPreferredRegion={setPreferredRegion}/>}
           {activeTab === "profile" && (
-            <ProfileTab username={username} setUsername={setUsername} sessionWalletInUse={sessionWalletInUse} preferredRegion={preferredRegion} setPreferredRegion={setPreferredRegion} />
+            <ProfileTab engine={engine} username={username} setUsername={setUsername} sessionWalletInUse={sessionWalletInUse} preferredRegion={preferredRegion} setPreferredRegion={setPreferredRegion} />
           )}
           {activeTab === "admin" && <AdminTab engine={engine} />}
         </div>
@@ -150,13 +151,14 @@ type GeneralTabProps = {
   setIsDepositModalOpen: (isDepositModalOpen: boolean) => void;
   setIsWithdrawalModalOpen: (isWithdrawalModalOpen: boolean) => void;
   setSessionLamports: (sessionLamports: number | undefined) => void;
+  setPreferredRegion: (region: string) => void;
 };
 
-function GeneralTab({ sessionWalletInUse, username, sessionLamports, setSessionWalletInUse, setIsDepositModalOpen, setIsWithdrawalModalOpen, setSessionLamports }: GeneralTabProps) {
+function GeneralTab({ sessionWalletInUse, username, sessionLamports, setSessionWalletInUse, setIsDepositModalOpen, setIsWithdrawalModalOpen, setSessionLamports, setPreferredRegion}: GeneralTabProps) {
   
   return (
     <div className="general-tab">
-      <MenuWallet />
+      <MenuWallet setPreferredRegion={setPreferredRegion}/>
 
       <MenuSession 
       //username={username} 
@@ -173,6 +175,7 @@ function GeneralTab({ sessionWalletInUse, username, sessionLamports, setSessionW
 }
 
 type ProfileTabProps = {
+  engine: MagicBlockEngine;
   username: string;
   setUsername: (username: string) => void;
   sessionWalletInUse: boolean;
@@ -180,7 +183,7 @@ type ProfileTabProps = {
   setPreferredRegion: (region: string) => void;
 };
 
-function ProfileTab({ username, setUsername, sessionWalletInUse, preferredRegion, setPreferredRegion }: ProfileTabProps) {
+function ProfileTab({ engine, username, setUsername, sessionWalletInUse, preferredRegion, setPreferredRegion }: ProfileTabProps) {
   const [input, setInput] = useState(username);
   const icons = [
     "/snake.png",
@@ -194,26 +197,33 @@ function ProfileTab({ username, setUsername, sessionWalletInUse, preferredRegion
 
   useEffect(() => {
     const stored = localStorage.getItem("user");
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (parsed.icon) setSelectedIcon(parsed.icon);
-      setInput(parsed.name);
+    if(engine.getWalletConnected()) {
+      let username = engine.getWalletPayer().toString().slice(0, 7);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.icon) setSelectedIcon(parsed.icon);
+        if (parsed.name) username = parsed.name;
+      }
+      setInput(username);
     }
   }, []);
 
   const handleSave = () => {
+    if(!engine.getWalletConnected()) return;
     const user = { name: input, use_session: sessionWalletInUse, icon: selectedIcon };
     localStorage.setItem("user", JSON.stringify(user));
+    window.dispatchEvent(new Event("storage"));
     setUsername(input);
   };
 
   const handleSelectIcon = (icon: string) => {
+    if(!engine.getWalletConnected()) return;
     setSelectedIcon(icon);
     const stored = localStorage.getItem("user");
     const parsed = stored ? JSON.parse(stored) : {};
     localStorage.setItem(
       "user",
-      JSON.stringify({ ...parsed, name: input, use_session: sessionWalletInUse, icon })
+      JSON.stringify({ ...parsed, icon })
     );
     window.dispatchEvent(new Event("storage"));
   };
@@ -225,8 +235,9 @@ function ProfileTab({ username, setUsername, sessionWalletInUse, preferredRegion
         <input
           type="text"
           placeholder="Enter your username"
-          value={input}
+          value={engine.getWalletConnected() ? input : ""}
           onChange={(e) => setInput(e.target.value)}
+          disabled={!engine.getWalletConnected()}
         />
         <button className="btn-save" onClick={handleSave}>
           Save
@@ -235,6 +246,7 @@ function ProfileTab({ username, setUsername, sessionWalletInUse, preferredRegion
       <div className="icon-grid">
         {icons.map((icon) => (
           <img
+            style={{ cursor: engine.getWalletConnected() ? "pointer" : "default" }}
             key={icon}
             src={icon}
             alt={icon}
@@ -244,7 +256,7 @@ function ProfileTab({ username, setUsername, sessionWalletInUse, preferredRegion
         ))}
       </div>
       <div style={{ marginTop: "1rem" }}>
-        <RegionSelector preferredRegion={preferredRegion} setPreferredRegion={setPreferredRegion}/>
+        <RegionSelector preferredRegion={preferredRegion} setPreferredRegion={setPreferredRegion} engine={engine}/>
       </div>
     </div>
   );

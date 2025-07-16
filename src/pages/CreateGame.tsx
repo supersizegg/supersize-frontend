@@ -14,9 +14,10 @@ type CreateGameProps = {
   activeGamesLoaded: FetchedGame[];
   setActiveGamesLoaded: React.Dispatch<React.SetStateAction<FetchedGame[]>>;
   randomFood: Food[];
+  tokenBalance: number;
 };
 
-const CreateGame: React.FC<CreateGameProps> = ({ activeGamesLoaded, setActiveGamesLoaded, randomFood }) => {
+const CreateGame: React.FC<CreateGameProps> = ({ activeGamesLoaded, setActiveGamesLoaded, randomFood, tokenBalance }) => {
   const tabs = [0, 1, 2];
   const [tab, setTab] = useState(0);
 
@@ -36,7 +37,7 @@ const CreateGame: React.FC<CreateGameProps> = ({ activeGamesLoaded, setActiveGam
       >
         <GameComponent
           players={[]}
-          visibleFood={randomFood}
+          visibleFood={[]}
           currentPlayer={{
             name: "",
             authority: null,
@@ -55,7 +56,7 @@ const CreateGame: React.FC<CreateGameProps> = ({ activeGamesLoaded, setActiveGam
           buyIn={0}
         />
       </div>
-      <MenuBar/>
+      <MenuBar tokenBalance={tokenBalance} />
       <div className="create-game-wrapper" style={{ position: "relative", zIndex: 1}}>
         <div className="create-game-card">
           {tab === 0 ? (

@@ -37,7 +37,7 @@ const BalanceWarning: React.FC<BalanceWarningProps> = ({ activeGame, tokenBalanc
         setOpacity(0);
         setTimeout(() => {
           setHasInsufficientTokenBalance(false);
-          setTokenBalance(-1);
+          //setTokenBalance(-1);
         }, 1000);
       }, 4000);
 

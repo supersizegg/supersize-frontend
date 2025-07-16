@@ -2,8 +2,18 @@ import * as React from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import "./MenuBar.scss";
 import "../../pages/Landing.scss";
+import { useMagicBlockEngine } from "../../engine/MagicBlockEngineProvider";
+import { SupersizeVaultClient } from "../../engine/SupersizeVaultClient";
+import { useState, useEffect, useCallback } from "react";
+import { PublicKey } from "@solana/web3.js";
 
-export function MenuBar() {
+type MenuBarProps = {
+  tokenBalance: number;
+};
+
+export function MenuBar({ tokenBalance }: MenuBarProps) {
+  const engine = useMagicBlockEngine();
+
   const [isMobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [username, setUsername] = React.useState<string>("");
   const [avatar, setAvatar] = React.useState<string>("/chick.png");
@@ -14,27 +24,36 @@ export function MenuBar() {
     window.open("https://x.com/SUPERSIZEgg", "_blank");
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
+    if (!engine.getWalletConnected()) return;
+    const vaultClient = new SupersizeVaultClient(engine);
+
     const stored = localStorage.getItem("user");
+    let username = "";
+    username = engine.getWalletPayer().toString().slice(0, 7);
     if (stored) {
       const user = JSON.parse(stored);
-      setUsername(user.name);
+      if (user.name) username = user.name;
       setAvatar(user.icon || "/chick.png");
     }
+    setUsername(username);
+    
+
     const onStorage = () => {
       const u = localStorage.getItem("user");
       if (u) {
         const user = JSON.parse(u);
-        setUsername(user.name);
+        if (user.name) setUsername(user.name);
         setAvatar(user.icon || "/chick.png");
       } else {
         setUsername("");
         setAvatar("/chick.png");
       }
     };
+
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, []);
+  }, [engine]);
 
   return (
     <header className="menu-bar" style={{ zIndex:2}}>
@@ -64,12 +83,13 @@ export function MenuBar() {
         <nav className="nav-links">
           <div className="nav-right">
           <div className="coin-icon">
-            <img src="/coin.png" alt="game token" className="coin-image" />
+            <img src="/fallback-token.webp" alt="game token" className="coin-image" />
           </div>
 
           <div className="coin-pill">
             <div className="overlay-panel" style={{borderRadius: "10px", border: "3px solid transparent"}}/>
-            <span style={{ position: "absolute", zIndex: "1", marginLeft: "10px"}}>0</span>
+            <span style={{ position: "absolute", zIndex: "1", marginLeft: "8px"}}>
+              {engine.getWalletConnected() ? tokenBalance.toFixed(1) : "0"}</span>
           </div>
           <NavLink to="/profile">
           <div className="user-panel" onMouseEnter={(e) => {
@@ -84,7 +104,7 @@ export function MenuBar() {
             }
           }}>
             <div className="overlay-panel" style={{ borderRadius: "18px", border: "3px solid transparent"}}/>
-            <img src={avatar} alt="avatar" style={{ width: "48px", height: "48px", position: "absolute", zIndex: "1", marginLeft: "10px"}}/>
+            <img src={engine.getWalletConnected() ? avatar : "/chick.png"} alt="avatar" style={{ width: "48px", height: "48px", position: "absolute", zIndex: "1", marginLeft: "10px"}}/>
             <div className="username-pill" 
             style={{ position: "absolute", zIndex: "1", transform: "translateX(65px)",
               display: "flex",
@@ -95,7 +115,7 @@ export function MenuBar() {
               <span
               style={{ fontSize: "24px", fontWeight: "bold", margin: "auto"}}
               >
-                {username || "sign up"}
+                {(engine.getWalletConnected() && username) || "sign in"}
               </span>
             </div>
           </div>

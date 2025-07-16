@@ -9,6 +9,7 @@ import BN from "bn.js";
 
 type HowToPlayProps = {
   randomFood: Food[];
+  tokenBalance: number;
 };
 
 const EyeSvg: React.FC = () => {
@@ -85,7 +86,7 @@ const EyeSvg: React.FC = () => {
   );
 };
 
-const HowToPlay: React.FC<HowToPlayProps> = ({ randomFood }) => {
+const HowToPlay: React.FC<HowToPlayProps> = ({ randomFood, tokenBalance }) => {
   return (
     <div className="main-container">
       <div
@@ -102,7 +103,7 @@ const HowToPlay: React.FC<HowToPlayProps> = ({ randomFood }) => {
       >
         <GameComponent
           players={[]}
-          visibleFood={randomFood}
+          visibleFood={[]}
           currentPlayer={{
             name: "",
             authority: null,
@@ -124,7 +125,7 @@ const HowToPlay: React.FC<HowToPlayProps> = ({ randomFood }) => {
           buyIn={0}
         />
       </div>
-      <MenuBar />
+      <MenuBar tokenBalance={tokenBalance} />
 
       <div className="how-to-play-container" style={{ position: "relative", zIndex: 1 }}>
         <div className="top-blocks-row">

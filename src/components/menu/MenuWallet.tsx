@@ -6,13 +6,13 @@ import { Text } from "../util/Text";
 import { usePrivy } from "@privy-io/react-auth";
 import "./MenuWallet.scss";
 
-export function MenuWallet() {
+export function MenuWallet({setPreferredRegion}: {setPreferredRegion: (region: string) => void}) {
   const engine = useMagicBlockEngine();
   const walletConnected = engine.getWalletConnected();
-  return <div className="menu-wallet">{walletConnected ? <MenuWalletConnected /> : <MenuWalletDisconnected />}</div>;
+  return <div className="menu-wallet">{walletConnected ? <MenuWalletConnected setPreferredRegion={setPreferredRegion}/> : <MenuWalletDisconnected />}</div>;
 }
 
-function MenuWalletConnected() {
+function MenuWalletConnected({setPreferredRegion}: {setPreferredRegion: (region: string) => void}) {
   const engine = useMagicBlockEngine();
 
   function truncateAddress(address: string): string {
@@ -30,6 +30,7 @@ function MenuWalletConnected() {
       <button
         className="wallet-disconnect-button"
         onClick={() => {
+          setPreferredRegion("");
           engine.selectWalletAdapter(null);
         }}
       >
@@ -45,7 +46,7 @@ function MenuWalletDisconnected() {
   return (
     <div className="wallet-disconnected desktop-only">
       <Button
-        text="Connect Wallet"
+        text="Sign in"
         className="connect-wallet-button"
         onClick={login}
       />

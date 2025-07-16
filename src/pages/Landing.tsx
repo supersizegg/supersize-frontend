@@ -4,8 +4,16 @@ import "./Landing.scss";
 import { BN } from "@coral-xyz/anchor";
 import GameComponent from "@components/Game/Game";
 import { MenuBar } from "@components/menu/MenuBar";
+import SignUpBanner from "../components/util/SignUpBanner";
+import { useMagicBlockEngine } from "../engine/MagicBlockEngineProvider";
 
-const Landing = ({ preferredRegion}: { preferredRegion: string }) => {
+type LandingProps = {
+  preferredRegion: string;
+  tokenBalance: number;
+};
+
+const Landing = ({ preferredRegion, tokenBalance }: LandingProps) => {
+  const engine = useMagicBlockEngine();
   const navigate = useNavigate();
   const openX = () => {
     window.open("https://x.com/SUPERSIZEgg", "_blank");
@@ -46,7 +54,7 @@ const Landing = ({ preferredRegion}: { preferredRegion: string }) => {
           buyIn={0}
         />
       </div>
-      <MenuBar />
+      <MenuBar tokenBalance={tokenBalance} />
       <div 
         onClick={openX} 
         className="follow-x-button  follow-btn"
@@ -83,6 +91,7 @@ const Landing = ({ preferredRegion}: { preferredRegion: string }) => {
 
         <div className="promo-text">Sign up for the <br/>app wishlist!</div>
       </div>
+      <SignUpBanner engine={engine} preferredRegion={preferredRegion} />
     </div>
   );
 };

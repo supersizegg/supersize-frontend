@@ -276,15 +276,20 @@ export class SupersizeVaultClient {
   }
 
   async findMyEphemEndpoint(setPreferredRegion: (region: string) => void) {
-    for (const endpoint of endpoints[NETWORK]) {
-      const gwPdaCheck = await this.getGameWalletEphem(endpoint);
-      if (gwPdaCheck) {
-        console.log("gwPdaCheck", gwPdaCheck.toString(), endpoint, getRegion(endpoint));
-        setPreferredRegion(getRegion(endpoint));
-        this.engine.setEndpointEphemRpc(endpoint);
-        //break;
-      }
-    }
+    await Promise.all(
+      endpoints[NETWORK].map(async (endpoint) => {
+        try {
+          const gwPdaCheck = await this.getGameWalletEphem(endpoint);
+          if (gwPdaCheck) {
+            console.log("gwPdaCheck", gwPdaCheck.toString(), endpoint, getRegion(endpoint));
+            setPreferredRegion(getRegion(endpoint));
+            this.engine.setEndpointEphemRpc(endpoint);
+          }
+        } catch (error) {
+          console.error("Error in findMyEphemEndpoint:", error);
+        }
+      })
+    );
   }
 
   async newGameWallet() {

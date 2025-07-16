@@ -55,9 +55,10 @@ const availableEvents: EventOption[] = [
 
 type LeaderboardProps = {
   randomFood: Food[];
+  tokenBalance: number;
 };
 
-const Leaderboard: React.FC<LeaderboardProps>  = ({ randomFood }) => {
+const Leaderboard: React.FC<LeaderboardProps>  = ({ randomFood, tokenBalance }) => {
   const [season, setSeason] = useState<Season>({
     icon: `${process.env.PUBLIC_URL}/token.png`,
     name: "BONK",
@@ -206,7 +207,7 @@ const Leaderboard: React.FC<LeaderboardProps>  = ({ randomFood }) => {
       >
         <GameComponent
           players={[]}
-          visibleFood={randomFood}
+          visibleFood={[]}
           currentPlayer={{
             name: "",
             authority: null,
@@ -225,7 +226,7 @@ const Leaderboard: React.FC<LeaderboardProps>  = ({ randomFood }) => {
           buyIn={0}
         />
       </div>
-      <MenuBar />
+      <MenuBar tokenBalance={tokenBalance} />
 
       <div className="leaderboard-container" style={{ position: "relative", zIndex: 1 }}>
         <div className="top-stats-row">
