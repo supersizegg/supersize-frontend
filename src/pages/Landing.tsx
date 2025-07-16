@@ -5,7 +5,7 @@ import { BN } from "@coral-xyz/anchor";
 import GameComponent from "@components/Game/Game";
 import { MenuBar } from "@components/menu/MenuBar";
 
-const Landing = () => {
+const Landing = ({ preferredRegion}: { preferredRegion: string }) => {
   const navigate = useNavigate();
   const openX = () => {
     window.open("https://x.com/SUPERSIZEgg", "_blank");

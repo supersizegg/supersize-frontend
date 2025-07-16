@@ -54,16 +54,12 @@ type profileProps = {
   setUsername: (username: string) => void;
   sessionWalletInUse: boolean;
   setSessionWalletInUse: (sessionWalletInUse: boolean) => void;
+  preferredRegion: string;
+  setPreferredRegion: (region: string) => void;
 };
 
-export default function Profile({ randomFood, username, setUsername, sessionWalletInUse, setSessionWalletInUse }: profileProps ) {
+export default function Profile({ randomFood, username, setUsername, sessionWalletInUse, setSessionWalletInUse, preferredRegion, setPreferredRegion }: profileProps ) {
   const engine = useMagicBlockEngine();
-  useEffect(() => {
-    let stored = localStorage.getItem("preferredRegion");
-    if (stored) {
-      engine.setEndpointEphemRpc(endpoints[NETWORK][options.indexOf(stored)]);
-    }
-  }, []);
   const [activeTab, setActiveTab] = useState<"wallet" | "profile" | "admin">("wallet");
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
   const [isWithdrawalModalOpen, setIsWithdrawalModalOpen] = useState(false);
@@ -123,7 +119,7 @@ export default function Profile({ randomFood, username, setUsername, sessionWall
           setSessionWalletInUse={setSessionWalletInUse} setIsDepositModalOpen={setIsDepositModalOpen} setIsWithdrawalModalOpen={setIsWithdrawalModalOpen}
           setSessionLamports={setSessionLamports} sessionLamports={sessionLamports}/>}
           {activeTab === "profile" && (
-            <ProfileTab username={username} setUsername={setUsername} sessionWalletInUse={sessionWalletInUse} />
+            <ProfileTab username={username} setUsername={setUsername} sessionWalletInUse={sessionWalletInUse} preferredRegion={preferredRegion} setPreferredRegion={setPreferredRegion} />
           )}
           {activeTab === "admin" && <AdminTab engine={engine} />}
         </div>
@@ -157,13 +153,6 @@ type GeneralTabProps = {
 };
 
 function GeneralTab({ sessionWalletInUse, username, sessionLamports, setSessionWalletInUse, setIsDepositModalOpen, setIsWithdrawalModalOpen, setSessionLamports }: GeneralTabProps) {
-  const engine = useMagicBlockEngine();
-  useEffect(() => {
-    let stored = localStorage.getItem("preferredRegion");
-    if (stored) {
-      engine.setEndpointEphemRpc(endpoints[NETWORK][options.indexOf(stored)]);
-    }
-  }, []);
   
   return (
     <div className="general-tab">
@@ -187,9 +176,11 @@ type ProfileTabProps = {
   username: string;
   setUsername: (username: string) => void;
   sessionWalletInUse: boolean;
+  preferredRegion: string;
+  setPreferredRegion: (region: string) => void;
 };
 
-function ProfileTab({ username, setUsername, sessionWalletInUse }: ProfileTabProps) {
+function ProfileTab({ username, setUsername, sessionWalletInUse, preferredRegion, setPreferredRegion }: ProfileTabProps) {
   const [input, setInput] = useState(username);
   const icons = [
     "/snake.png",
@@ -253,7 +244,7 @@ function ProfileTab({ username, setUsername, sessionWalletInUse }: ProfileTabPro
         ))}
       </div>
       <div style={{ marginTop: "1rem" }}>
-        <RegionSelector />
+        <RegionSelector preferredRegion={preferredRegion} setPreferredRegion={setPreferredRegion}/>
       </div>
     </div>
   );

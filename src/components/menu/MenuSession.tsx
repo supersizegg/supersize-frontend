@@ -3,10 +3,11 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import { useMagicBlockEngine } from "../../engine/MagicBlockEngineProvider";
 import { SupersizeVaultClient } from "../../engine/SupersizeVaultClient";
-import { cachedTokenMetadata } from "../../utils/constants";
+import { cachedTokenMetadata, NETWORK, endpoints } from "../../utils/constants";
 import TokenTransferModal from "../TokenTransferModal/TokenTransferModal";
 import "./MenuSession.scss";
 import { useSolanaWallets } from "@privy-io/react-auth/solana";
+import { getRegion } from "../../utils/helper";
 
 type UserStatus = "loading" | "uninitialized" | "ready_to_delegate" | "delegated";
 
@@ -21,6 +22,7 @@ export function MenuSession() {
 
   const [vaultClient, setVaultClient] = useState<SupersizeVaultClient | null>(null);
   const [status, setStatus] = useState<UserStatus>("loading");
+  const [resetGameWallet, setResetGameWallet] = useState(false);
   const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
   const [dialog, setDialog] = useState<null | {
     type: "deposit" | "withdraw";
@@ -40,7 +42,7 @@ export function MenuSession() {
   const refreshVaultBalances = useCallback(async () => {
     if (!vaultClient) return;
 
-    setStatus("loading");
+    //setStatus("loading");
     const supportedMints = Object.keys(cachedTokenMetadata);
     const balances: TokenBalance[] = [];
 
@@ -56,7 +58,7 @@ export function MenuSession() {
     }
 
     setTokenBalances(balances);
-    setStatus("ready_to_delegate");
+    //setStatus("ready_to_delegate");
   }, [vaultClient]);
 
   const checkStatus = useCallback(async () => {
@@ -64,14 +66,26 @@ export function MenuSession() {
 
     setStatus("loading");
     const gwPda = vaultClient.gameWalletPda();
+    const gwPdaCheck = await vaultClient.getGameWallet();
     try {
       const accountInfo = await engine.getConnectionChain().getAccountInfo(gwPda);
       if (!accountInfo) {
         setStatus("uninitialized");
       } else if (accountInfo.owner.equals(new PublicKey("DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh"))) {
+        if (gwPdaCheck) {
+          if (gwPdaCheck.toString() !==  engine.getSessionPayer().toString()) {
+            setResetGameWallet(true);
+          }
+        }
         setStatus("delegated");
-        setTokenBalances([]);
+        await refreshVaultBalances();
+        //setTokenBalances([]);
       } else {
+        if (gwPdaCheck) {
+          if (gwPdaCheck.toString() !==  engine.getSessionPayer().toString()) {
+            setResetGameWallet(true);
+          }
+        }
         await refreshVaultBalances();
         setStatus("ready_to_delegate");
       }
@@ -129,8 +143,9 @@ export function MenuSession() {
   return (
     <div className="menu-session">
       <div className="session-bottom">
-        {status === "loading" && <div className="loading-overlay">Loading...</div>}
 
+        {status === "loading" && <div className="loading-overlay">Loading...</div>}
+    
         {status === "uninitialized" && (
           <div className="session-prompt">
             <p style={{ padding: "20px 0" }}>
@@ -144,6 +159,28 @@ export function MenuSession() {
 
         {(status === "ready_to_delegate" || status === "delegated") && (
           <>
+            <div className="session-top row-inline">
+              <div className="network-switch" style={{ display: "flex", alignItems: "center" }}>
+                <span className="session-label" style={{marginRight: '10px', display: "inline"}}>Game wallet
+                  {status === "delegated" && !resetGameWallet && (
+                      <p style={{display: "inline", color: "#ff4d4f", marginLeft: "10px"}}>[active]</p>
+                  )}
+                </span>
+              </div>
+              
+            </div>
+
+            <input className="session-address" type="text" readOnly value={engine.getSessionPayer().toString()} />
+            {(resetGameWallet || status === "ready_to_delegate") && (
+              <div className="session-buttons">
+                <button className="btn-fund" onClick={() => {
+                  vaultClient?.newGameWallet();
+                  setResetGameWallet(false);
+                }}>
+                Need to reset game wallet
+                </button>
+              </div>
+            )}
             <div
               style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}
             >
@@ -157,12 +194,6 @@ export function MenuSession() {
               </button>
             </div>
 
-            {status === "delegated" && (
-              <div className="session-active-banner">
-                <p>✓ Session Active: You can now play games without signing transactions.</p>
-              </div>
-            )}
-
             <table className="token-table">
               <thead>
                 <tr>
@@ -172,14 +203,14 @@ export function MenuSession() {
                 </tr>
               </thead>
               <tbody>
-                {status === "delegated" && (
+                {/*status === "delegated" && (
                   <tr>
                     <td colSpan={4} style={{ textAlign: "center", opacity: 0.7 }}>
                       Balances are managed in-game. Withdraw to see updated balance.
                     </td>
                   </tr>
-                )}
-                {status === "ready_to_delegate" &&
+                )*/}
+                {(status === "ready_to_delegate"  || status === "delegated") &&
                   tokenBalances.map(({ mint, uiAmount }) => {
                     let meta = cachedTokenMetadata[mint];
                     if (!meta) return null;

@@ -32,6 +32,7 @@ type homeProps = {
   randomFood: Food[];
   sessionWalletInUse: boolean;
   username: string;
+  preferredRegion: string;
 };
 
 const Home = ({
@@ -42,7 +43,8 @@ const Home = ({
   setActiveGamesLoaded,
   randomFood,
   sessionWalletInUse,
-  username
+  username,
+  preferredRegion,
 }: homeProps) => {
   const navigate = useNavigate();
   const engine = useMagicBlockEngine();
@@ -328,7 +330,9 @@ const Home = ({
   useEffect(() => {
     const fetchPingData = async () => {
       setIsLoadingCurrentGames(true);
-      let stored = localStorage.getItem("preferredRegion");
+      //let stored = localStorage.getItem("preferredRegion");
+      console.log("preferredRegion", preferredRegion);
+      let stored = preferredRegion;
       if (stored) {
         selectedServer.current = stored;
         setSelectedEndpoint(endpoints[NETWORK][options.indexOf(stored)]);
@@ -343,7 +347,7 @@ const Home = ({
         if (!selectedServer.current) {
           selectedServer.current = result.region;
           setSelectedEndpoint(result.endpoint);
-          localStorage.setItem("preferredRegion", result.region);
+          //localStorage.setItem("preferredRegion", result.region);
         }
       });
       setIsLoadingCurrentGames(false);

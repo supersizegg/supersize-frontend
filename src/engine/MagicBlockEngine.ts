@@ -173,6 +173,13 @@ export class MagicBlockEngine {
     return signature;
   }
 
+  async processWalletEphemTransaction(name: string, transaction: Transaction): Promise<string> {
+    log(name, "sending");
+    const signature = await this.walletContext.sendTransaction(transaction, this.connectionEphem);
+    await this.waitSignatureConfirmation(name, signature, this.connectionEphem, "confirmed");
+    return signature;
+  }
+
   async processSessionChainTransaction(name: string, transaction: Transaction): Promise<string> {
     log(name, "sending");
     const signature = await this.provider.connection.sendTransaction(transaction, [this.sessionKey], { skipPreflight: true });

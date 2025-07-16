@@ -1,9 +1,11 @@
 import { BN, Idl, Program } from "@coral-xyz/anchor";
-import { Connection, PublicKey, Transaction } from "@solana/web3.js";
+import { Connection, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync, getMint } from "@solana/spl-token";
 
 import supersizeVaultIdl from "../backend/target/idl/supersize_vault.json";
 import { SupersizeVault } from "../backend/target/types/supersize_vault";
+import { endpoints, NETWORK } from "../utils/constants";
+import { getRegion } from "../utils/helper";
 
 const DELEGATION_PROGRAM_ID = new PublicKey("DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh");
 
@@ -64,6 +66,9 @@ export class SupersizeVaultClient {
 
     const gwInfo = await this.mainChainConnection.getAccountInfo(gwPda);
     if (!gwInfo) {
+      const ephemIdentity = await this.engine.getConnectionEphem().getSlotLeader();
+      const validator = new PublicKey(ephemIdentity);
+
       console.log("Creating GameWallet PDA...");
       setupTx.add(
         await this.program.methods
@@ -71,6 +76,7 @@ export class SupersizeVaultClient {
           .accounts({ user: this.wallet, gameKey: this.engine.getSessionPayer() })
           .instruction(),
       );
+      setupTx.add(await this.program.methods.delegateWallet(validator).accounts({ payer: this.wallet }).instruction());
     }
 
     const balInfo = await this.mainChainConnection.getAccountInfo(balPda);
@@ -91,9 +97,32 @@ export class SupersizeVaultClient {
     } else {
       console.log("User accounts already exist.");
     }
+
+    const checkTx = new Transaction();
+    if(!gwInfo) {
+      checkTx.add(
+        SystemProgram.transfer({
+          fromPubkey: this.engine.getSessionPayer(),
+          toPubkey: gwPda,
+          lamports: 0, // 1 SOL
+        })
+      )
+    }
+    if(!balInfo) {
+      checkTx.add(
+        SystemProgram.transfer({
+          fromPubkey: this.engine.getSessionPayer(),
+          toPubkey: balPda,
+          lamports: 0, // 1 SOL
+        })
+      );
+    }
+    if(checkTx.instructions.length > 0) {
+      await this.engine.processSessionEphemTransaction("testTx", checkTx);
+    }
   }
 
-  async delegateAccounts(mint: PublicKey) {
+  async delegateAll(mint: PublicKey) {
     if (!this.wallet) throw new Error("Wallet not connected to delegate.");
 
     const ephemIdentity = await this.engine.getConnectionEphem().getSlotLeader();
@@ -218,15 +247,87 @@ export class SupersizeVaultClient {
     console.log("Fetching balance for PDA:", balPda.toBase58());
     const acc = await this.program.account.balance.fetchNullable(balPda);
     if (!acc) return 0;
-    const checkBalancePDA = await this.programEphem.account.balance.fetchNullable(
+    const balanceAcc = await this.programEphem.account.balance.fetchNullable(
       balPda
     );
-    if (!checkBalancePDA) return "wrong_server";
+    if (!balanceAcc) return "wrong_server";
     const conn = this.program.provider.connection;
     const { decimals } = await getMint(conn, mint);
-    let finalnum = Number(checkBalancePDA.balance) / 10 ** decimals;
+    let finalnum = Number(balanceAcc.balance) / 10 ** decimals;
     console.log("finalnum",finalnum);
     return Number(acc.balance) / 10 ** decimals;
+  }
+
+  async getGameWallet(): Promise<PublicKey | undefined> {
+    const walletPda = this.gameWalletPda();
+    const walletAcc = await this.program.account.gameWallet.fetchNullable(
+      walletPda
+    );
+    return walletAcc?.wallet;
+  }
+
+  async getGameWalletEphem(endpoint: any): Promise<PublicKey | undefined> {
+    const walletPda = this.gameWalletPda();
+    const programSpecificEphem = this.engine.getProgramOnSpecificEphem(supersizeVaultIdl as Idl, endpoint);
+    const walletAcc = await programSpecificEphem.account.gameWallet.fetchNullable(
+      walletPda
+    );
+    return walletAcc?.wallet;
+  }
+
+  async findMyEphemEndpoint(setPreferredRegion: (region: string) => void) {
+    for (const endpoint of endpoints[NETWORK]) {
+      const gwPdaCheck = await this.getGameWalletEphem(endpoint);
+      if (gwPdaCheck) {
+        console.log("gwPdaCheck", gwPdaCheck.toString(), endpoint, getRegion(endpoint));
+        setPreferredRegion(getRegion(endpoint));
+        this.engine.setEndpointEphemRpc(endpoint);
+        //break;
+      }
+    }
+  }
+
+  async newGameWallet() {
+    if (!this.wallet) throw new Error("Wallet not connected to new game wallet.");
+    
+    const ephemIdentity = await this.engine.getConnectionEphem().getSlotLeader();
+    const validator = new PublicKey(ephemIdentity);
+    
+    try {
+      const undelegateTx = new Transaction()
+      .add(await this.program.methods.undelegateWallet(this.wallet).accounts({}).instruction());
+      const signers = [this.engine.getSessionKey()];
+      const signature = await this.engine.getConnectionEphem().sendTransaction(undelegateTx, signers);
+      await this.engine.getConnectionEphem().confirmTransaction(signature, "confirmed");
+    } catch (error) {
+      console.error("Error in newGameWallet:", error);
+    }
+    
+    const tx = new Transaction();
+    tx.add(
+      await this.program.methods
+        .newGameWallet()
+        .accounts({ user: this.wallet, gameKey: this.engine.getSessionPayer() })
+        .instruction(),
+    );
+    //await this.engine.processWalletTransaction("NewGameWallet", tx);
+
+    //const redelegateTx = new Transaction();
+    tx.add(await this.program.methods.delegateWallet(validator).accounts({ payer: this.wallet }).instruction());
+    tx.feePayer = this.engine.getWalletPayer();
+    tx.recentBlockhash = (await this.mainChainConnection.getLatestBlockhash()).blockhash;
+    tx.partialSign(this.engine.getSessionKey());
+    await this.engine.processWalletTransaction("DelegateAccounts", tx);
+
+    const walletPda = this.gameWalletPda();
+    const checkTx = new Transaction().add(
+      SystemProgram.transfer({
+        fromPubkey: this.engine.getSessionPayer(),
+        toPubkey: walletPda,
+        lamports: 0, // 1 SOL
+      })
+    );
+    await this.engine.processSessionEphemTransaction("testTx", checkTx);
   }
 
   private async uiAmountToLamports(mint: PublicKey, uiAmount: number) {

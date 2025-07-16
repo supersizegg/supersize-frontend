@@ -15,12 +15,17 @@ import { PublicKey } from "@solana/web3.js";
 import { activeGamesList, NETWORK } from "@utils/constants";
 import { createUnloadedGame } from "@utils/game";
 import { useMagicBlockEngine } from "./engine/MagicBlockEngineProvider";
-import { endpoints, options } from "./utils/constants";
+import { SupersizeVaultClient } from "./engine/SupersizeVaultClient";
+import { getRegion } from "./utils/helper";
+import { endpoints } from "./utils/constants";
 
 const AppRoutes = () => {
+  const engine = useMagicBlockEngine();
+  const [vaultClient, setVaultClient] = useState<SupersizeVaultClient | null>(null);
   const [selectedGame, setSelectedGame] = useState<ActiveGame | null>(null);
   const [sessionWalletInUse, setSessionWalletInUse] = useState<boolean>(true); //(NETWORK === 'mainnet' ? false : true);
   const [username, setUsername] = useState<string>("");
+  const [preferredRegion, setPreferredRegion] = useState<string>("");
   const [activeGamesLoaded, setActiveGamesLoaded] = useState<FetchedGame[]>(
     /*(NETWORK === 'mainnet' 
       ? [...activeGamesList[NETWORK], ...activeGamesList['devnet']]
@@ -49,9 +54,23 @@ const AppRoutes = () => {
     }
   },[]);
 
+  useEffect(() => {
+    let vaultClient : SupersizeVaultClient | null = null;
+    if (engine && engine.getWalletConnected()) {
+      vaultClient = new SupersizeVaultClient(engine);
+    }
+    const fetchGameWalletEphem = async () => {
+      if (vaultClient) {
+        await vaultClient.findMyEphemEndpoint(setPreferredRegion);
+      }
+    };
+
+    fetchGameWalletEphem();
+  }, [engine]);
+
   return (
     <Routes>
-      <Route index element={<Landing />} />
+      <Route index element={<Landing preferredRegion={preferredRegion}/>} />
       <Route
         path="/home"
         element={
@@ -64,6 +83,7 @@ const AppRoutes = () => {
             randomFood={randomFood}
             sessionWalletInUse={sessionWalletInUse}
             username={username}
+            preferredRegion={preferredRegion}
           />
         }
       />
@@ -78,7 +98,8 @@ const AppRoutes = () => {
       <Route path="/about" element={<HowToPlay randomFood={randomFood}/>} />
       <Route path="/shop" element={<Shop />} />
       <Route path="/profile" element={<Profile randomFood={randomFood} username={username} setUsername={setUsername}
-      sessionWalletInUse={sessionWalletInUse} setSessionWalletInUse={setSessionWalletInUse}/>} />
+      sessionWalletInUse={sessionWalletInUse} setSessionWalletInUse={setSessionWalletInUse} preferredRegion={preferredRegion} 
+      setPreferredRegion={setPreferredRegion}/>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
