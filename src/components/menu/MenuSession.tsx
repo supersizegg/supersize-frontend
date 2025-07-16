@@ -55,7 +55,10 @@ export function MenuSession() {
   }, [vaultClient]);
 
   const checkStatus = useCallback(async () => {
-    if (!vaultClient) return;
+    if (!vaultClient) {
+      console.warn("Vault client not initialized");
+      return;
+    }
 
     setStatus("loading");
     const gwPda = vaultClient.gameWalletPda();
@@ -65,7 +68,7 @@ export function MenuSession() {
         setStatus("uninitialized");
       } else if (accountInfo.owner.equals(new PublicKey("DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh"))) {
         setStatus("delegated");
-        setTokenBalances([]);
+        await refreshVaultBalances();
       } else {
         await refreshVaultBalances();
         setStatus("ready_to_delegate");
@@ -167,57 +170,49 @@ export function MenuSession() {
                 </tr>
               </thead>
               <tbody>
-                {status === "delegated" && (
-                  <tr>
-                    <td colSpan={4} style={{ textAlign: "center", opacity: 0.7 }}>
-                      Balances are managed in-game. Withdraw to see updated balance.
-                    </td>
-                  </tr>
-                )}
-                {status === "ready_to_delegate" &&
-                  tokenBalances.map(({ mint, uiAmount }) => {
-                    let meta = cachedTokenMetadata[mint];
-                    if (!meta) return null;
-                    const symbol = meta.symbol ?? mint.slice(0, 4) + "…";
-                    return (
-                      <tr key={mint}>
-                        <td className="token-cell">
-                          {meta.image && <img src={meta.image} alt={symbol} />}
-                          {symbol}
-                        </td>
-                        <td className="balance-cell">
-                          {uiAmount.toLocaleString(undefined, { maximumFractionDigits: 4 })}
-                        </td>
-                        <td>
-                          <button
-                            className="table-btn"
-                            onClick={() =>
-                              setDialog({
-                                type: "deposit",
-                                token: { mint, uiAmount, symbol, decimals: meta.decimals ?? 0 },
-                              })
-                            }
-                          >
-                            Deposit
-                          </button>
-                        </td>
-                        <td>
-                          <button
-                            className="table-btn outline"
-                            disabled={uiAmount === 0}
-                            onClick={() =>
-                              setDialog({
-                                type: "withdraw",
-                                token: { mint, uiAmount, symbol, decimals: meta.decimals ?? 0 },
-                              })
-                            }
-                          >
-                            Withdraw
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                {tokenBalances.map(({ mint, uiAmount }) => {
+                  let meta = cachedTokenMetadata[mint];
+                  if (!meta) return null;
+                  const symbol = meta.symbol ?? mint.slice(0, 4) + "…";
+                  return (
+                    <tr key={mint}>
+                      <td className="token-cell">
+                        {meta.image && <img src={meta.image} alt={symbol} />}
+                        {symbol}
+                      </td>
+                      <td className="balance-cell">
+                        {uiAmount.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                      </td>
+                      <td>
+                        <button
+                          className="table-btn"
+                          onClick={() =>
+                            setDialog({
+                              type: "deposit",
+                              token: { mint, uiAmount, symbol, decimals: meta.decimals ?? 0 },
+                            })
+                          }
+                        >
+                          Deposit
+                        </button>
+                      </td>
+                      <td>
+                        <button
+                          className="table-btn outline"
+                          disabled={uiAmount === 0}
+                          onClick={() =>
+                            setDialog({
+                              type: "withdraw",
+                              token: { mint, uiAmount, symbol, decimals: meta.decimals ?? 0 },
+                            })
+                          }
+                        >
+                          Withdraw
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </>

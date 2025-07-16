@@ -220,7 +220,7 @@ export class SupersizeVaultClient {
     if (!acc) return 0;
 
     const conn = this.program.provider.connection;
-    const { decimals } = await getMint(conn, mint);
+    const { decimals } = await getMint(conn, mint, "confirmed");
     return Number(acc.balance) / 10 ** decimals;
   }
 

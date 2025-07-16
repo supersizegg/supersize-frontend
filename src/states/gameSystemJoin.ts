@@ -2,7 +2,7 @@ import { PublicKey } from "@solana/web3.js";
 import { ApplySystem } from "@magicblock-labs/bolt-sdk";
 
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
-import { COMPONENT_PLAYER_ID, COMPONENT_MAP_ID, SYSTEM_BUY_IN_ID, SYSTEM_JOIN_TEMP_ID } from "./gamePrograms";
+import { COMPONENT_PLAYER_ID, COMPONENT_MAP_ID, SYSTEM_BUY_IN_ID, SUPERSIZE_VAULT_PROGRAM_ID } from "./gamePrograms";
 
 import { ActiveGame } from "@utils/types";
 
@@ -13,8 +13,78 @@ export async function gameSystemJoin(
   mapEntityPda: PublicKey,
   playerName: string,
 ) {
+  const parentKey = engine.getWalletPayer();
+  if (!parentKey) {
+    throw new Error("User wallet is not connected.");
+  }
+
+  const sessionWallet = engine.getSessionPayer();
+
+  const mintOfToken = gameInfo.tokenMint!;
+
+  const [gameWalletPda] = PublicKey.findProgramAddressSync(
+    [Buffer.from("game-wallet"), parentKey.toBuffer()],
+    SUPERSIZE_VAULT_PROGRAM_ID,
+  );
+  const [userBalancePda] = PublicKey.findProgramAddressSync(
+    [parentKey.toBuffer(), mintOfToken.toBuffer()],
+    SUPERSIZE_VAULT_PROGRAM_ID,
+  );
+  const [gameBalancePda] = PublicKey.findProgramAddressSync(
+    [mapEntityPda.toBuffer(), mintOfToken.toBuffer()],
+    SUPERSIZE_VAULT_PROGRAM_ID,
+  );
+
+  console.log([
+    {
+      pubkey: SUPERSIZE_VAULT_PROGRAM_ID.toBase58(),
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: gameWalletPda.toBase58(),
+      isSigner: false,
+      isWritable: true,
+    },
+    {
+      pubkey: userBalancePda.toBase58(),
+      isSigner: false,
+      isWritable: true,
+    },
+    {
+      pubkey: gameBalancePda.toBase58(),
+      isSigner: false,
+      isWritable: true,
+    },
+    {
+      pubkey: newplayerEntityPda.toBase58(),
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: mapEntityPda.toBase58(),
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: mintOfToken.toBase58(),
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: parentKey.toBase58(),
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: sessionWallet.toBase58(),
+      isSigner: true,
+      isWritable: true,
+    },
+  ]);
+
   const applyJoinSystem = await ApplySystem({
-    authority: engine.getSessionPayer(),
+    authority: sessionWallet,
     world: gameInfo.worldPda,
     entities: [
       {
@@ -30,13 +100,59 @@ export async function gameSystemJoin(
     args: {
       name: playerName,
     },
+    extraAccounts: [
+      {
+        pubkey: SUPERSIZE_VAULT_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: gameWalletPda,
+        isSigner: false,
+        isWritable: true,
+      },
+      {
+        pubkey: userBalancePda,
+        isSigner: false,
+        isWritable: true,
+      },
+      {
+        pubkey: gameBalancePda,
+        isSigner: false,
+        isWritable: true,
+      },
+      {
+        pubkey: newplayerEntityPda,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: mapEntityPda,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: mintOfToken,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: parentKey,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: sessionWallet,
+        isSigner: true,
+        isWritable: true,
+      },
+    ],
   });
 
   try {
     let joinSignature = await engine.processSessionEphemTransaction("join:" + playerName, applyJoinSystem.transaction);
     console.log(`join signature: ${joinSignature}`);
     return { success: true, transactionSignature: joinSignature };
-
   } catch (error) {
     console.log("Error buying in:", error);
     return { success: false, error: `Error buying in: ${(error as Error)?.message}`, message: "error" };
