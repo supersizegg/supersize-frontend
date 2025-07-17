@@ -17,6 +17,7 @@ type ShopProps = {
 const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
   const engine = useMagicBlockEngine();
   const { fundWallet } = useFundWallet();
+  const [waitingForFund, setWaitingForFund] = useState(false);
   const [price, setPrice] = useState<number | null>(null);
   const [change, setChange] = useState<number | null>(null);
 
@@ -41,7 +42,7 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
         const priceData = await priceRes.json();
         const solPrice = priceData.solana.usd;
         const solAmount = usd / solPrice;
-        if (engine.getWalletType() === "embedded") {
+        if (engine.getWalletType() === "embedded" && !waitingForFund) {
           try {
             await fundWallet(engine.getWalletPayer().toBase58(), {
               amount: solAmount.toString(),
@@ -49,10 +50,14 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
           } catch (e) {
             console.error(e);
           }
+          setWaitingForFund(true);
+          return;
         }
         amount = Math.round(solAmount * 1_000_000_000); // SOL has 9 decimals
         inputMint = SOL_MINT;
       }
+
+      setWaitingForFund(false);
 
       const quoteRes = await fetch(
         `https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${BONK_MINT}&amount=${amount}&slippageBps=100`,
@@ -77,9 +82,11 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
       const bonkAmount = parseInt(quote.outAmount) / 100000; // BONK has 5 decimals
       await vaultClient.deposit(new PublicKey(BONK_MINT), bonkAmount);
       alert("Purchase complete!");
+      setWaitingForFund(false);
     } catch (e) {
       console.error(e);
       alert("Failed to buy BONK");
+      setWaitingForFund(false);
     }
   };
 
