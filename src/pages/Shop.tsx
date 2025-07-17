@@ -20,17 +20,30 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
 
   const BONK_MINT = "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263";
   const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+  const SOL_MINT = "So11111111111111111111111111111111111111112";
 
-  const buyBonk = async (usd: number) => {
+  const buyBonk = async (usd: number, useSol = false) => {
     if (!engine.getWalletConnected()) {
       alert("Please sign in first");
       return;
     }
 
     try {
-      const amount = Math.round(usd * 1_000_000); // USDC has 6 decimals
+      let inputMint = USDC_MINT;
+      let amount = Math.round(usd * 1_000_000); // USDC has 6 decimals
+
+      if (useSol) {
+        const priceRes = await fetch(
+          "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd",
+        );
+        const priceData = await priceRes.json();
+        const solPrice = priceData.solana.usd;
+        amount = Math.round((usd / solPrice) * 1_000_000_000); // SOL has 9 decimals
+        inputMint = SOL_MINT;
+      }
+
       const quoteRes = await fetch(
-        `https://quote-api.jup.ag/v6/quote?inputMint=${USDC_MINT}&outputMint=${BONK_MINT}&amount=${amount}&slippageBps=100`,
+        `https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${BONK_MINT}&amount=${amount}&slippageBps=100`,
       );
       const quote = await quoteRes.json();
       const swapRes = await fetch("https://quote-api.jup.ag/v6/swap", {
@@ -39,7 +52,7 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
         body: JSON.stringify({
           quoteResponse: quote,
           userPublicKey: engine.getWalletPayer().toBase58(),
-          wrapAndUnwrapSol: false,
+          wrapAndUnwrapSol: useSol,
         }),
       });
       const swapJson = await swapRes.json();
@@ -147,7 +160,7 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
           <button className="buy-button" onClick={() => buyBonk(1)}>
             buy $1 of Bonk
           </button>
-          <button className="buy-button" onClick={() => buyBonk(5)}>
+          <button className="buy-button" onClick={() => buyBonk(5, true)}>
             buy $5 of Bonk
           </button>
           <a href="/about?section=sell" className="sell-link">
