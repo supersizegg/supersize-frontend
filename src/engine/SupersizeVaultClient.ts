@@ -127,29 +127,26 @@ export class SupersizeVaultClient {
 
     const currentlyDelegated = await this.isDelegated(mint);
     if (currentlyDelegated) {
-      const transaction = new Transaction();
       await this.undelegateAll(mint);
-
-      const ephemIdentity = await this.engine.getConnectionEphem().getSlotLeader();
-      const validator = new PublicKey(ephemIdentity);
-
-      const delegateIx = await this.program.methods
-        .delegateUser(validator)
-        .accounts({ payer: this.wallet, mintOfToken: mint })
-        .instruction();
-
-      await this.engine.processWalletTransaction("Deposit", transaction.add(depositIx).add(delegateIx));
-    } else {
-      const ephemIdentity = await this.engine.getConnectionEphem().getSlotLeader();
-      const validator = new PublicKey(ephemIdentity);
-
-      const delegateIx = await this.program.methods
-        .delegateUser(validator)
-        .accounts({ payer: this.wallet, mintOfToken: mint })
-        .instruction();
-
-      await this.engine.processWalletTransaction("Deposit", new Transaction().add(depositIx).add(delegateIx));
     }
+    const transaction = new Transaction();
+    const ephemIdentity = await this.engine.getConnectionEphem().getSlotLeader();
+    const validator = new PublicKey(ephemIdentity);
+
+    const delegateUserIx = await this.program.methods
+      .delegateUser(validator)
+      .accounts({ payer: this.wallet, mintOfToken: mint })
+      .instruction();
+
+    const delegateWalletIx = await this.program.methods
+      .delegateWallet(validator)
+      .accounts({ payer: this.wallet })
+      .instruction();
+
+    await this.engine.processWalletTransaction(
+      "Deposit",
+      transaction.add(depositIx).add(delegateUserIx).add(delegateWalletIx),
+    );
   }
 
   private async undelegateAll(mint: PublicKey) {
@@ -209,6 +206,66 @@ export class SupersizeVaultClient {
     );
 
     await this.engine.processWalletTransaction("Withdraw", withdrawTx);
+  }
+
+  async setupGameWallet(mapComponentPda: PublicKey, mint: PublicKey) {
+    if (!this.wallet) {
+      throw new Error("Wallet not connected. Cannot set up a new game wallet.");
+    }
+
+    const balancePda = this.mapBalancePda(mapComponentPda, mint);
+    console.log(`Checking game setup for balance PDA: ${balancePda.toBase58()}`);
+
+    const balanceInfo = await this.mainChainConnection.getAccountInfo(balancePda);
+    const setupTx = new Transaction();
+
+    if (!balanceInfo) {
+      console.log("Game balance account not found. Creating and delegating...");
+
+      const newGameIx = await this.program.methods
+        .newGame()
+        .accounts({
+          map: mapComponentPda,
+          mintOfToken: mint,
+          user: this.engine.getSessionPayer(),
+        })
+        .instruction();
+      setupTx.add(newGameIx);
+
+      const ephemIdentity = await this.ephemConnection.getSlotLeader();
+      const validator = new PublicKey(ephemIdentity);
+      const delegateGameIx = await this.program.methods
+        .delegateGame(validator)
+        .accounts({
+          payer: this.engine.getSessionPayer(),
+          mintOfToken: mint,
+          map: mapComponentPda,
+        })
+        .instruction();
+      setupTx.add(delegateGameIx);
+    } else if (!balanceInfo.owner.equals(DELEGATION_PROGRAM_ID)) {
+      console.log("Game balance account found but not delegated. Delegating now...");
+
+      const ephemIdentity = await this.ephemConnection.getSlotLeader();
+      const validator = new PublicKey(ephemIdentity);
+      const delegateGameIx = await this.program.methods
+        .delegateGame(validator)
+        .accounts({
+          payer: this.engine.getSessionPayer(),
+          mintOfToken: mint,
+          map: mapComponentPda,
+        })
+        .instruction();
+      setupTx.add(delegateGameIx);
+    } else {
+      console.log("Game is already set up and delegated.");
+      return;
+    }
+
+    if (setupTx.instructions.length > 0) {
+      await this.engine.processSessionChainTransaction("SetupGameWallet", setupTx);
+      console.log("Game setup transaction successful.");
+    }
   }
 
   async getVaultBalance(mint: PublicKey): Promise<number> {

@@ -64,7 +64,7 @@ export async function gameExecuteJoin(
       message: "buyin_failed",
     };
   }
-  try{
+  try {
     const makeMove = await ApplySystem({
       authority: engine.getSessionPayer(),
       world: gameInfo.worldPda,
@@ -89,22 +89,23 @@ export async function gameExecuteJoin(
     const alltransaction = new anchor.web3.Transaction();
     alltransaction.add(makeMove.transaction);
 
-    let moveSig = await engine.processSessionEphemTransactionNoConfirm("txn:" + performance.now(), alltransaction).catch((error) => {
-      console.log(error);
-    });
+    let moveSig = await engine
+      .processSessionEphemTransactionNoConfirm("txn:" + performance.now(), alltransaction)
+      .catch((error) => {
+        console.log(error);
+      });
     if (moveSig) {
       setMyPlayerEntityPda(newplayerEntityPda);
       return { success: true, transactionSignature: moveSig };
     } else {
       return { success: false, error: `Error joining the game, please refresh and try again`, message: "join_failed" };
     }
-  }
-  catch(error){
+  } catch (error) {
     console.log("error", error);
     return {
       success: false,
       error: `Error joining the game: ${(error as Error)?.message}, please refresh and try again`,
       message: "join_failed",
-    };  
+    };
   }
 }

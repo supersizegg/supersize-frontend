@@ -1,9 +1,9 @@
 import { PublicKey } from "@solana/web3.js";
 import { ApplySystem } from "@magicblock-labs/bolt-sdk";
+import { FindComponentPda } from "@magicblock-labs/bolt-sdk";
 
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
 import { COMPONENT_PLAYER_ID, COMPONENT_MAP_ID, SYSTEM_BUY_IN_ID, SUPERSIZE_VAULT_PROGRAM_ID } from "./gamePrograms";
-
 import { ActiveGame } from "@utils/types";
 
 export async function gameSystemJoin(
@@ -22,6 +22,18 @@ export async function gameSystemJoin(
 
   const mintOfToken = gameInfo.tokenMint!;
 
+  const mapComponentPda = FindComponentPda({
+    componentId: COMPONENT_MAP_ID,
+    entity: mapEntityPda,
+  });
+  console.log("Map Component PDA:", mapComponentPda.toBase58());
+
+  const playerComponentPda = FindComponentPda({
+    componentId: COMPONENT_PLAYER_ID,
+    entity: newplayerEntityPda,
+  });
+  console.log("Player Component PDA:", playerComponentPda.toBase58());
+
   const [gameWalletPda] = PublicKey.findProgramAddressSync(
     [Buffer.from("game-wallet"), parentKey.toBuffer()],
     SUPERSIZE_VAULT_PROGRAM_ID,
@@ -31,57 +43,59 @@ export async function gameSystemJoin(
     SUPERSIZE_VAULT_PROGRAM_ID,
   );
   const [gameBalancePda] = PublicKey.findProgramAddressSync(
-    [mapEntityPda.toBuffer(), mintOfToken.toBuffer()],
+    [mapComponentPda.toBuffer(), mintOfToken.toBuffer()],
     SUPERSIZE_VAULT_PROGRAM_ID,
   );
 
+  /*
   console.log([
-    {
-      pubkey: SUPERSIZE_VAULT_PROGRAM_ID.toBase58(),
-      isSigner: false,
-      isWritable: false,
-    },
-    {
-      pubkey: gameWalletPda.toBase58(),
-      isSigner: false,
-      isWritable: true,
-    },
-    {
-      pubkey: userBalancePda.toBase58(),
-      isSigner: false,
-      isWritable: true,
-    },
-    {
-      pubkey: gameBalancePda.toBase58(),
-      isSigner: false,
-      isWritable: true,
-    },
-    {
-      pubkey: newplayerEntityPda.toBase58(),
-      isSigner: false,
-      isWritable: false,
-    },
-    {
-      pubkey: mapEntityPda.toBase58(),
-      isSigner: false,
-      isWritable: false,
-    },
-    {
-      pubkey: mintOfToken.toBase58(),
-      isSigner: false,
-      isWritable: false,
-    },
-    {
-      pubkey: parentKey.toBase58(),
-      isSigner: false,
-      isWritable: false,
-    },
-    {
-      pubkey: sessionWallet.toBase58(),
-      isSigner: true,
-      isWritable: true,
-    },
-  ]);
+      {
+        pubkey: SUPERSIZE_VAULT_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: gameWalletPda,
+        isSigner: false,
+        isWritable: true,
+      },
+      {
+        pubkey: userBalancePda,
+        isSigner: false,
+        isWritable: true,
+      },
+      {
+        pubkey: gameBalancePda,
+        isSigner: false,
+        isWritable: true,
+      },
+      {
+        pubkey: newplayerEntityPda,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: mapComponentPda,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: mintOfToken,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: parentKey,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: sessionWallet,
+        isSigner: true,
+        isWritable: true,
+      },
+    ]);
+  */
 
   const applyJoinSystem = await ApplySystem({
     authority: sessionWallet,
@@ -127,7 +141,7 @@ export async function gameSystemJoin(
         isWritable: false,
       },
       {
-        pubkey: mapEntityPda,
+        pubkey: mapComponentPda,
         isSigner: false,
         isWritable: false,
       },

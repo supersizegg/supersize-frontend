@@ -26,6 +26,7 @@ import {
   stepReclaimSOL,
   stepDelegatePlayers,
 } from "./gameSteps";
+import { SupersizeVaultClient } from "../engine/SupersizeVaultClient";
 
 export async function gameExecuteNewGame(
   engine: MagicBlockEngine,
@@ -90,7 +91,11 @@ export async function gameExecuteNewGame(
     [Buffer.from("token_account_owner_pda"), mapComponentPda.toBuffer()],
     new PublicKey("BAP315i1xoAXqbJcTT1LrUS45N3tAQnNnPuNQkCcvbAr"),
   );
-  const tokenVault = await getAssociatedTokenAddress(mint_of_token, tokenAccountOwnerPda, true);
+  // const tokenVault = await getAssociatedTokenAddress(mint_of_token, tokenAccountOwnerPda, true);
+
+  const vaultClient = new SupersizeVaultClient(context.engine);
+
+  await vaultClient.setupGameWallet(mapComponentPda, mint_of_token);
 
   await stepDelegateMap(context, setTransactions, showPrompt);
   await stepDelegateFood(context, setTransactions, showPrompt);
