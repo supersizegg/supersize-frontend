@@ -26,6 +26,7 @@ function MagicBlockEngineProviderInner({ children }: { children: React.ReactNode
   const { wallets } = useSolanaWallets();
   const { sendTransaction } = useSendTransaction();
 
+  const walletTypeRef = React.useRef("external");
   const walletContext = React.useMemo(() => {
     if (wallets && wallets[0]) {
       console.log("walletContext", wallets, wallets[0].address);
@@ -43,14 +44,15 @@ function MagicBlockEngineProviderInner({ children }: { children: React.ReactNode
     );   
     const pk_item = pklist && pklist[0] ? pklist[0] : null;
     let pk : PublicKey | null = null;
-    let pk_type = "external"
+    let pk_type = "external";
     if (pk_item ){
       pk = new PublicKey(pk_item.address);
       if (pk && pk_item.connectorType == "embedded") {
         pk_type = "embedded";
-      } 
+      }
     }
-    console.log(pklist, pk_type, pk?.toString())
+    walletTypeRef.current = pk_type;
+    console.log(pklist, pk_type, pk?.toString());
     return {
       connected: ready && authenticated && !!pk,
       connecting: !ready,
@@ -101,7 +103,7 @@ function MagicBlockEngineProviderInner({ children }: { children: React.ReactNode
     return new MagicBlockEngine(walletContext, sessionKey, {
       minLamports: SESSION_MIN_LAMPORTS,
       maxLamports: SESSION_MAX_LAMPORTS,
-    });
+    }, walletTypeRef.current);
   }, [walletContext]);
 
   return <MagicBlockEngineContext.Provider value={engine}>{children}</MagicBlockEngineContext.Provider>;

@@ -7,6 +7,7 @@ import { BN } from "@coral-xyz/anchor";
 import { PublicKey, VersionedTransaction } from "@solana/web3.js";
 import { SupersizeVaultClient } from "@engine/SupersizeVaultClient";
 import { useMagicBlockEngine } from "@engine/MagicBlockEngineProvider";
+import { useFundWallet } from "@privy-io/react-auth/solana";
 import "./Shop.scss";
 
 type ShopProps = {
@@ -15,6 +16,7 @@ type ShopProps = {
 
 const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
   const engine = useMagicBlockEngine();
+  const { fundWallet } = useFundWallet();
   const [price, setPrice] = useState<number | null>(null);
   const [change, setChange] = useState<number | null>(null);
 
@@ -38,7 +40,17 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
         );
         const priceData = await priceRes.json();
         const solPrice = priceData.solana.usd;
-        amount = Math.round((usd / solPrice) * 1_000_000_000); // SOL has 9 decimals
+        const solAmount = usd / solPrice;
+        if (engine.getWalletType() === "embedded") {
+          try {
+            await fundWallet(engine.getWalletPayer().toBase58(), {
+              amount: solAmount.toString(),
+            });
+          } catch (e) {
+            console.error(e);
+          }
+        }
+        amount = Math.round(solAmount * 1_000_000_000); // SOL has 9 decimals
         inputMint = SOL_MINT;
       }
 
