@@ -21,9 +21,6 @@ export function MenuBar({ tokenBalance }: MenuBarProps) {
   const navigate = useNavigate();
   const toggleMobileMenu = () => setMobileMenuOpen(!isMobileMenuOpen);
   const closeMobileMenu = () => setMobileMenuOpen(false);
-  const openX = () => {
-    window.open("https://x.com/SUPERSIZEgg", "_blank");
-  };
 
   useEffect(() => {
     if (!engine.getWalletConnected()) return;

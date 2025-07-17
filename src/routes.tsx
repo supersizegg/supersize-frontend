@@ -17,12 +17,9 @@ import { activeGamesList, NETWORK } from "@utils/constants";
 import { createUnloadedGame } from "@utils/game";
 import { useMagicBlockEngine } from "./engine/MagicBlockEngineProvider";
 import { SupersizeVaultClient } from "./engine/SupersizeVaultClient";
-import { getRegion } from "./utils/helper";
-import { endpoints } from "./utils/constants";
 
 const AppRoutes = () => {
   const engine = useMagicBlockEngine();
-  const [vaultClient, setVaultClient] = useState<SupersizeVaultClient | null>(null);
   const [selectedGame, setSelectedGame] = useState<ActiveGame | null>(null);
   const [sessionWalletInUse, setSessionWalletInUse] = useState<boolean>(true); //(NETWORK === 'mainnet' ? false : true);
   const [username, setUsername] = useState<string>("");
@@ -131,7 +128,7 @@ const AppRoutes = () => {
         />
       )}
       <Route path="/leaderboard" element={<Leaderboard randomFood={randomFood} tokenBalance={tokenBalance} />} />
-      <Route path="/about" element={<HowToPlay randomFood={randomFood} tokenBalance={tokenBalance} />} />
+      <Route path="/about" element={<HowToPlay tokenBalance={tokenBalance} />} />
       <Route path="/shop" element={<Shop tokenBalance={tokenBalance} />} />
       <Route path="/wishlist" element={<Wishlist tokenBalance={tokenBalance} />} />
       <Route
