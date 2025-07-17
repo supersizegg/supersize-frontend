@@ -4,6 +4,9 @@ import BackButton from "@components/util/BackButton";
 import GameComponent from "@components/Game/Game";
 import TradingViewWidget from "@components/util/TradingViewWidget";
 import { BN } from "@coral-xyz/anchor";
+import { PublicKey, VersionedTransaction } from "@solana/web3.js";
+import { SupersizeVaultClient } from "@engine/SupersizeVaultClient";
+import { useMagicBlockEngine } from "@engine/MagicBlockEngineProvider";
 import "./Shop.scss";
 
 type ShopProps = {
@@ -11,8 +14,49 @@ type ShopProps = {
 };
 
 const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
+  const engine = useMagicBlockEngine();
   const [price, setPrice] = useState<number | null>(null);
   const [change, setChange] = useState<number | null>(null);
+
+  const BONK_MINT = "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263";
+  const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+
+  const buyBonk = async (usd: number) => {
+    if (!engine.getWalletConnected()) {
+      alert("Please sign in first");
+      return;
+    }
+
+    try {
+      const amount = Math.round(usd * 1_000_000); // USDC has 6 decimals
+      const quoteRes = await fetch(
+        `https://quote-api.jup.ag/v6/quote?inputMint=${USDC_MINT}&outputMint=${BONK_MINT}&amount=${amount}&slippageBps=100`,
+      );
+      const quote = await quoteRes.json();
+      const swapRes = await fetch("https://quote-api.jup.ag/v6/swap", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          quoteResponse: quote,
+          userPublicKey: engine.getWalletPayer().toBase58(),
+          wrapAndUnwrapSol: false,
+        }),
+      });
+      const swapJson = await swapRes.json();
+      const tx = VersionedTransaction.deserialize(Buffer.from(swapJson.swapTransaction, "base64"));
+      const walletContext = (engine as any).walletContext;
+      const signature = await walletContext.sendTransaction(tx, engine.getConnectionChain());
+      await engine.getConnectionChain().confirmTransaction(signature, "confirmed");
+
+      const vaultClient = new SupersizeVaultClient(engine);
+      const bonkAmount = parseInt(quote.outAmount) / 100000; // BONK has 5 decimals
+      await vaultClient.deposit(new PublicKey(BONK_MINT), bonkAmount);
+      alert("Purchase complete!");
+    } catch (e) {
+      console.error(e);
+      alert("Failed to buy BONK");
+    }
+  };
 
   useEffect(() => {
     const fetchPrice = async () => {
@@ -80,8 +124,7 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
                 title="DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263"
                 alt="BONK"
               />
-              <img src="/transaction.png" style={{ width: "20px", height: "20px", marginLeft: "10px"}}/>
-
+              <img src="/transaction.png" style={{ width: "20px", height: "20px", marginLeft: "10px" }} />
             </div>
             <div className="right">
               <span className="price">{price !== null ? `$${price.toFixed(5)}` : "--"}</span>
@@ -101,10 +144,14 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
           </div>
         </div>
         <div className="action-column">
-          <button className="buy-button">buy $1 of Bonk</button>
-          <button className="buy-button">buy $5 of Bonk</button>
-          <a href="#" className="sell-link">
-            can I sell my bonk?
+          <button className="buy-button" onClick={() => buyBonk(1)}>
+            buy $1 of Bonk
+          </button>
+          <button className="buy-button" onClick={() => buyBonk(5)}>
+            buy $5 of Bonk
+          </button>
+          <a href="/about?section=sell" className="sell-link">
+            How can I sell my bonk?
           </a>
         </div>
       </div>

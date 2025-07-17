@@ -37,7 +37,8 @@
     "@privy-io/react-auth": "^2.18.0",
     "three": "^0.172.0",
     "typescript": "^5.4.3",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "@jup-ag/api": "^6.0.44"
   },
   "scripts": {
     "start": "react-app-rewired start",
