@@ -16,7 +16,7 @@ const Wishlist: React.FC<WishlistProps> = ({ tokenBalance }) => {
         <div className="wishlist-container" onClick={(e) => e.stopPropagation()}>
           <iframe
             className="wishlist-form"
-            src="https://docs.google.com/forms/d/e/1FAIpQLSf_example/viewform?embedded=true"
+            src="https://docs.google.com/forms/d/e/1FAIpQLSd8oYHrwdANcVhcX5tETW7fjfPy2PGc-OrGBjh8q66NLWDutw/viewform?usp=header"
             title="wishlist-form"
             frameBorder="0"
             allowFullScreen
