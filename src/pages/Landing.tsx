@@ -40,7 +40,7 @@ const Landing = ({ preferredRegion, tokenBalance }: LandingProps) => {
             name: "",
             authority: null,
             score: 0,
-            circles: [{x: 5000, y: 5000, radius: 0, size: 0, speed: 0}],
+            circles: [{ x: 5000, y: 5000, radius: 0, size: 0, speed: 0 }],
             removal: new BN(0),
             x: 5000,
             y: 5000,
@@ -48,48 +48,52 @@ const Landing = ({ preferredRegion, tokenBalance }: LandingProps) => {
             target_y: 5000,
             timestamp: 0,
           }}
-          screenSize={{width: window.innerWidth, height: window.innerHeight }}
-          newTarget={{ x: 0, y: 0}}
+          screenSize={{ width: window.innerWidth, height: window.innerHeight }}
+          newTarget={{ x: 0, y: 0 }}
           gameSize={10000}
           buyIn={0}
         />
       </div>
       <MenuBar tokenBalance={tokenBalance} />
-      <div 
-        onClick={openX} 
+      <div
+        onClick={openX}
         className="follow-x-button  follow-btn"
         onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2b2d31")}
         onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#1d1f23")}
       >
-        <img 
-          src={`${process.env.PUBLIC_URL}/x-logo.png`} 
-          alt="X" 
-          style={{ width: "16px", height: "16px" }}
-        />
+        <img src={`${process.env.PUBLIC_URL}/x-logo.png`} alt="X" style={{ width: "16px", height: "16px" }} />
         Follow
       </div>
       <div className="panels">
-        <div className="panel" onClick={() => navigate("/home")}> 
+        <div className="panel" onClick={() => navigate("/home")}>
           <div className="inner-panel">
-          <div className="overlay-panel" />
-          <img src="/superblob.png" alt="SUPER BLOB" className="panel-image" style={{ width: "85%", height: "85%", margin: "auto", marginTop: "-20px"}}/>
+            <div className="overlay-panel" />
+            <img
+              src="/superblob.png"
+              alt="SUPER BLOB"
+              className="panel-image"
+              style={{ width: "85%", height: "85%", margin: "auto", marginTop: "-20px" }}
+            />
           </div>
           <div className="panel-subtitle">multiplayer blob game </div>
         </div>
         <div className="panel disabled" style={{ pointerEvents: "none" }}>
-          <div className="inner-panel" >
-          <div className="overlay-panel" />
-          <img src="/supersnake.png" alt="SUPER SNAKE" className="panel-image" />
+          <div className="inner-panel">
+            <div className="overlay-panel" />
+            <img src="/supersnake.png" alt="SUPER SNAKE" className="panel-image" />
           </div>
           <div className="panel-subtitle">coming soon!</div>
         </div>
       </div>
-      <div className="promo-callout">
-        <div className="promo-icon" >
+      <div className="promo-callout" onClick={() => navigate("/wishlist")}>
+        <div className="promo-icon">
           <img src="/slimeicon.png" alt="slime icon" className="promo-image" />
         </div>
 
-        <div className="promo-text">Sign up for the <br/>app wishlist!</div>
+        <div className="promo-text">
+          Sign up for the <br />
+          app wishlist!
+        </div>
       </div>
       <SignUpBanner engine={engine} preferredRegion={preferredRegion} />
     </div>

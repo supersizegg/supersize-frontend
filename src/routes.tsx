@@ -9,6 +9,7 @@ import Leaderboard from "@pages/Leaderboard";
 import Profile from "@pages/Profile";
 import HowToPlay from "@pages/HowToPlay";
 import Shop from "@pages/Shop";
+import Wishlist from "@pages/Wishlist";
 import { ActiveGame, FetchedGame, Food } from "@utils/types";
 import { useState } from "react";
 import { PublicKey } from "@solana/web3.js";
@@ -32,16 +33,18 @@ const AppRoutes = () => {
       ? [...activeGamesList[NETWORK], ...activeGamesList['devnet']]
       : [...activeGamesList[NETWORK]]
     )*/
-   [...activeGamesList[NETWORK]].map((world) =>
+    [...activeGamesList[NETWORK]].map((world) =>
       createUnloadedGame(world.worldId, world.worldPda, world.endpoint, world.permissionless),
     ),
   );
   const [myPlayerEntityPda, setMyPlayerEntityPda] = useState<PublicKey | null>(null);
-  const [randomFood] = useState<Food[]>(Array.from({ length: 100 }, () => ({
-    x: Math.floor(Math.random() * 4500) + 1000,
-    y: Math.floor(Math.random() * 4500) + 1000,
-    food_value: Math.floor(Math.random() * 10),
-  })));
+  const [randomFood] = useState<Food[]>(
+    Array.from({ length: 100 }, () => ({
+      x: Math.floor(Math.random() * 4500) + 1000,
+      y: Math.floor(Math.random() * 4500) + 1000,
+      food_value: Math.floor(Math.random() * 10),
+    })),
+  );
 
   useEffect(() => {
     const retrievedUser = localStorage.getItem("user");
@@ -49,17 +52,16 @@ const AppRoutes = () => {
     let myusername = "";
     if (retrievedUser) {
       use_session = JSON.parse(retrievedUser).use_session;
-      myusername = JSON.parse(retrievedUser).name
+      myusername = JSON.parse(retrievedUser).name;
       setSessionWalletInUse(use_session);
       setUsername(myusername);
     }
-  },[]);
+  }, []);
 
   useEffect(() => {
-    let vaultClient : SupersizeVaultClient | null = null;
+    let vaultClient: SupersizeVaultClient | null = null;
     if (engine && engine.getWalletConnected()) {
       vaultClient = new SupersizeVaultClient(engine);
-      
     }
     const fetchGameWalletEphem = async () => {
       if (vaultClient) {
@@ -74,8 +76,7 @@ const AppRoutes = () => {
       const uiAmount = await vaultClient?.getVaultBalance(mint);
       if (uiAmount == "wrong_server") {
         balance = 0;
-      }
-      else if (uiAmount && uiAmount >= 0) {
+      } else if (uiAmount && uiAmount >= 0) {
         balance = uiAmount;
       }
       setTokenBalance(balance);
@@ -87,7 +88,7 @@ const AppRoutes = () => {
 
   return (
     <Routes>
-      <Route index element={<Landing preferredRegion={preferredRegion} tokenBalance={tokenBalance}/>} />
+      <Route index element={<Landing preferredRegion={preferredRegion} tokenBalance={tokenBalance} />} />
       <Route
         path="/home"
         element={
@@ -108,17 +109,46 @@ const AppRoutes = () => {
       />
       <Route
         path="/create-game"
-        element={<CreateGame activeGamesLoaded={activeGamesLoaded} setActiveGamesLoaded={setActiveGamesLoaded} randomFood={randomFood} tokenBalance={tokenBalance}/>}
+        element={
+          <CreateGame
+            activeGamesLoaded={activeGamesLoaded}
+            setActiveGamesLoaded={setActiveGamesLoaded}
+            randomFood={randomFood}
+            tokenBalance={tokenBalance}
+          />
+        }
       />
       {selectedGame && (
-        <Route path="/game" element={<Game gameInfo={selectedGame} myPlayerEntityPda={myPlayerEntityPda} sessionWalletInUse={sessionWalletInUse} />} />
+        <Route
+          path="/game"
+          element={
+            <Game
+              gameInfo={selectedGame}
+              myPlayerEntityPda={myPlayerEntityPda}
+              sessionWalletInUse={sessionWalletInUse}
+            />
+          }
+        />
       )}
-      <Route path="/leaderboard" element={<Leaderboard randomFood={randomFood} tokenBalance={tokenBalance}/>} />
-      <Route path="/about" element={<HowToPlay randomFood={randomFood} tokenBalance={tokenBalance}/>} />
-      <Route path="/shop" element={<Shop tokenBalance={tokenBalance}/>} />
-      <Route path="/profile" element={<Profile randomFood={randomFood} username={username} setUsername={setUsername}
-      sessionWalletInUse={sessionWalletInUse} setSessionWalletInUse={setSessionWalletInUse} preferredRegion={preferredRegion} 
-      setPreferredRegion={setPreferredRegion} tokenBalance={tokenBalance}/>} />
+      <Route path="/leaderboard" element={<Leaderboard randomFood={randomFood} tokenBalance={tokenBalance} />} />
+      <Route path="/about" element={<HowToPlay randomFood={randomFood} tokenBalance={tokenBalance} />} />
+      <Route path="/shop" element={<Shop tokenBalance={tokenBalance} />} />
+      <Route path="/wishlist" element={<Wishlist tokenBalance={tokenBalance} />} />
+      <Route
+        path="/profile"
+        element={
+          <Profile
+            randomFood={randomFood}
+            username={username}
+            setUsername={setUsername}
+            sessionWalletInUse={sessionWalletInUse}
+            setSessionWalletInUse={setSessionWalletInUse}
+            preferredRegion={preferredRegion}
+            setPreferredRegion={setPreferredRegion}
+            tokenBalance={tokenBalance}
+          />
+        }
+      />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

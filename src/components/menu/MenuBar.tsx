@@ -1,11 +1,9 @@
 import * as React from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import "./MenuBar.scss";
 import "../../pages/Landing.scss";
 import { useMagicBlockEngine } from "../../engine/MagicBlockEngineProvider";
-import { SupersizeVaultClient } from "../../engine/SupersizeVaultClient";
-import { useState, useEffect, useCallback } from "react";
-import { PublicKey } from "@solana/web3.js";
+import { useEffect } from "react";
 
 type MenuBarProps = {
   tokenBalance: number;
@@ -14,9 +12,12 @@ type MenuBarProps = {
 export function MenuBar({ tokenBalance }: MenuBarProps) {
   const engine = useMagicBlockEngine();
 
+  const stored = localStorage.getItem("user");
+  const initialUser = stored ? JSON.parse(stored) : null;
+
   const [isMobileMenuOpen, setMobileMenuOpen] = React.useState(false);
-  const [username, setUsername] = React.useState<string>("");
-  const [avatar, setAvatar] = React.useState<string>("/chick.png");
+  const [username, setUsername] = React.useState<string>(initialUser?.name || "");
+  const [avatar, setAvatar] = React.useState<string>(initialUser?.icon || "/chick.png");
   const navigate = useNavigate();
   const toggleMobileMenu = () => setMobileMenuOpen(!isMobileMenuOpen);
   const closeMobileMenu = () => setMobileMenuOpen(false);
@@ -26,18 +27,15 @@ export function MenuBar({ tokenBalance }: MenuBarProps) {
 
   useEffect(() => {
     if (!engine.getWalletConnected()) return;
-    const vaultClient = new SupersizeVaultClient(engine);
 
     const stored = localStorage.getItem("user");
-    let username = "";
-    username = engine.getWalletPayer().toString().slice(0, 7);
+    let name = engine.getWalletPayer().toString().slice(0, 7);
     if (stored) {
       const user = JSON.parse(stored);
-      if (user.name) username = user.name;
+      if (user.name) name = user.name;
       setAvatar(user.icon || "/chick.png");
     }
-    setUsername(username);
-    
+    setUsername(name);
 
     const onStorage = () => {
       const u = localStorage.getItem("user");
@@ -56,103 +54,118 @@ export function MenuBar({ tokenBalance }: MenuBarProps) {
   }, [engine]);
 
   return (
-    <header className="menu-bar" style={{ zIndex:2}}>
-
+    <header className="menu-bar" style={{ zIndex: 2 }}>
       <div className="menu-bar-left">
-
-      <div className="branding">
+        <div className="branding">
           <NavLink to="/">
-          <svg width="305" height="60">
-            <text x="0" y="40" fill="#fff" stroke="#4A4A4A" strokeWidth="8px" fontSize="48px" fontFamily="'Lexend', sans-serif" paintOrder="stroke">
-              supersize.gg
-            </text>
-          </svg>
+            <svg width="305" height="60">
+              <text
+                x="0"
+                y="40"
+                fill="#fff"
+                stroke="#4A4A4A"
+                strokeWidth="8px"
+                fontSize="48px"
+                fontFamily="'Lexend', sans-serif"
+                paintOrder="stroke"
+              >
+                supersize.gg
+              </text>
+            </svg>
           </NavLink>
-          <button
-              onClick={() => navigate("/about")}
-              className="help-btn"
-            >
-               <span className="desktop-only">?</span>
-               <span className="mobile-only">?</span>            
+          <button onClick={() => navigate("/about")} className="help-btn">
+            <span className="desktop-only">?</span>
+            <span className="mobile-only">?</span>
           </button>
-      </div>
-
+        </div>
       </div>
 
       <div className="menu-bar-right">
         <nav className="nav-links">
           <div className="nav-right">
-          <div className="coin-icon">
-            <img src="/fallback-token.webp" alt="game token" className="coin-image" />
-          </div>
+            <div className="coin-icon">
+              <img src="/fallback-token.webp" alt="game token" className="coin-image" />
+            </div>
 
-          <div className="coin-pill">
-            <div className="overlay-panel" style={{borderRadius: "10px", border: "3px solid transparent"}}/>
-            <span style={{ position: "absolute", zIndex: "1", marginLeft: "8px"}}>
-              {engine.getWalletConnected() ? tokenBalance.toFixed(1) : "0"}</span>
-          </div>
-          <NavLink to="/profile">
-          <div className="user-panel" onMouseEnter={(e) => {
-            const usernamePill = e.currentTarget.querySelector<HTMLElement>('.username-pill');
-            if (usernamePill) {
-              usernamePill.style.opacity = '0.8';
-            }
-          }} onMouseLeave={(e) => {
-            const usernamePill = e.currentTarget.querySelector<HTMLElement>('.username-pill');
-            if (usernamePill) {
-              usernamePill.style.opacity = '1';
-            }
-          }}>
-            <div className="overlay-panel" style={{ borderRadius: "18px", border: "3px solid transparent"}}/>
-            <img src={engine.getWalletConnected() ? avatar : "/chick.png"} alt="avatar" style={{ width: "48px", height: "48px", position: "absolute", zIndex: "1", marginLeft: "10px"}}/>
-            <div className="username-pill" 
-            style={{ position: "absolute", zIndex: "1", transform: "translateX(65px)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              border: "none",
-            }}>
-              <span
-              style={{ fontSize: "24px", fontWeight: "bold", margin: "auto"}}
-              >
-                {(engine.getWalletConnected() && username) || "sign in"}
+            <div className="coin-pill">
+              <div className="overlay-panel" style={{ borderRadius: "10px", border: "3px solid transparent" }} />
+              <span style={{ position: "absolute", zIndex: "1", marginLeft: "8px" }}>
+                {engine.getWalletConnected() ? tokenBalance.toFixed(1) : "0"}
               </span>
             </div>
+            <NavLink to="/profile">
+              <div
+                className="user-panel"
+                onMouseEnter={(e) => {
+                  const usernamePill = e.currentTarget.querySelector<HTMLElement>(".username-pill");
+                  if (usernamePill) {
+                    usernamePill.style.opacity = "0.8";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  const usernamePill = e.currentTarget.querySelector<HTMLElement>(".username-pill");
+                  if (usernamePill) {
+                    usernamePill.style.opacity = "1";
+                  }
+                }}
+              >
+                <div className="overlay-panel" style={{ borderRadius: "18px", border: "3px solid transparent" }} />
+                <img
+                  src={engine.getWalletConnected() ? avatar : "/chick.png"}
+                  alt="avatar"
+                  style={{ width: "48px", height: "48px", position: "absolute", zIndex: "1", marginLeft: "10px" }}
+                />
+                <div
+                  className="username-pill"
+                  style={{
+                    position: "absolute",
+                    zIndex: "1",
+                    transform: "translateX(65px)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "none",
+                  }}
+                >
+                  <span style={{ fontSize: "24px", fontWeight: "bold", margin: "auto" }}>
+                    {(engine.getWalletConnected() && username) || "sign in"}
+                  </span>
+                </div>
+              </div>
+            </NavLink>
           </div>
-          </NavLink>
-        </div>
         </nav>
 
         <button className="burger-menu" onClick={toggleMobileMenu} aria-label="Toggle navigation">
           <img src="/icons/bars-solid.svg" alt="Menu" />
         </button>
-        
+
         <div className="utility-column">
-        <NavLink to="/leaderboard">
-        <div className="utility-btn">
-          <img 
-            src="/trophy.png" 
-            alt="trophy" 
-            className="utility-image" 
-            style={{ transition: "transform 0.2s", cursor: "pointer"}}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05) rotate(5deg)")}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1) rotate(0deg)")}
-          />
+          <NavLink to="/leaderboard">
+            <div className="utility-btn">
+              <img
+                src="/trophy.png"
+                alt="trophy"
+                className="utility-image"
+                style={{ transition: "transform 0.2s", cursor: "pointer" }}
+                onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05) rotate(5deg)")}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1) rotate(0deg)")}
+              />
+            </div>
+          </NavLink>
+          <NavLink to="/shop">
+            <div className="utility-btn">
+              <img
+                src="/shop.png"
+                alt="store"
+                className="utility-image"
+                style={{ transition: "transform 0.2s", cursor: "pointer" }}
+                onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05) rotate(5deg)")}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1) rotate(0deg)")}
+              />
+            </div>
+          </NavLink>
         </div>
-        </NavLink>
-        <NavLink to="/shop">
-        <div className="utility-btn">
-          <img
-            src="/shop.png"
-            alt="store"
-            className="utility-image"
-            style={{ transition: "transform 0.2s", cursor: "pointer" }}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05) rotate(5deg)")}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1) rotate(0deg)")}
-          />
-        </div>
-        </NavLink>
-      </div>
       </div>
 
       <div className={`mobile-nav-backdrop ${isMobileMenuOpen ? "open" : ""}`} onClick={closeMobileMenu}>
