@@ -157,7 +157,7 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
           </div>
         </div>
         <div className="action-column">
-          <button className="buy-button" onClick={() => buyBonk(1)}>
+          <button className="buy-button" onClick={() => buyBonk(1, true)}>
             buy $1 of Bonk
           </button>
           <button className="buy-button" onClick={() => buyBonk(5, true)}>
