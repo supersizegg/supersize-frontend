@@ -48,6 +48,7 @@ interface WalletAdapter {
 
 export class MagicBlockEngine {
   private walletContext: WalletContextState;
+  private walletType: string;
   private sessionKey: Keypair;
   private sessionConfig: SessionConfig;
   private endpointEphemRpc: string;
@@ -55,8 +56,14 @@ export class MagicBlockEngine {
   private provider: AnchorProvider;
   private providerEphemeralRollup: AnchorProvider;
 
-  constructor(walletContext: WalletContextState, sessionKey: Keypair, sessionConfig: SessionConfig) {
+  constructor(
+    walletContext: WalletContextState,
+    sessionKey: Keypair,
+    sessionConfig: SessionConfig,
+    walletType = "external",
+  ) {
     this.walletContext = walletContext;
+    this.walletType = walletType;
     this.sessionKey = sessionKey;
     this.sessionConfig = sessionConfig;
     this.endpointEphemRpc = endpoints[NETWORK][1]; 
@@ -145,6 +152,10 @@ export class MagicBlockEngine {
   }
   getWalletConnecting() {
     return this.walletContext.connecting;
+  }
+
+  getWalletType(): string {
+    return this.walletType;
   }
 
   getWalletPayer(): PublicKey {

@@ -4,7 +4,6 @@
   height: 100vh;
   background: #191919;
   color: #fff;
-  font-family: sans-serif;
 }
 
 .game-canvas {
@@ -30,7 +29,7 @@
 .branding {
   font-size: 36px;
   font-weight: 700;
-  font-family: 'Lexend', sans-serif;
+  font-family: "Lexend", sans-serif;
   color: #fff;
   padding: 6px 12px;
   display: flex;
@@ -54,7 +53,9 @@
   border-radius: 100px;
   font-size: 15px;
   cursor: pointer;
-  transition: background 0.2s, transform 0.2s;
+  transition:
+    background 0.2s,
+    transform 0.2s;
 }
 .help-btn:hover {
   font-size: 16px;
@@ -149,7 +150,7 @@
 
 .username-pill {
   background: #000000;
-  opacity: 1.0;
+  opacity: 1;
   border-radius: 18px;
   position: relative;
   color: #cccccc;
@@ -225,12 +226,11 @@
   z-index: 1;
 }
 
-
 .panel-subtitle {
   opacity: 0.4;
   color: #ffffff;
   margin-top: 6px;
-  font-family: 'Lexend', sans-serif;
+  font-family: "Lexend", sans-serif;
   font-size: 24px;
 }
 
@@ -262,6 +262,7 @@
   align-items: center;
   gap: 12px;
   padding: 6px 18px;
+  cursor: pointer;
 }
 
 .promo-icon {

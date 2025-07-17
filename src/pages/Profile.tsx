@@ -433,7 +433,7 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
       ) : (
         <></>
       )}
-      <div className="game-stack" style={{ overflowY: "scroll", maxHeight: "70vh", width: "600px" }}>
+      <div className="game-stack" style={{ overflowY: "scroll", maxHeight: "70vh", width: "100%" }}>
         {myGames.map((row, idx) => (
           <CollapsiblePanel
             key={idx}
