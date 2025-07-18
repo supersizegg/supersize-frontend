@@ -188,7 +188,6 @@ export class MagicBlockEngine {
     const signature = await this.connectionEphem.sendTransaction(transaction, [this.sessionKey], {
       skipPreflight: true,
     });
-    console.log("Session Ephemeral Transaction Signature:", signature);
     await this.waitSignatureConfirmation(name, signature, this.connectionEphem, "confirmed", 1000);
     return signature;
   }

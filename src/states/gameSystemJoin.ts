@@ -136,7 +136,7 @@ export async function gameSystemJoin(
         isWritable: true,
       },
       {
-        pubkey: newplayerEntityPda,
+        pubkey: playerComponentPda,
         isSigner: false,
         isWritable: false,
       },
