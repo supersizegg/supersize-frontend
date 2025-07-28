@@ -22,6 +22,8 @@ import { SplitBlob } from "../backend/target/types/split_blob";
 import { KillSnake } from "../backend/target/types/kill_snake";
 import { JoinTemp } from "../backend/target/types/join_temp";
 import { ExitTemp } from "../backend/target/types/exit_temp";
+import { SupersizeVault } from "../backend/target/types/supersize_vault";
+
 
 import * as SnakeIdl from "../backend/target/idl/snake.json";
 import * as MapIdl from "../backend/target/idl/map.json";
@@ -43,6 +45,8 @@ import * as SplitBlobIdl from "../backend/target/idl/split_blob.json";
 import * as KillSnakeIdl from "../backend/target/idl/kill_snake.json";
 import * as JoinTempIdl from "../backend/target/idl/join_temp.json";
 import * as ExitTempIdl from "../backend/target/idl/exit_temp.json";
+import * as SupersizeVaultIdl from "../backend/target/idl/supersize_vault.json";
+
 
 const componentSnake = SnakeIdl as Snake;
 const componentMap = MapIdl as Map;
@@ -63,6 +67,10 @@ const systemSpawnFood = SpawnFoodIdl as SpawnFood;
 const systemSplitBlob = SplitBlobIdl as SplitBlob;
 const systemJoinTemp = JoinTempIdl as JoinTemp;
 const systemExitTemp = ExitTempIdl as ExitTemp;
+
+const supersizeVault = SupersizeVaultIdl as SupersizeVault;
+
+export const SUPERSIZE_VAULT_PROGRAM_ID = new PublicKey(supersizeVault.address);
 
 export const COMPONENT_SNAKE_ID = new PublicKey(componentSnake.address);
 export const COMPONENT_MAP_ID = new PublicKey(componentMap.address);

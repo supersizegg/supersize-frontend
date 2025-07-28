@@ -18,7 +18,7 @@ type FormData = [number, number, string, string, string];
 const CreateGameForm: React.FC<gameProps> = ({ game_size, activeGamesLoaded, setActiveGamesLoaded, selectedServer }) => {
   const engine = useMagicBlockEngine();
   const { publicKey } = useWallet();
-  const userKey = publicKey?.toString() || "Connect Wallet";
+  const userKey = publicKey?.toString() ||  engine.getWalletPayer().toString() || "Connect Wallet";
   const [formData, setFormData] = useState<FormData>([
     game_size,
     1.0,

@@ -13,7 +13,7 @@ function App() {
         appId={process.env.REACT_APP_PRIVY_APP_ID || ""}
         config={{
           appearance: {walletChainType: 'solana-only'},
-          embeddedWallets: { createOnLogin: "all-users" },
+          embeddedWallets: { solana: {createOnLogin: "all-users"} },
           externalWallets: {
             solana: {connectors: toSolanaWalletConnectors()}
           }
