@@ -27,21 +27,24 @@ function MagicBlockEngineProviderInner({ children }: { children: React.ReactNode
   const { sendTransaction } = useSendTransaction();
 
   const walletTypeRef = React.useRef("embedded");
+
+  const pklist = useMemo<WalletWithMetadata[]>(
+    () =>
+      (user?.linkedAccounts.filter(
+        (account) =>
+          account.type === "wallet" &&
+          account.chainType === "solana"
+      ) as WalletWithMetadata[]) ?? [],
+    [user]
+  );
+
   const walletContext = React.useMemo(() => {
     if (wallets && wallets[0]) {
       console.log("walletContext", wallets, wallets[0].address);
       console.log("user", user);
     }
     //const pk = wallets && wallets[0] ? new PublicKey(wallets[0].address) : null;
-    const pklist = useMemo<WalletWithMetadata[]>(
-      () =>
-        (user?.linkedAccounts.filter(
-          (account) =>
-            account.type === "wallet" &&
-            account.chainType === "solana"
-        ) as WalletWithMetadata[]) ?? [],
-      [user]
-    );   
+
     const pk_item = pklist && pklist[0] ? pklist[0] : null;
     let pk : PublicKey | null = null;
     let pk_type = "external";
