@@ -125,10 +125,10 @@ const Home = ({
             ]);
           }
         } catch (error) {
-          console.error("Error fetching map data:", error);
+          console.log("Error fetching map data:", error);
         }
       } catch (error) {
-        console.error("Invalid PublicKey:", error);
+        console.log("Invalid PublicKey:", error);
       } finally {
         isSearchingGame.current = false;
       }

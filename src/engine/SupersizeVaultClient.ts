@@ -140,6 +140,73 @@ export class SupersizeVaultClient {
     await this.engine.processWalletTransaction("DelegateAccounts", tx);
   }
 
+  async depositToGame(mint: PublicKey, uiAmount: number, mapComponentPda: PublicKey) {
+    if (!this.wallet) throw new Error("Wallet not connected.");
+
+    const mintInfo = await getMint(this.mainChainConnection, mint);
+    const decimals = mintInfo.decimals;
+    const tokens = new BN(Math.round(uiAmount * 10 ** decimals));
+    const userAta = getAssociatedTokenAddressSync(mint, this.wallet);
+    console.log(uiAmount, tokens, decimals);
+    const depositIx = await this.program.methods
+      .depositToGame(tokens)
+      .accounts({
+        mintOfToken: mint,
+        senderTokenAccount: userAta,
+        map: mapComponentPda,
+        payer: this.wallet,
+      })
+      .instruction();
+
+    const balancePda = this.mapBalancePda(mapComponentPda, mint);
+    const accountInfo = await this.mainChainConnection.getAccountInfo(balancePda);
+    const currentlyDelegated = accountInfo?.owner.equals(DELEGATION_PROGRAM_ID) ?? false;
+      
+    if (currentlyDelegated) {
+
+      const undelegateTx = new Transaction();
+      undelegateTx.add(
+        await this.program.methods
+          .undelegateGame()
+          .accounts({ payer: this.engine.getSessionPayer(), mintOfToken: mint, map: mapComponentPda })
+          .instruction(),
+      );
+  
+      const signers = [this.engine.getSessionKey()];
+      const signature = await this.engine.getConnectionEphem().sendTransaction(undelegateTx, signers);
+      await this.engine.getConnectionEphem().confirmTransaction(signature, "confirmed");
+
+      console.log("undelegateGame");
+
+      const transaction = new Transaction();
+      const ephemIdentity = await this.engine.getConnectionEphem().getSlotLeader();
+      const validator = new PublicKey(ephemIdentity);
+      const delegateGameIx = await this.program.methods
+        .delegateGame(validator)
+        .accounts({
+          payer: this.wallet,
+          mintOfToken: mint,
+          map: mapComponentPda,
+        })
+        .instruction();
+      console.log("delegateGame");
+      return await this.engine.processWalletTransaction("Deposit", transaction.add(depositIx).add(delegateGameIx));
+    } else {
+      const ephemIdentity = await this.ephemConnection.getSlotLeader();
+      const validator = new PublicKey(ephemIdentity);
+      const delegateGameIx = await this.program.methods
+        .delegateGame(validator)
+        .accounts({
+          payer: this.wallet,
+          mintOfToken: mint,
+          map: mapComponentPda,
+        })
+        .instruction();
+      console.log("delegateGame");
+      return await this.engine.processWalletTransaction("Deposit", new Transaction().add(depositIx).add(delegateGameIx));
+    }
+  }
+
   async deposit(mint: PublicKey, uiAmount: number) {
     if (!this.wallet) throw new Error("Wallet not connected.");
 
@@ -301,6 +368,24 @@ export class SupersizeVaultClient {
     }
   }
 
+  async getGameBalance(mapComponentPda: PublicKey, mint: PublicKey): Promise<number | "wrong_server"> {
+    if (!this.wallet) return 0;
+
+    const balPda = this.mapBalancePda(mapComponentPda, mint);
+    console.log("Fetching balance for PDA:", balPda.toBase58());
+    const acc = await this.program.account.balance.fetchNullable(balPda);
+    if (!acc) return 0;
+    const balanceAcc = await this.programEphem.account.balance.fetchNullable(
+      balPda
+    );
+    if (!balanceAcc) return "wrong_server";
+    const conn = this.program.provider.connection;
+    const { decimals } = await getMint(conn, mint);
+    let finalnum = Number(balanceAcc.balance) / 10 ** decimals;
+    console.log("finalnum", mint.toString(), finalnum);
+    return finalnum; //Number(acc.balance) / 10 ** decimals;
+  }
+
   async getVaultBalance(mint: PublicKey): Promise<number | "wrong_server"> {
     if (!this.wallet) return 0;
 
@@ -315,8 +400,8 @@ export class SupersizeVaultClient {
     const conn = this.program.provider.connection;
     const { decimals } = await getMint(conn, mint);
     let finalnum = Number(balanceAcc.balance) / 10 ** decimals;
-    console.log("finalnum",finalnum);
-    return Number(acc.balance) / 10 ** decimals;
+    console.log("finalnum", mint.toString(), finalnum);
+    return finalnum; //Number(acc.balance) / 10 ** decimals;
   }
 
   async getGameWallet(): Promise<PublicKey | undefined> {

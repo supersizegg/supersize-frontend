@@ -66,6 +66,131 @@
       "returns": {
         "vec": "bytes"
       }
+    },
+    {
+      "name": "init_extra_accounts",
+      "discriminator": [
+        58,
+        71,
+        119,
+        115,
+        48,
+        174,
+        40,
+        177
+      ],
+      "accounts": [
+        {
+          "name": "supersize_vault_program",
+          "address": "DZtWbzgheM9YEaQu24dR3bkvWHURhSZw5jFwZyoz95DH"
+        },
+        {
+          "name": "game_wallet",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  45,
+                  119,
+                  97,
+                  108,
+                  108,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "parent_key"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_balance",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "parent_key"
+              },
+              {
+                "kind": "account",
+                "path": "mint_of_token"
+              }
+            ]
+          }
+        },
+        {
+          "name": "game_balance",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "map"
+              },
+              {
+                "kind": "account",
+                "path": "mint_of_token"
+              }
+            ]
+          }
+        },
+        {
+          "name": "player"
+        },
+        {
+          "name": "map"
+        },
+        {
+          "name": "mint_of_token"
+        },
+        {
+          "name": "parent_key"
+        },
+        {
+          "name": "exit_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  120,
+                  105,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "map"
+              },
+              {
+                "kind": "account",
+                "path": "player"
+              }
+            ]
+          }
+        },
+        {
+          "name": "instruction_sysvar",
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        }
+      ],
+      "args": []
     }
   ],
   "accounts": [

@@ -822,7 +822,7 @@ export const fetchPlayers = async (engine: MagicBlockEngine, gameInfo: ActiveGam
 };
 
 export const fetchGames = async (engine: MagicBlockEngine, myGames: ActiveGame[]) => {
-  const startIndices = { devnet: 2044, mainnet: 25 };
+  const startIndices = { devnet: 2330, mainnet: 25 };
   const startIndex = startIndices[NETWORK];
   let newGames: ActiveGame[] = myGames;
   const gamePromises = Array.from({ length: 100 }, (_, idx) => {

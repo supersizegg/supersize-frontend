@@ -13,6 +13,7 @@ import { ActiveGame } from "@utils/types";
 import { COMPONENT_MAP_ID } from "./gamePrograms";
 import { MagicBlockEngine } from "@engine/MagicBlockEngine";
 import { gameSystemInitSection } from "./gameSystemInitSection";
+import { SupersizeVaultClient } from "../engine/SupersizeVaultClient";
 
 export const handleUndelegatePlayer = async (
     engine: MagicBlockEngine,
@@ -288,32 +289,17 @@ export async function calculateGameplayStats(engine: MagicBlockEngine, account: 
 }  
   
 export const deposit = async (
-    engine: MagicBlockEngine,
+    vaultClient: SupersizeVaultClient,
     amount: number,
-    gameWallet: PublicKey,
+    mapComponentPda: PublicKey,
     mint_of_token_being_sent: PublicKey,
-    decimals: number,
   ) => {
     if (amount <= 0) {
       console.error("Deposit amount must be greater than zero.");
       return;
     }
     try {
-      const transaction = new anchor.web3.Transaction();
-      let usertokenAccountInfo = await getAssociatedTokenAddress(
-        new PublicKey(mint_of_token_being_sent),
-        engine.getWalletPayer(),
-      );
-      const transferIx = createTransferInstruction(
-        usertokenAccountInfo,
-        gameWallet,
-        engine.getWalletPayer(),
-        amount * 10 ** decimals,
-        [],
-        TOKEN_PROGRAM_ID,
-      );
-      transaction.add(transferIx);
-      const desposittx = await engine.processWalletTransaction("deposit", transaction);
+      const desposittx = vaultClient.depositToGame(mint_of_token_being_sent, amount, mapComponentPda);
       console.log("Deposit successful, transaction signature:", desposittx);
     } catch (error) {
       console.error("Error during deposit:", error);

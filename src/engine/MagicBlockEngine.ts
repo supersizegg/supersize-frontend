@@ -128,9 +128,14 @@ export class MagicBlockEngine {
     return new Program<T>(idl as T, this.providerEphemeralRollup);
   }
   getProgramOnSpecificEphem<T extends Idl>(idl: object, endpoint: string): Program<T> {
-    const thisConnection = new Connection(endpoint, {
-      wsEndpoint: endpoint.replace("http", "ws"),
-    });
+    let thisConnection: Connection = this.connectionEphem;
+    try{
+      thisConnection = new Connection(endpoint, {
+        wsEndpoint: endpoint.replace("http", "ws"),
+      });
+    }catch(error){
+      console.error("Error getting program on specific ephem", error);
+    }
     const thisProvider = new AnchorProvider(thisConnection, new NodeWallet(this.sessionKey), {
       preflightCommitment: "processed",
     });

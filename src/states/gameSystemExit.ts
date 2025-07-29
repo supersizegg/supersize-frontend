@@ -73,7 +73,7 @@ export async function gameSystemExit(
       { pubkey: mintOfToken, isSigner: false, isWritable: false },
       { pubkey: parentKey, isSigner: false, isWritable: false },
       { pubkey: exitAuthorityPda, isSigner: false, isWritable: false },
-      { pubkey: SYSVAR_INSTRUCTIONS_PUBKEY, isSigner: false, isWritable: false },
+      //{ pubkey: SYSVAR_INSTRUCTIONS_PUBKEY, isSigner: false, isWritable: false },
     ],
   });
 

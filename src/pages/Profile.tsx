@@ -45,6 +45,8 @@ import WithdrawalModal from "@components/util/WithdrawalModal";
 import RegionSelector from "@components/util/RegionSelector";
 import BackButton from "@components/util/BackButton";
 import { endpoints, options, NETWORK } from "../utils/constants";
+import { SupersizeVaultClient } from "../engine/SupersizeVaultClient";
+import { getComponentMapOnChain, getComponentMapOnEphem } from "../states/gamePrograms";
 
 Chart.register(LineElement, PointElement, LinearScale, Title, Tooltip, Legend);
 
@@ -263,14 +265,16 @@ function ProfileTab({ engine, username, setUsername, sessionWalletInUse, preferr
 }
 
 function AdminTab({ engine }: { engine: MagicBlockEngine }) {
+  const [vaultClient, setVaultClient] = useState<SupersizeVaultClient | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [myGames, setMyGames] = useState<ActiveGame[]>([]);
   const [openPanelIndex, setOpenPanelIndex] = useState<number | null>(null);
   const [gameOwner, setGameOwner] = useState<string>("");
   const [gameWallet, setGameWallet] = useState<string>("");
   const [gameTokenAccount, setGameTokenAccount] = useState<string>("");
-  const [tokenBalance, setTokenBalance] = useState<number>(0);
-  const [inspectAnteParsedData, setAnteParsedData] = useState("");
+  const [userTokenBalance, setUserTokenBalance] = useState<number>(0);
+  const [activePlayers, setActivePlayers] = useState<number>(0);
+  const [valueOnMap, setValueOnMap] = useState<number>(0);
   const [foodComponentCheck, setFoodComponentCheck] = useState<string>("");
   const [depositValue, setDepositValue] = useState<string>("");
   const [currentFoodToAdd, setCurrentFoodToAdd] = useState<number>(0);
@@ -309,11 +313,21 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
     runFetchGames();
   }, []);
 
+  useEffect(() => {
+    if (engine && engine.getWalletConnected()) {
+      setVaultClient(new SupersizeVaultClient(engine));
+    } else {
+      setVaultClient(null);
+    }
+  }, [engine]);
+
   const handlePanelOpen = async (engine: MagicBlockEngine, newGameInfo: ActiveGame) => {
+    
     // Reset states
-    setTokenBalance(0);
+    setUserTokenBalance(0);
+    setActivePlayers(0);
+    setValueOnMap(0);
     setPlayers([]);
-    setAnteParsedData("");
     setFoodComponentCheck("");
     setGameOwner("");
     setGameWallet("");
@@ -329,9 +343,48 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
       entity: mapEntityPda,
     });
 
+    
     try {  
       // p1: Process game and anteroom data
       const processGameData = async () => {
+
+        try {
+          let balance = 0;
+          if (newGameInfo.tokenMint) {
+            const balancePda = vaultClient?.mapBalancePda(mapComponentPda, newGameInfo.tokenMint);
+            if (balancePda) {
+              setGameWallet(balancePda.toString());
+              const new_balance = await vaultClient?.getGameBalance(mapComponentPda, newGameInfo.tokenMint);
+              console.log("new_balance",new_balance);
+              if (new_balance && new_balance !== "wrong_server") {
+                balance = new_balance;
+              } else {
+                console.log("wrong server");
+              }
+            }
+          }
+    
+          const mapInfo = await getComponentMapOnEphem(engine).account.map.fetchNullable(mapComponentPda);
+          console.log("mapInfo",mapInfo);
+          let valueOnMap = 0;
+          if (mapInfo) {
+            valueOnMap = mapInfo.valueOnMap.toNumber() / 10 ** newGameInfo.decimals;
+            setValueOnMap(valueOnMap);
+            const new_activePlayers = mapInfo.activePlayers;
+            setActivePlayers(new_activePlayers);
+            if (mapInfo.authority) {
+              setGameOwner(mapInfo.authority.toString());
+            }
+          }
+          console.log("balance",balance);
+    
+          // Update userTokenBalance immediately and force re-render
+          setUserTokenBalance(balance);
+    
+        } catch (error) {
+          console.log("Error getting account info:", error);
+        }
+        
         const { gameInfo: updatedGameInfo } = await getGameData(
           engine,
           newGameInfo.worldId,
@@ -452,6 +505,12 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
               <p style={{ flex: "1 1 30%" }}>Size: {row.size}</p>
               <p style={{ flex: "1 1 30%" }}>Token: {row.token.slice(0, 11)}</p>
               <p style={{ flex: "1 1 30%" }}>Buy in: {row.buy_in / 10 ** row.decimals}</p>
+              <p style={{ flex: "1 1 50%" }}>
+                Base food values: {row.buy_in / (2500 * 10 ** row.decimals)} - {row.buy_in * 3 / (2500 * 10 ** row.decimals)}
+              </p>
+              <p style={{ flex: "1 1 30%" }}>
+                Gold: {row.buy_in / (500 * 10 ** row.decimals)} - {row.buy_in / (250 * 10 ** row.decimals)} 
+              </p> 
               <p style={{ flex: "1 1 100%", marginTop: "10px" }}>
                 Game Owner: {" "} 
                 <a href={`https://solscan.io/account/${gameOwner}`} target="_blank" rel="noopener noreferrer">
@@ -465,7 +524,7 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                 </a>
               </p>
               <p style={{ flex: "1 1 30%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  Token Balance: {getRoundedAmount(tokenBalance / 10 ** row.decimals, row.buy_in / (1000 * 10 ** row.decimals) )}<br />
+                  Token Balance: {userTokenBalance.toFixed(2)}<br />
                 </p>
               <div
                 style={{
@@ -487,8 +546,17 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                   style={{ flex: "1 1 10%", margin: "10px" }}
                   onClick={() =>
                   {
-                    if (row.tokenMint) {
-                      deposit(engine, parseFloat(depositValue), new PublicKey(gameTokenAccount), row.tokenMint, row.decimals)
+                    if (row.tokenMint && vaultClient) {
+                      const mapEntityPda = FindEntityPda({
+                        worldId: row.worldId,
+                        entityId: new anchor.BN(0),
+                        seed: stringToUint8Array("origin"),
+                      });
+                      const mapComponentPda = FindComponentPda({
+                        componentId: COMPONENT_MAP_ID,
+                        entity: mapEntityPda,
+                      });
+                      deposit(vaultClient, parseFloat(depositValue), mapComponentPda, row.tokenMint)
                     }
                   }
                   }
@@ -514,26 +582,23 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                   justifyContent: "center",
                 }}
               >
-                <p style={{ margin: "10px" }}>Fees Earned: {cashoutStats.cashOutSum ? getRoundedAmount(cashoutStats.cashOutSum, row.buy_in / 1000) : "Loading"}</p>
-                <p style={{ margin: "10px" }}>Total Wagered: {cashoutStats.buyInSum ? getRoundedAmount(cashoutStats.buyInSum, row.buy_in / 1000) : "Loading"}</p>
-                <p style={{ margin: "10px" }}>Total Plays: {cashoutStats.buyInCount ? cashoutStats.buyInCount : "Loading"}</p>
+                <p style={{ margin: "10px" }}>Total Wagered (30D): {cashoutStats.buyInSum ? getRoundedAmount(cashoutStats.buyInSum, row.buy_in / 1000) : "Loading"}</p>
+                <p style={{ margin: "10px" }}>Total Plays (30D): {cashoutStats.buyInCount ? cashoutStats.buyInCount : "Loading"}</p>
+                <p style={{ margin: "10px" }}>Active Players: {activePlayers}</p>
+                <p style={{ margin: "10px" }}>Tokens on Map: {valueOnMap}</p>
               </div>
-              <p style={{ margin: "10px"}}>
-                Food value multiplier: {currentFoodToAdd}
-              </p>
-              <p style={{ margin: "10px"}}>
-                Green - Purple food value: {(row.buy_in * currentFoodToAdd) / (200000 * 10 ** row.decimals)} - {(row.buy_in * 7 * currentFoodToAdd) / (200000 * 10 ** row.decimals)}
-              </p>        
+
               <div style={{ display: "flex", flexWrap: "wrap", width: "100%", alignItems: "center", justifyContent: "center" }}>
-              <CollapsiblePanel title="Food Value Curve" defaultOpen={false}>
+              <CollapsiblePanel title="User Metrics" defaultOpen={false}>
                 <Graph 
                   maxPlayers={row.max_players}
-                  foodInWallet={Math.floor(tokenBalance / row.buy_in) * 1000}
+                  foodInWallet={Math.floor(userTokenBalance / row.buy_in) * 1000}
                   buyIn={row.buy_in}
                   decimals={row.decimals}
                 />
               </CollapsiblePanel>
               </div>
+
               <div
                 style={{
                   display: "flex",
@@ -639,7 +704,7 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                   }}
                 >
                   <CollapsiblePanel title="Players" defaultOpen={true}>
-                  <p style={{ margin: "5px" }}>* if someone is playing, the player should be delegated</p>
+                  <p style={{ margin: "5px" }}>* player components should always be delegated</p>
                   <div style={{ overflowY: "scroll", maxHeight: "200px" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <tbody>
@@ -714,11 +779,10 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                             }}
                           >
                             <th style={{ padding: "5px", borderBottom: "1px solid #ccc" }}>Network</th>
-                            <th style={{ padding: "5px", borderBottom: "1px solid #ccc" }}>Status</th>
-                            <th style={{ padding: "5px", borderBottom: "1px solid #ccc" }}>Mass</th>
+                            <th style={{ padding: "5px", borderBottom: "1px solid #ccc" }}></th>
+                            <th style={{ padding: "5px", borderBottom: "1px solid #ccc" }}>Name</th>
                             <th style={{ padding: "5px", borderBottom: "1px solid #ccc" }}>Score</th>
                             <th style={{ padding: "5px", borderBottom: "1px solid #ccc" }}>Authority</th>
-                            <th style={{ padding: "5px", borderBottom: "1px solid #ccc" }}>Payout</th>
                           </tr>
                           <tr
                             style={{
@@ -729,10 +793,9 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                           >
                             <td style={{ padding: "5px", fontWeight: "bold" }}>mainnet</td>
                             <td style={{ padding: "5px" }}>
-                              {player.parsedData?.status ? player.parsedData.status : "N/A"}
                             </td>
                             <td style={{ padding: "5px" }}>
-                              {player.parsedData?.mass ? parseInt(player.parsedData.mass).toString() : "N/A"}
+                              {player.parsedData?.name ? player.parsedData.name : "N/A"}
                             </td>
                             <td style={{ padding: "5px" }}>
                               {typeof player.playersParsedDataEphem?.score.toNumber() === "number"
@@ -740,18 +803,14 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                                 : "N/A"}
                             </td>
                             <td style={{ padding: "5px" }}>
-                              {player.parsedData?.authority?.toString().slice(0, 3)}...
-                              {player.parsedData?.authority?.toString().slice(-3)}
-                            </td>
-                            <td style={{ padding: "5px" }}>
-                              <a
-                                href={`https://solscan.io/account/${player.playerWallet?.toString()}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                {player.playerWallet?.toString().slice(0, 3)}...
-                                {player.playerWallet?.toString().slice(-3)}
-                              </a>
+                                <a
+                                  href={`https://solscan.io/account/${player.playersParsedDataEphem?.authority?.toString()}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                {player.playersParsedDataEphem?.authority?.toString().slice(0, 3)}...
+                                {player.playersParsedDataEphem?.authority?.toString().slice(-3)}
+                                </a>
                             </td>
                           </tr>
                           <tr
@@ -763,10 +822,9 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                           >
                             <td style={{ padding: "5px", fontWeight: "bold" }}>ephemeral</td>
                             <td style={{ padding: "5px" }}>
-                              {player.playersParsedDataEphem?.status}
                             </td>
                             <td style={{ padding: "5px" }}>
-                              {parseInt(player.playersParsedDataEphem?.mass).toString() || "N/A"}
+                              {player.playersParsedDataEphem?.name ? player.playersParsedDataEphem.name : "N/A"}
                             </td>
                             <td style={{ padding: "5px" }}>
                               {typeof player.playersParsedDataEphem?.score.toNumber() === "number"
@@ -774,18 +832,14 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                                 : "N/A"}
                             </td>
                             <td style={{ padding: "5px" }}>
-                              {player.playersParsedDataEphem?.authority?.toString().slice(0, 3)}...
-                              {player.playersParsedDataEphem?.authority?.toString().slice(-3)}
-                            </td>
-                            <td style={{ padding: "5px" }}>
                               <a
-                                href={`https://solscan.io/account/${player.playerWalletEphem?.toString()}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                {player.playerWalletEphem?.toString().slice(0, 3)}...
-                                {player.playerWalletEphem?.toString().slice(-3)}
-                              </a>
+                                  href={`https://solscan.io/account/${player.playersParsedDataEphem?.authority?.toString()}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                {player.playersParsedDataEphem?.authority?.toString().slice(0, 3)}...
+                                {player.playersParsedDataEphem?.authority?.toString().slice(-3)}
+                                </a>
                             </td>
                           </tr>
                         </React.Fragment>
@@ -796,11 +850,6 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                 </CollapsiblePanel>
                 </p>
               </div>
-              <CollapsiblePanel title="Anteroom component" defaultOpen={true}>
-                <p style={{ flex: "1 1 100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {inspectAnteParsedData}
-                </p>
-              </CollapsiblePanel>
               <div
                 style={{
                   display: "flex",
