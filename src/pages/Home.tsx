@@ -3,8 +3,21 @@ import { useNavigate } from "react-router-dom";
 import "./Home.scss";
 import { ActiveGame, Food } from "@utils/types";
 import { cachedTokenMetadata, NETWORK, options } from "@utils/constants";
-import { formatBuyIn, fetchTokenBalance, pingEndpointsStream, pingSpecificEndpoint, getMaxPlayers, getNetwork } from "@utils/helper";
-import { FindEntityPda, FindComponentPda, FindWorldPda, createDelegateInstruction, BN } from "@magicblock-labs/bolt-sdk";
+import {
+  formatBuyIn,
+  fetchTokenBalance,
+  pingEndpointsStream,
+  pingSpecificEndpoint,
+  getMaxPlayers,
+  getNetwork,
+} from "@utils/helper";
+import {
+  FindEntityPda,
+  FindComponentPda,
+  FindWorldPda,
+  createDelegateInstruction,
+  BN,
+} from "@magicblock-labs/bolt-sdk";
 import { PublicKey, Transaction } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import { Tooltip } from "react-tooltip";
@@ -80,7 +93,7 @@ const Home = ({
 
   const handleEnterKeyPress = async (inputValue: string) => {
     console.log("Searching game", inputValue);
-    const thisEndpoint = endpoints[NETWORK][options.indexOf(selectedServer.current)];
+    const thisEndpoint = engine.getEndpointEphemRpc(); // endpoints[NETWORK][options.indexOf(selectedServer.current)];
     if (inputValue.trim() !== "") {
       isSearchingGame.current = true;
       try {
@@ -94,12 +107,31 @@ const Home = ({
         const worldPda = await FindWorldPda(worldId);
         const newGameInfo = createUnloadedGame(worldId.worldId, worldPda, "", true);
         try {
-          const { gameInfo: updateGameInfo } = await getGameData(engine, worldId.worldId, thisEndpoint, newGameInfo.activeGame);
+          const { gameInfo: updateGameInfo } = await getGameData(
+            engine,
+            worldId.worldId,
+            thisEndpoint,
+            newGameInfo.activeGame,
+          );
           newGameInfo.activeGame = updateGameInfo;
-          if (newGameInfo.activeGame.max_players > 0){
-            console.log("new game info", newGameInfo, updateGameInfo, newGameInfo.activeGame.worldId, newGameInfo.activeGame.worldPda.toString());
+          if (newGameInfo.activeGame.max_players > 0) {
+            console.log(
+              "new game info",
+              newGameInfo,
+              updateGameInfo,
+              newGameInfo.activeGame.worldId,
+              newGameInfo.activeGame.worldPda.toString(),
+            );
             setSelectedGame(newGameInfo.activeGame);
-            let updatedPlayerInfo = await updatePlayerInfo(engine, newGameInfo.activeGame.worldId, newGameInfo.activeGame.max_players, "new_player", new PublicKey(0), 0, thisEndpoint);
+            let updatedPlayerInfo = await updatePlayerInfo(
+              engine,
+              newGameInfo.activeGame.worldId,
+              newGameInfo.activeGame.max_players,
+              "new_player",
+              new PublicKey(0),
+              0,
+              thisEndpoint,
+            );
             newGameInfo.activeGame.active_players = updatedPlayerInfo.activeplayers;
             newGameInfo.activeGame.isLoaded = true;
 
@@ -155,9 +187,15 @@ const Home = ({
       setActiveGamesLoaded(refreshedGames);
 
       let max_players = getMaxPlayers(activeGames[index].activeGame.size);
-      let updatedPlayerInfo = await updatePlayerInfo(engine, activeGames[index].activeGame.worldId, max_players, 
-        activeGames[index].playerInfo.playerStatus, activeGames[index].playerInfo.newplayerEntityPda, activeGames[index].activeGame.active_players,
-        activeGames[index].activeGame.endpoint);
+      let updatedPlayerInfo = await updatePlayerInfo(
+        engine,
+        activeGames[index].activeGame.worldId,
+        max_players,
+        activeGames[index].playerInfo.playerStatus,
+        activeGames[index].playerInfo.newplayerEntityPda,
+        activeGames[index].activeGame.active_players,
+        activeGames[index].activeGame.endpoint,
+      );
       const newgame: FetchedGame = {
         activeGame: {
           ...activeGames[index].activeGame,
@@ -180,15 +218,11 @@ const Home = ({
     }
   };
 
-  const fetchAndLogMapData = async (
-    engine: MagicBlockEngine,
-    activeGames: FetchedGame[],
-    server: string,
-  ) => {
+  const fetchAndLogMapData = async (engine: MagicBlockEngine, activeGames: FetchedGame[], server: string) => {
     let pingResults = await pingSpecificEndpoint(server);
     let pingTime = pingResults.pingTime;
     pingResultsRef.current = pingResultsRef.current.map((result) =>
-      result.endpoint === server ? { ...result, pingTime: pingTime } : result
+      result.endpoint === server ? { ...result, pingTime: pingTime } : result,
     );
     let filteredGames = [...activeGames];
     const serverIndex = endpoints[NETWORK].indexOf(server);
@@ -207,14 +241,14 @@ const Home = ({
       const preMergedGames = [...filteredGames];
 
       //if(!(server === filteredGames[i].activeGame.endpoint || filteredGames[i].activeGame.endpoint === endpoints["devnet"][serverIndex])){
-      if(server !== filteredGames[i].activeGame.endpoint){
+      if (server !== filteredGames[i].activeGame.endpoint) {
         preNewGame.activeGame.isLoaded = false;
         preMergedGames[i] = preNewGame;
         filteredGames = preMergedGames;
         activeGamesRef.current[i] = preNewGame;
         setActiveGamesLoaded(preMergedGames);
         continue;
-      } 
+      }
       console.log("engine", engine);
       try {
         preMergedGames[i] = preNewGame;
@@ -222,12 +256,23 @@ const Home = ({
         setActiveGamesLoaded(preMergedGames);
 
         let activeGameCopy = filteredGames[i].activeGame;
-        const { gameInfo: updateGameInfo } = await getGameData(engine, activeGameCopy.worldId, activeGameCopy.endpoint, activeGameCopy);
+        const { gameInfo: updateGameInfo } = await getGameData(
+          engine,
+          activeGameCopy.worldId,
+          activeGameCopy.endpoint,
+          activeGameCopy,
+        );
         activeGameCopy = updateGameInfo;
         let max_players = getMaxPlayers(activeGameCopy.size);
-        let updatedPlayerInfo = await updatePlayerInfo(engine, activeGameCopy.worldId, max_players, 
-          filteredGames[i].playerInfo.playerStatus, filteredGames[i].playerInfo.newplayerEntityPda, activeGameCopy.active_players,  
-          activeGameCopy.endpoint);
+        let updatedPlayerInfo = await updatePlayerInfo(
+          engine,
+          activeGameCopy.worldId,
+          max_players,
+          filteredGames[i].playerInfo.playerStatus,
+          filteredGames[i].playerInfo.newplayerEntityPda,
+          activeGameCopy.active_players,
+          activeGameCopy.endpoint,
+        );
         const newgame: FetchedGame = {
           activeGame: {
             ...activeGameCopy,
@@ -248,7 +293,7 @@ const Home = ({
         console.log(`Error fetching map data for game ID ${filteredGames[i].activeGame.worldId}:`, error);
       }
     }
-  }
+  };
 
   const handlePlayButtonClick = async (game: FetchedGame) => {
     let networkType = getNetwork(game.activeGame.endpoint);
@@ -257,20 +302,27 @@ const Home = ({
     setSelectedGame(game.activeGame);
 
     if (game.playerInfo.playerStatus === "new_player") {
-        const alertId = NotificationService.addAlert({
-          type: "success",
-          message: "submitting buy in...",
-          shouldExit: false,
-        });
+      const alertId = NotificationService.addAlert({
+        type: "success",
+        message: "submitting buy in...",
+        shouldExit: false,
+      });
       let max_players = getMaxPlayers(game.activeGame.size);
-      let updatedPlayerInfo = await updatePlayerInfo(engine, game.activeGame.worldId, max_players, game.playerInfo.playerStatus, 
-        game.playerInfo.newplayerEntityPda, game.activeGame.active_players, game.activeGame.endpoint);
+      let updatedPlayerInfo = await updatePlayerInfo(
+        engine,
+        game.activeGame.worldId,
+        max_players,
+        game.playerInfo.playerStatus,
+        game.playerInfo.newplayerEntityPda,
+        game.activeGame.active_players,
+        game.activeGame.endpoint,
+      );
       const myplayerComponent = FindComponentPda({
-          componentId: COMPONENT_PLAYER_ID,
+        componentId: COMPONENT_PLAYER_ID,
         entity: updatedPlayerInfo.newPlayerEntityPda,
       });
       console.log("updatedPlayerInfo", updatedPlayerInfo.newPlayerEntityPda.toString(), myplayerComponent.toString());
-      if (updatedPlayerInfo.playerStatus == "Game Full" || updatedPlayerInfo.playerStatus == "error"){
+      if (updatedPlayerInfo.playerStatus == "Game Full" || updatedPlayerInfo.playerStatus == "error") {
         const exitAlertId = NotificationService.addAlert({
           type: "error",
           message: updatedPlayerInfo.playerStatus,
@@ -284,10 +336,14 @@ const Home = ({
         playerStatus: updatedPlayerInfo.playerStatus,
         newplayerEntityPda: updatedPlayerInfo.newPlayerEntityPda,
       };
-      const { tokenBalance, hasInsufficientTokenBalance } = await fetchTokenBalance(engine, game.activeGame, networkType == "devnet");
+      const { tokenBalance, hasInsufficientTokenBalance } = await fetchTokenBalance(
+        engine,
+        game.activeGame,
+        networkType == "devnet",
+      );
       setTokenBalance(tokenBalance);
       setHasInsufficientTokenBalance(hasInsufficientTokenBalance);
-      
+
       const result = await gameExecuteJoin(
         engine,
         game.activeGame,
@@ -297,10 +353,9 @@ const Home = ({
         networkType == "devnet" || sessionWalletInUse,
         setMyPlayerEntityPda,
       );
-      if (result.success) { 
-        navigate("/game"); 
-      }
-      else{
+      if (result.success) {
+        navigate("/game");
+      } else {
         const exitAlertId = NotificationService.addAlert({
           type: "error",
           message: result.error || "Error submitting buy in",
@@ -324,11 +379,7 @@ const Home = ({
   const refreshAllGames = async () => {
     console.log(`Refreshing games in ${selectedEndpoint}`);
     setIsLoadingCurrentGames(true);
-    await fetchAndLogMapData(
-      engine,
-      activeGamesRef.current,
-      selectedEndpoint,
-    );
+    await fetchAndLogMapData(engine, activeGamesRef.current, selectedEndpoint);
     setIsLoadingCurrentGames(false);
   };
 
@@ -346,9 +397,7 @@ const Home = ({
       }
 
       await pingEndpointsStream((result) => {
-        pingResultsRef.current = pingResultsRef.current.map((r) =>
-          r.endpoint === result.endpoint ? result : r,
-        );
+        pingResultsRef.current = pingResultsRef.current.map((r) => (r.endpoint === result.endpoint ? result : r));
         if (!selectedServer.current) {
           selectedServer.current = result.region;
           setSelectedEndpoint(result.endpoint);
@@ -413,11 +462,7 @@ const Home = ({
       try {
         setIsLoadingCurrentGames(true);
         await fetchAndLogMapData(engine, activeGamesRef.current, selectedEndpoint);
-        setTimeout(
-          checkActiveGamesLoaded,
-          checkActiveGamesLoadedWait.current,
-          selectedEndpoint,
-        );
+        setTimeout(checkActiveGamesLoaded, checkActiveGamesLoadedWait.current, selectedEndpoint);
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -431,7 +476,6 @@ const Home = ({
     fetchGameData();
   }, [selectedEndpoint]);
 
-  
   return (
     <div className="main-container">
       <div
@@ -453,7 +497,7 @@ const Home = ({
             name: "",
             authority: null,
             score: 0,
-            circles: [{x: 5000, y: 5000, radius: 0, size: 0, speed: 0}],
+            circles: [{ x: 5000, y: 5000, radius: 0, size: 0, speed: 0 }],
             removal: new BN(0),
             x: 5000,
             y: 5000,
@@ -461,21 +505,45 @@ const Home = ({
             target_y: 5000,
             timestamp: 0,
           }}
-          screenSize={{width: window.innerWidth, height: window.innerHeight }}
-          newTarget={{ x: 0, y: 0}}
+          screenSize={{ width: window.innerWidth, height: window.innerHeight }}
+          newTarget={{ x: 0, y: 0 }}
           gameSize={10000}
           buyIn={0}
         />
       </div>
       <MenuBar tokenBalance={tokenBalance} />
 
-      <div className="banner" style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-          <img src="/superblob-oneword.png" alt="SUPER BLOB" className="banner-title" style={{ width: "100%", height: "100%", marginTop: "10%"}}/>
-          <div style={{ position: "absolute", display: "none", flexDirection: "column", alignItems: "flex-end", justifyContent: "center", right: "-2em", top: "3em"}}>
-            <img src={`${process.env.PUBLIC_URL}/snake.png`} alt="Banner" style={{ width: "200px", height: "auto" }} />
-          </div>
+      <div
+        className="banner"
+        style={{
+          position: "relative",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <img
+          src="/superblob-oneword.png"
+          alt="SUPER BLOB"
+          className="banner-title"
+          style={{ width: "100%", height: "100%", marginTop: "10%" }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            display: "none",
+            flexDirection: "column",
+            alignItems: "flex-end",
+            justifyContent: "center",
+            right: "-2em",
+            top: "3em",
+          }}
+        >
+          <img src={`${process.env.PUBLIC_URL}/snake.png`} alt="Banner" style={{ width: "200px", height: "auto" }} />
+        </div>
       </div>
-      <div className="home-container" style={{ position: "relative" }}> 
+      <div className="home-container" style={{ position: "relative" }}>
         <div className="mobile-only mobile-alert">For the best experience, use a desktop or laptop.</div>
         <div className="table-container">
           <div className="filters-header">
@@ -543,106 +611,108 @@ const Home = ({
                   </td>
                 </tr>
               )}
-              {activeGamesLoaded
-                .map((row, idx) => (
-                  <tr key={idx} style={{ display: !row.activeGame.isLoaded ? "none" : "table-row" }}>
-                    <td>{row.activeGame.worldId.toString()}</td>
-                    <td>
-                      {row.activeGame.permissionless === true ? (
-                        <span className="community-list">Community</span>
-                      ) : (
-                        <span className="strict-list">Supersize</span>
-                      )}
-                    </td>
-                    <td>
-                      {row.activeGame.isLoaded ? (
-                        <>
-                          <img src={row.activeGame.image} alt={row.activeGame.name} className="token-image" style={{ marginRight: "5px" }} />
-                          <span>{row.activeGame.token}</span>
-                        </>
-                      ) : (
-                        <Spinner />
-                      )}
-                    </td>
-                    <td style={{ color: "#898989" }}>
-                      {row.activeGame.isLoaded ? (
-                        formatBuyIn(row.activeGame.buy_in / 10 ** row.activeGame.decimals)
-                      ) : (
-                        <Spinner />
-                      )}
-                    </td>
-                    <td>
-                      {row.activeGame.isLoaded && row.activeGame.active_players >= 0 ? (
-                        row.activeGame.active_players + "/" + row.activeGame.max_players
-                      ) : (
-                        <Spinner />
-                      )}
-                    </td>
-
-                    <td className="desktop-only">
-                      <button
-                        className="btn-play"
-                        disabled={
-                          !row.activeGame.isLoaded ||
-                          row.activeGame.active_players < 0 ||
-                          row.playerInfo.playerStatus == "error" ||
-                          row.playerInfo.playerStatus == "Game Full" ||
-                          engine.getWalletConnected() == false
-                        }
-                        onClick={() => {
-                          handlePlayButtonClick(row);
-                        }}
-                        data-tooltip-id={`connect-wallet-${idx}`}
-                        data-tooltip-content="Connect wallet to play"
-                      >
-                        {{
-                          new_player: "Play",
-                          cashing_out: "Cash Out",
-                          in_game: "Resume",
-                        }[row.playerInfo.playerStatus] || row.playerInfo.playerStatus}
-                      </button>
-                      {engine.getWalletConnected() == false && <Tooltip id={`connect-wallet-${idx}`} />}
-                    </td>
-                    <td className="desktop-only">
-                      <button
-                        data-tooltip-id={`refresh-game-${idx}`}
-                        data-tooltip-content="Refresh game"
-                        onClick={async () => {
-                          try {
-                            setLoadingGameNum(idx);
-                            await handleRefresh(
-                              engine,
-                              activeGamesRef.current,
-                              idx,
-                            );
-                            setLoadingGameNum(-1);
-                          } catch (error) {
-                            console.log("Error refreshing game:", error);
-                            setLoadingGameNum(-1);
-                          }
-                        }}
-                      >
+              {activeGamesLoaded.map((row, idx) => (
+                <tr key={idx} style={{ display: !row.activeGame.isLoaded ? "none" : "table-row" }}>
+                  <td>{row.activeGame.worldId.toString()}</td>
+                  <td>
+                    {row.activeGame.permissionless === true ? (
+                      <span className="community-list">Community</span>
+                    ) : (
+                      <span className="strict-list">Supersize</span>
+                    )}
+                  </td>
+                  <td>
+                    {row.activeGame.isLoaded ? (
+                      <>
                         <img
-                          src="/icons/arrows-rotate.svg"
-                          width={18}
-                          className={`${loadingGameNum === idx ? "refresh-icon" : ""}`}
+                          src={row.activeGame.image}
+                          alt={row.activeGame.name}
+                          className="token-image"
+                          style={{ marginRight: "5px" }}
                         />
-                      </button>
-                      <Tooltip id={`refresh-game-${idx}`} />
-                    </td>
-                  </tr>
-                ))}
+                        <span>{row.activeGame.token}</span>
+                      </>
+                    ) : (
+                      <Spinner />
+                    )}
+                  </td>
+                  <td style={{ color: "#898989" }}>
+                    {row.activeGame.isLoaded ? (
+                      formatBuyIn(row.activeGame.buy_in / 10 ** row.activeGame.decimals)
+                    ) : (
+                      <Spinner />
+                    )}
+                  </td>
+                  <td>
+                    {row.activeGame.isLoaded && row.activeGame.active_players >= 0 ? (
+                      row.activeGame.active_players + "/" + row.activeGame.max_players
+                    ) : (
+                      <Spinner />
+                    )}
+                  </td>
+
+                  <td className="desktop-only">
+                    <button
+                      className="btn-play"
+                      disabled={
+                        !row.activeGame.isLoaded ||
+                        row.activeGame.active_players < 0 ||
+                        row.playerInfo.playerStatus == "error" ||
+                        row.playerInfo.playerStatus == "Game Full" ||
+                        engine.getWalletConnected() == false
+                      }
+                      onClick={() => {
+                        handlePlayButtonClick(row);
+                      }}
+                      data-tooltip-id={`connect-wallet-${idx}`}
+                      data-tooltip-content="Connect wallet to play"
+                    >
+                      {{
+                        new_player: "Play",
+                        cashing_out: "Cash Out",
+                        in_game: "Resume",
+                      }[row.playerInfo.playerStatus] || row.playerInfo.playerStatus}
+                    </button>
+                    {engine.getWalletConnected() == false && <Tooltip id={`connect-wallet-${idx}`} />}
+                  </td>
+                  <td className="desktop-only">
+                    <button
+                      data-tooltip-id={`refresh-game-${idx}`}
+                      data-tooltip-content="Refresh game"
+                      onClick={async () => {
+                        try {
+                          setLoadingGameNum(idx);
+                          await handleRefresh(engine, activeGamesRef.current, idx);
+                          setLoadingGameNum(-1);
+                        } catch (error) {
+                          console.log("Error refreshing game:", error);
+                          setLoadingGameNum(-1);
+                        }
+                      }}
+                    >
+                      <img
+                        src="/icons/arrows-rotate.svg"
+                        width={18}
+                        className={`${loadingGameNum === idx ? "refresh-icon" : ""}`}
+                      />
+                    </button>
+                    <Tooltip id={`refresh-game-${idx}`} />
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
+        <div className="mobile-alert">Connected to {engine.getEndpointEphemRpc()}</div>
       </div>
-      {(selectedGame && hasInsufficientTokenBalance) 
-      && 
-      <BalanceWarning 
-        activeGame={selectedGame} 
-        tokenBalance={tokenBalance}
-        setHasInsufficientTokenBalance={setHasInsufficientTokenBalance}
-        setTokenBalance={setTokenBalance}/>}
+      {selectedGame && hasInsufficientTokenBalance && (
+        <BalanceWarning
+          activeGame={selectedGame}
+          tokenBalance={tokenBalance}
+          setHasInsufficientTokenBalance={setHasInsufficientTokenBalance}
+          setTokenBalance={setTokenBalance}
+        />
+      )}
       <NotificationContainer />
       <SignUpBanner engine={engine} preferredRegion={preferredRegion} />
     </div>
