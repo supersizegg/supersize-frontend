@@ -66,7 +66,8 @@ export class MagicBlockEngine {
     this.walletType = walletType;
     this.sessionKey = sessionKey;
     this.sessionConfig = sessionConfig;
-    this.endpointEphemRpc = endpoints[NETWORK][1]; 
+    // FIX: set to Asia by default for debugging
+    this.endpointEphemRpc = endpoints[NETWORK][2];
     this.connectionEphem = new Connection(this.endpointEphemRpc, {
       wsEndpoint: this.endpointEphemRpc.replace("http", "ws"),
     });
@@ -95,6 +96,7 @@ export class MagicBlockEngine {
   }
 
   public setEndpointEphemRpc(endpoint: string): void {
+    console.log("setEndpointEphemRpc", endpoint);
     this.endpointEphemRpc = endpoint;
     this.connectionEphem = new Connection(endpoint, {
       wsEndpoint: endpoint.replace("http", "ws"),

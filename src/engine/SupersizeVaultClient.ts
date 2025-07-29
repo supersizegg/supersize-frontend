@@ -64,6 +64,8 @@ export class SupersizeVaultClient {
     const gwPda = this.gameWalletPda();
     const balPda = this.userBalancePda(this.wallet, mint);
 
+    console.log("Vault Ephem Endpoint", this.engine.getEndpointEphemRpc());
+
     const gwInfo = await this.mainChainConnection.getAccountInfo(gwPda);
     if (!gwInfo) {
       const ephemIdentity = await this.engine.getConnectionEphem().getSlotLeader();

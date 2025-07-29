@@ -1,13 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import { useMagicBlockEngine } from "../../engine/MagicBlockEngineProvider";
 import { SupersizeVaultClient } from "../../engine/SupersizeVaultClient";
-import { cachedTokenMetadata, NETWORK, endpoints } from "../../utils/constants";
+import { cachedTokenMetadata } from "../../utils/constants";
 import TokenTransferModal from "../TokenTransferModal/TokenTransferModal";
 import "./MenuSession.scss";
-import { useSolanaWallets } from "@privy-io/react-auth/solana";
-import { getRegion } from "../../utils/helper";
 
 type UserStatus = "loading" | "uninitialized" | "ready_to_delegate" | "delegated";
 
@@ -18,7 +15,6 @@ export interface TokenBalance {
 
 export function MenuSession() {
   const engine = useMagicBlockEngine();
-  //const { connected: isWalletConnected } = useWallet();
 
   const [vaultClient, setVaultClient] = useState<SupersizeVaultClient | null>(null);
   const [status, setStatus] = useState<UserStatus>("loading");
@@ -30,7 +26,7 @@ export function MenuSession() {
   }>(null);
 
   useEffect(() => {
-    console.log(engine)
+    console.log(engine.getEndpointEphemRpc())
     if (engine && engine.getWalletConnected()) {
       setVaultClient(new SupersizeVaultClient(engine));
     } else {
@@ -42,7 +38,6 @@ export function MenuSession() {
   const refreshVaultBalances = useCallback(async () => {
     if (!vaultClient) return;
 
-    //setStatus("loading");
     const supportedMints = Object.keys(cachedTokenMetadata);
     const balances: TokenBalance[] = [];
 
@@ -58,7 +53,6 @@ export function MenuSession() {
     }
 
     setTokenBalances(balances);
-    //setStatus("ready_to_delegate");
   }, [vaultClient]);
 
   const checkStatus = useCallback(async () => {
@@ -79,7 +73,6 @@ export function MenuSession() {
         }
         setStatus("delegated");
         await refreshVaultBalances();
-        //setTokenBalances([]);
       } else {
         if (gwPdaCheck) {
           if (gwPdaCheck.toString() !==  engine.getSessionPayer().toString()) {
@@ -205,13 +198,6 @@ export function MenuSession() {
                 </tr>
               </thead>
               <tbody>
-                {/*status === "delegated" && (
-                  <tr>
-                    <td colSpan={4} style={{ textAlign: "center", opacity: 0.7 }}>
-                      Balances are managed in-game. Withdraw to see updated balance.
-                    </td>
-                  </tr>
-                )*/}
                 {(status === "ready_to_delegate"  || status === "delegated") &&
                   tokenBalances.map(({ mint, uiAmount }) => {
                     let meta = cachedTokenMetadata[mint];

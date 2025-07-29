@@ -14,6 +14,7 @@ import { ActiveGame, FetchedGame, Food } from "@utils/types";
 import { useState } from "react";
 import { PublicKey } from "@solana/web3.js";
 import { activeGamesList, NETWORK } from "@utils/constants";
+import { pingEndpoints, getRegion } from "@utils/helper";
 import { createUnloadedGame } from "@utils/game";
 import { useMagicBlockEngine } from "./engine/MagicBlockEngineProvider";
 import { SupersizeVaultClient } from "./engine/SupersizeVaultClient";
@@ -63,6 +64,14 @@ const AppRoutes = () => {
     const fetchGameWalletEphem = async () => {
       if (vaultClient) {
         await vaultClient.findMyEphemEndpoint(setPreferredRegion);
+      } else {
+        const pingResults = await pingEndpoints();
+        console.log('Vault is not initialized, fallback pinging endpoints', pingResults);
+        if (pingResults.lowestPingEndpoint) {
+          setPreferredRegion(getRegion(pingResults.lowestPingEndpoint.region));
+          engine.setEndpointEphemRpc(pingResults.lowestPingEndpoint.endpoint);
+          console.log("Set ephem endpoint to", engine.getEndpointEphemRpc());
+        }
       }
     };
 

@@ -449,7 +449,7 @@ export function getRegion(endpoint: string): string {
   if (endpoint === endpoints[NETWORK][0]) return "europe";
   if (endpoint === endpoints[NETWORK][1]) return "america";
   if (endpoint === endpoints[NETWORK][2]) return "asia";
-  return "unknown";
+  return endpoint;
 }
 
 export const getSectionIndex = (x: number, y: number, mapSize: number, duplicateEncodings: number = 1): number => {

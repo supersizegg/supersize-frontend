@@ -387,7 +387,7 @@ const Home = ({
     const fetchPingData = async () => {
       setIsLoadingCurrentGames(true);
       //let stored = localStorage.getItem("preferredRegion");
-      console.log("preferredRegion", preferredRegion);
+      console.log("Preferred region:", preferredRegion);
       let stored = preferredRegion;
       if (stored) {
         selectedServer.current = stored;
@@ -703,7 +703,7 @@ const Home = ({
             </tbody>
           </table>
         </div>
-        <div className="mobile-alert">Connected to {engine.getEndpointEphemRpc()}</div>
+        <div className="mobile-alert">Connected to {selectedServer.current}</div>
       </div>
       {selectedGame && hasInsufficientTokenBalance && (
         <BalanceWarning
