@@ -375,9 +375,10 @@ export class SupersizeVaultClient {
 
     const balPda = this.mapBalancePda(mapComponentPda, mint);
     console.log("Fetching balance for PDA:", balPda.toBase58());
+    const currentProgramEphem = this.engine.getProgramOnSpecificEphem(supersizeVaultIdl as Idl, this.engine.getEndpointEphemRpc());
     const acc = await this.program.account.balance.fetchNullable(balPda);
     if (!acc) return 0;
-    const balanceAcc = await this.programEphem.account.balance.fetchNullable(
+    const balanceAcc = await currentProgramEphem.account.balance.fetchNullable(
       balPda
     );
     if (!balanceAcc) return "wrong_server";
@@ -393,11 +394,14 @@ export class SupersizeVaultClient {
 
     const balPda = this.userBalancePda(this.wallet, mint);
     console.log("Fetching balance for PDA:", balPda.toBase58());
+    console.log("ephem endpoint", this.engine.getEndpointEphemRpc());
+    const currentProgramEphem = this.engine.getProgramOnSpecificEphem(supersizeVaultIdl as Idl, this.engine.getEndpointEphemRpc());
     const acc = await this.program.account.balance.fetchNullable(balPda);
     if (!acc) return 0;
-    const balanceAcc = await this.programEphem.account.balance.fetchNullable(
+    const balanceAcc = await currentProgramEphem.account.balance.fetchNullable(
       balPda
     );
+    console.log("balanceAcc", balanceAcc);
     if (!balanceAcc) return "wrong_server";
     const conn = this.program.provider.connection;
     const { decimals } = await getMint(conn, mint);
