@@ -87,7 +87,7 @@ export const activeGamesList: {
       endpoint: "https://supersize-fra.magicblock.app",
     },
     {
-      worldId: new anchor.BN(2234),
+      worldId: new anchor.BN(2334),
       worldPda: new PublicKey("5ywP8AFDBYsNT4uWSXvGBKQ8cjcFX1enz9NcN2dQFGj8"),
       endpoint: "https://supersize.magicblock.app",
     },

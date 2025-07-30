@@ -239,7 +239,6 @@ const Home = ({
         } as PlayerInfo,
       };
       const preMergedGames = [...filteredGames];
-
       //if(!(server === filteredGames[i].activeGame.endpoint || filteredGames[i].activeGame.endpoint === endpoints["devnet"][serverIndex])){
       if (server !== filteredGames[i].activeGame.endpoint) {
         preNewGame.activeGame.isLoaded = false;
@@ -249,7 +248,6 @@ const Home = ({
         setActiveGamesLoaded(preMergedGames);
         continue;
       }
-      console.log("engine", engine);
       try {
         preMergedGames[i] = preNewGame;
         filteredGames = preMergedGames;
@@ -262,6 +260,7 @@ const Home = ({
           activeGameCopy.endpoint,
           activeGameCopy,
         );
+
         activeGameCopy = updateGameInfo;
         let max_players = getMaxPlayers(activeGameCopy.size);
         let updatedPlayerInfo = await updatePlayerInfo(
@@ -391,7 +390,8 @@ const Home = ({
       let stored = preferredRegion;
       if (stored) {
         selectedServer.current = stored;
-        setSelectedEndpoint(endpoints[NETWORK][options.indexOf(stored)]);
+        const server_index = options.map(option => option.toLowerCase()).indexOf(stored.toLowerCase());
+        setSelectedEndpoint(endpoints[NETWORK][server_index]);
         setIsLoadingCurrentGames(false);
         return;
       }
@@ -444,6 +444,7 @@ const Home = ({
           },
         };
       }
+
       activeGamesRef.current = clearPingGames;
       setActiveGamesLoaded(clearPingGames);
 
@@ -454,9 +455,9 @@ const Home = ({
       const gamesCountInEndpoint = activeGamesRef.current.filter(
         (row) => row.activeGame.endpoint === selectedEndpoint,
       ).length;
-      console.log("Number of games in endpoint", gamesCountInEndpoint);
+      console.log("Number of games in endpoint", gamesCountInEndpoint, isLoadingCurrentGames);
       setNumberOfGamesInEndpoint(gamesCountInEndpoint);
-      if (isLoadingCurrentGames === true || gamesCountInEndpoint === 0) {
+      if (gamesCountInEndpoint === 0) {
         return;
       }
       try {
