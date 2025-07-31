@@ -1,6 +1,6 @@
 import { createTransferInstruction } from "@solana/spl-token";
 import { createDelegateInstruction } from "@magicblock-labs/bolt-sdk";
-import { AccountMeta, ComputeBudgetProgram } from "@solana/web3.js";
+import { AccountMeta, ComputeBudgetProgram, ParsedTransactionWithMeta } from "@solana/web3.js";
 import { COMPONENT_SECTION_ID } from "./gamePrograms";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { getAssociatedTokenAddress } from "@solana/spl-token";
@@ -232,61 +232,39 @@ export const handleReinitializeClick = async (engine: MagicBlockEngine, gameInfo
       console.log("initFoodSig", initFoodSig);
 };
 
-export async function calculateGameplayStats(engine: MagicBlockEngine, account: string) {
-    const accountPubkey = new PublicKey(account);
-    const signatures = await engine.getConnectionChain().getSignaturesForAddress(accountPubkey, { limit: 1000 });
-    const supersizeOwner = "DdGB1EpmshJvCq48W1LvB1csrDnC4uataLnQbUVhp6XB";
-    const transactionPromises = signatures.map(async (signatureInfo) => {
-      const transactionDetails = await engine.getConnectionChain().getTransaction(signatureInfo.signature, {
-        commitment: "confirmed",
-      });
-  
-      let cashOut = 0;
-      let buyIn = 0;
-      let buyInCount = 0;
-  
-      if (transactionDetails) {
-        const { meta } = transactionDetails;
-        if (meta && meta.preTokenBalances && meta.postTokenBalances) {
-          const tokenPreAccountIndex = meta.preTokenBalances.findIndex(
-            (token) => token.owner === supersizeOwner
-          );
-          const tokenPostAccountIndex = meta.postTokenBalances.findIndex(
-            (token) => token.owner === supersizeOwner
-          );
-  
-          if (tokenPreAccountIndex !== -1 && tokenPostAccountIndex !== -1) {
-            const preBalance = meta.preTokenBalances[tokenPreAccountIndex]?.uiTokenAmount.uiAmount || 0;
-            const postBalance = meta.postTokenBalances[tokenPostAccountIndex]?.uiTokenAmount.uiAmount || 0;
-            const balanceChange = postBalance - preBalance;
-            if (balanceChange > 0 && meta.preTokenBalances.length > 2) {
-              cashOut += balanceChange;
-            }
-          } else {
-            const preBalance = meta.preTokenBalances[0]?.uiTokenAmount.uiAmount || 0;
-            const postBalance = meta.postTokenBalances[0]?.uiTokenAmount.uiAmount || 0;
-            const balanceChange = postBalance - preBalance;
-            buyIn += Math.abs(balanceChange);
-            buyInCount++;
-          }
-        }
-      }
-      return { cashOut, buyIn, buyInCount };
-    });
-  
-    const transactionResults = await Promise.all(transactionPromises);
-    const totals = transactionResults.reduce(
-      (acc, result) => {
-        acc.cashOutSum += result.cashOut;
-        acc.buyInSum += result.buyIn;
-        acc.buyInCount += result.buyInCount;
-        return acc;
-      },
-      { cashOutSum: 0, buyInSum: 0, buyInCount: 0 }
-    );
-  
-    return totals;
-}  
+export async function countMatchingTransactions(
+  engine: MagicBlockEngine,
+  targetPubkey: PublicKey,
+  programId: PublicKey = new PublicKey("CLC46PuyXnSuZGmUrqkFbAh7WwzQm8aBPjSQ3HMP56kp"),
+  daysToScan: number = 30
+): Promise<number> {
+  const now = Date.now() / 1000;
+  const thirtyDaysAgo = now - daysToScan * 24 * 60 * 60;
+
+  let signatures = await engine.getConnectionEphem().getSignaturesForAddress(programId, {
+    limit: 1000,
+  });
+
+  signatures = signatures.filter(
+    (sig) => (sig.blockTime ?? now) > thirtyDaysAgo
+  );
+
+  const txPromises = signatures.map((sigInfo) =>
+    engine.getConnectionEphem().getParsedTransaction(sigInfo.signature, 'confirmed')
+  );
+
+  const transactions = (await Promise.all(txPromises)).filter(
+    (tx): tx is ParsedTransactionWithMeta => tx !== null
+  );
+
+  const matchingTxs = transactions.filter((tx) =>
+    tx.transaction.message.accountKeys.some(
+      (account) => account.pubkey.equals(targetPubkey)
+    )
+  );
+
+  return matchingTxs.length;
+}
   
 export const deposit = async (
     vaultClient: SupersizeVaultClient,

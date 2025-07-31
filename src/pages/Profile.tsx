@@ -37,7 +37,7 @@ import { Chart, LineElement, PointElement, LinearScale, Title, Tooltip, Legend }
 import { getTopLeftCorner, getRegion } from "@utils/helper";
 import GameComponent from "@components/Game/Game";
 import { handleUndelegatePlayer, handleDelegatePlayer, handleDeleteGame, 
-  handleReinitializeClick, calculateGameplayStats, deposit } from "@states/adminFunctions";
+  handleReinitializeClick, countMatchingTransactions, deposit } from "@states/adminFunctions";
 import DepositInput from '@components/util/DepositInput';
 import CollapsiblePanel from '@components/util/CollapsiblePanel';
 import DepositModal from "@components/util/DepositModal";
@@ -279,11 +279,9 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
   const [depositValue, setDepositValue] = useState<string>("");
   const [currentFoodToAdd, setCurrentFoodToAdd] = useState<number>(0);
   const [cashoutStats, setCashoutStats] = useState<{
-    cashOutSum: number | null,
     buyInSum: number | null,
     buyInCount: number | null,
   }>({
-    cashOutSum: null,
     buyInSum: null,
     buyInCount: null,
   });
@@ -331,7 +329,7 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
     setFoodComponentCheck("");
     setGameOwner("");
     setGameWallet("");
-    setCashoutStats({ cashOutSum: null, buyInSum: null, buyInCount: null });
+    setCashoutStats({ buyInSum: null, buyInCount: null });
   
     const mapEntityPda = FindEntityPda({
       worldId: newGameInfo.worldId,
@@ -456,7 +454,12 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
         setPlayers(players);
       };
   
-      
+      const countMetrics = async () => {
+        const count = await countMatchingTransactions(engine, mapComponentPda);
+        const buyInSum = count * newGameInfo.buy_in;
+        setCashoutStats({ buyInSum: buyInSum / 10 ** newGameInfo.decimals, buyInCount: count });
+      }
+
       let updatedGameInfo;
       let validEndpointResult;
       [updatedGameInfo, validEndpointResult] = await Promise.all([processGameData(),  getValidEndpoint(engine, mapComponentPda)]);
@@ -471,6 +474,7 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
       await Promise.all([
         processFoodComponents(),
         processPlayers(),
+        countMetrics(),
       ]);
     } catch (error) {
       console.error("Error in handlePanelOpen:", error);
@@ -582,10 +586,10 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
                   justifyContent: "center",
                 }}
               >
-                <p style={{ margin: "10px" }}>Total Wagered (30D): {cashoutStats.buyInSum ? getRoundedAmount(cashoutStats.buyInSum, row.buy_in / 1000) : "Loading"}</p>
-                <p style={{ margin: "10px" }}>Total Plays (30D): {cashoutStats.buyInCount ? cashoutStats.buyInCount : "Loading"}</p>
-                <p style={{ margin: "10px" }}>Active Players: {activePlayers}</p>
-                <p style={{ margin: "10px" }}>Tokens on Map: {valueOnMap}</p>
+                <p style={{ flex: "1 1 50%" }}>Total Wagered (30D): {cashoutStats.buyInSum ? getRoundedAmount(cashoutStats.buyInSum, row.buy_in / 1000) : "Loading"}</p>
+                <p style={{ flex: "1 1 50%" }}>Total Plays (30D): {cashoutStats.buyInCount ? cashoutStats.buyInCount : "Loading"}</p>
+                <p style={{ flex: "1 1 50%" }}>Active Players: {activePlayers}</p>
+                <p style={{ flex: "1 1 50%" }}>Tokens on Map: {valueOnMap}</p>
               </div>
 
               <div style={{ display: "flex", flexWrap: "wrap", width: "100%", alignItems: "center", justifyContent: "center" }}>

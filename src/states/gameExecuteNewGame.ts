@@ -27,6 +27,7 @@ import {
   stepDelegatePlayers,
 } from "./gameSteps";
 import { SupersizeVaultClient } from "../engine/SupersizeVaultClient";
+import { endpoints } from "../utils/constants";
 
 export async function gameExecuteNewGame(
   engine: MagicBlockEngine,
@@ -89,7 +90,18 @@ export async function gameExecuteNewGame(
 
   const vaultClient = new SupersizeVaultClient(context.engine);
 
-  await vaultClient.setupGameWallet(mapComponentPda, mint_of_token);
+  const currentEndpoint = context.engine.getConnectionEphem();
+  let validator = new PublicKey(await currentEndpoint.getSlotLeader()); 
+  if (currentEndpoint.rpcEndpoint === endpoints[NETWORK][0]) {
+    validator = new PublicKey("EUhi4xecUqEUmGgBCoGomeEiUprwu2D2oM2QmwMjzM75git");
+  }
+  if (currentEndpoint.rpcEndpoint === endpoints[NETWORK][1]) {
+    validator = new PublicKey("USQT2zbsRiK7dZqVzCktauygDXVAdAgWZbnHJyQo4TV");
+  }
+  if (currentEndpoint.rpcEndpoint === endpoints[NETWORK][2]) {
+    validator = new PublicKey("ASLxD38WUHStVbUGm4BW7WZNSThwzZYTr6Qz4eohf3Xp");
+  }
+  await vaultClient.setupGameWallet(mapComponentPda, mint_of_token, validator);
   
   await stepDelegateMap(context, setTransactions, showPrompt);
   await stepDelegateFood(context, setTransactions, showPrompt);

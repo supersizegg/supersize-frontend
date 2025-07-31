@@ -310,7 +310,7 @@ export class SupersizeVaultClient {
   }
 
 
-  async setupGameWallet(mapComponentPda: PublicKey, mint: PublicKey) {
+  async setupGameWallet(mapComponentPda: PublicKey, mint: PublicKey, validator: PublicKey) {
     if (!this.wallet) {
       throw new Error("Wallet not connected. Cannot set up a new game wallet.");
     }
@@ -334,8 +334,8 @@ export class SupersizeVaultClient {
         .instruction();
       setupTx.add(newGameIx);
 
-      const ephemIdentity = await this.ephemConnection.getSlotLeader();
-      const validator = new PublicKey(ephemIdentity);
+      //const ephemIdentity = await this.ephemConnection.getSlotLeader();
+      //const validator = new PublicKey(ephemIdentity);
       const delegateGameIx = await this.program.methods
         .delegateGame(validator)
         .accounts({
@@ -348,8 +348,8 @@ export class SupersizeVaultClient {
     } else if (!balanceInfo.owner.equals(DELEGATION_PROGRAM_ID)) {
       console.log("Game balance account found but not delegated. Delegating now...");
 
-      const ephemIdentity = await this.ephemConnection.getSlotLeader();
-      const validator = new PublicKey(ephemIdentity);
+      //const ephemIdentity = await this.ephemConnection.getSlotLeader();
+      //const validator = new PublicKey(ephemIdentity);
       const delegateGameIx = await this.program.methods
         .delegateGame(validator)
         .accounts({
