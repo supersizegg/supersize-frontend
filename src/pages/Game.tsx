@@ -29,7 +29,7 @@ type gameProps = {
 
 const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) => {
   const navigate = useNavigate();
-  const engine = useMagicBlockEngine();
+  const { engine } = useMagicBlockEngine();
 
   const animationFrame = useRef(0);
 
@@ -96,7 +96,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
 
   useEffect(() => {
     currentGameSizeRef.current = currentGameSize;
-  }, [currentGameSize])
+  }, [currentGameSize]);
 
   const checkSuccessfulExit = async (myplayerComponent: PublicKey) => {
     const playerData = await playerFetchOnEphem(engine, myplayerComponent);
@@ -104,7 +104,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
       return true;
     }
     return false;
-  }
+  };
 
   const handleExitClick = async () => {
     if (!currentPlayerEntity.current) {
@@ -151,7 +151,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
           }
           const currentTime = Date.now();
           const elapsedTime = currentTime - startTime;
-         //console.log("elapsedTime", elapsedTime);
+          //console.log("elapsedTime", elapsedTime);
           countdown.current = Math.max(0, Math.floor(500 - elapsedTime / 10));
 
           if (elapsedTime > 5000) {
@@ -164,7 +164,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
             console.log("5 seconds have passed");
             try {
               gameSystemExit(engine, gameInfo, currentPlayerEntity.current, entityMatch.current).then((exitTx) => {
-                setCashoutTx(exitTx); 
+                setCashoutTx(exitTx);
               });
             } catch (error) {
               console.log("error", error);
@@ -210,8 +210,12 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
         //const foodDataArray = new Uint8Array(mapParsedData.nextFood[0].foodData);
         //const decodedFood = decodeFood(foodDataArray);
         //console.log("decodedFood", mapParsedData.nextFood[0]);
-        newFood = { x: mapParsedData.nextFood[0].x, y: mapParsedData.nextFood[0].y, food_value: mapParsedData.nextFood[0].foodValue };
-      } 
+        newFood = {
+          x: mapParsedData.nextFood[0].x,
+          y: mapParsedData.nextFood[0].y,
+          food_value: mapParsedData.nextFood[0].foodValue,
+        };
+      }
 
       await gameSystemSpawnFood(
         engine,
@@ -251,7 +255,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
     } else if (gameInfo.size == 10000) {
       maxplayer = 100;
       foodcomponents = 100;
-    } 
+    }
 
     for (let i = 1; i < foodcomponents + 1; i++) {
       const foodseed = "food" + i.toString();
@@ -304,7 +308,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
         setCurrentGameSize(mapData.size);
       }
     });
-    
+
     subscribeToGame(
       engine,
       foodEntities.current,
@@ -327,16 +331,16 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
 
   const endGame = async () => {
     if (currentPlayer && currentPlayer.circles.length == 0 && currentPlayerEntity.current && anteroomEntity.current) {
-        playersComponentSubscriptionId.current = [];
-        foodComponentSubscriptionId.current = [];
-        myplayerComponentSubscriptionId.current = null;
-        mapComponentSubscriptionId.current = null;
-        currentPlayerRef.current = null;
-        entityMatch.current = null;
-        foodEntities.current = [];
-        playersRef.current = [];
-        setAllFood([]);
-        setFoodListLen([]);
+      playersComponentSubscriptionId.current = [];
+      foodComponentSubscriptionId.current = [];
+      myplayerComponentSubscriptionId.current = null;
+      mapComponentSubscriptionId.current = null;
+      currentPlayerRef.current = null;
+      entityMatch.current = null;
+      foodEntities.current = [];
+      playersRef.current = [];
+      setAllFood([]);
+      setFoodListLen([]);
     }
   };
 
@@ -431,8 +435,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
   useEffect(() => {
     if (currentPlayer) {
       const playersWithAuthority = allplayersRef.current.filter(
-        (player) =>
-          player.authority !== null && player.circles.length > 0,
+        (player) => player.authority !== null && player.circles.length > 0,
       );
       updateLeaderboard(playersWithAuthority, setLeaderboard);
       const newVisiblePlayers: Blob[] = playersWithAuthority.reduce((accumulator: Blob[], playerx) => {
@@ -573,7 +576,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
             Disconnecting in {(countdown.current / 100).toFixed(2)} seconds
           </div>
         )}
-        {currentPlayer && currentPlayer.score * 2500 / gameInfo.buy_in > 250000 && (
+        {currentPlayer && (currentPlayer.score * 2500) / gameInfo.buy_in > 250000 && (
           <div className="text-[#ffa500] font-[Terminus] text-xl text-right ml-2.5 font-bold animate-pulse animate-glow">
             Approaching max size!!
           </div>
@@ -583,17 +586,13 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
       <div className={`fixed bottom-0 left-0 m-2 z-[9999] text-white text-base font-[terminus] flex flex-col text-xl`}>
         <div>
           <span className="opacity-50">{gameInfo.token}: </span>
-          <span className="opacity-100">
-            {currentPlayer ? currentPlayer.score / 10 ** gameInfo.decimals : null}
-          </span>
+          <span className="opacity-100">{currentPlayer ? currentPlayer.score / 10 ** gameInfo.decimals : null}</span>
         </div>
       </div>
 
       <div className={`fixed bottom-0 right-0 m-2 z-[9999] text-white text-base font-[terminus] flex flex-col text-xl`}>
         <div>
-          <span className="opacity-100">
-            Press space to split!
-          </span>
+          <span className="opacity-100">Press space to split!</span>
         </div>
       </div>
 
@@ -635,24 +634,23 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
             <div className="bg-black flex flex-col items-center justify-center select-text">
               <p className=" p-0 m-1 text-center text-white inline">
                 <b className="text-[50px]">
-                  Payout:{" "}
-                  {currentPlayer ? currentPlayer.score / 10 ** gameInfo.decimals : ""}
+                  Payout: {currentPlayer ? currentPlayer.score / 10 ** gameInfo.decimals : ""}
                 </b>
               </p>
               <div className="flex items-center justify-center" style={{ flexDirection: "column" }}>
                 <pre style={{ margin: "20px 0" }}>
-                    <>
-                      ✅
-                      <a
-                        className=" p-0 m-1 text-center text-white text-xl inline"
-                        href={`https://explorer.solana.com/tx/${cashoutTx}?cluster=custom&customUrl=${gameInfo.endpoint}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ textDecoration: "underline" }}
-                      >
-                        Cashout transaction
-                      </a>
-                    </>
+                  <>
+                    ✅
+                    <a
+                      className=" p-0 m-1 text-center text-white text-xl inline"
+                      href={`https://explorer.solana.com/tx/${cashoutTx}?cluster=custom&customUrl=${gameInfo.endpoint}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ textDecoration: "underline" }}
+                    >
+                      Cashout transaction
+                    </a>
+                  </>
                 </pre>
               </div>
               <button id="returnButton" onClick={() => (window.location.href = "/home")}>

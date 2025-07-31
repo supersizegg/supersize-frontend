@@ -101,25 +101,25 @@ export class SupersizeVaultClient {
     }
 
     const checkTx = new Transaction();
-    if(!gwInfo) {
+    if (!gwInfo) {
       checkTx.add(
         SystemProgram.transfer({
           fromPubkey: this.engine.getSessionPayer(),
           toPubkey: gwPda,
           lamports: 0, // 1 SOL
-        })
-      )
+        }),
+      );
     }
-    if(!balInfo) {
+    if (!balInfo) {
       checkTx.add(
         SystemProgram.transfer({
           fromPubkey: this.engine.getSessionPayer(),
           toPubkey: balPda,
           lamports: 0, // 1 SOL
-        })
+        }),
       );
     }
-    if(checkTx.instructions.length > 0) {
+    if (checkTx.instructions.length > 0) {
       await this.engine.processSessionEphemTransaction("testTx", checkTx);
     }
   }
@@ -163,9 +163,8 @@ export class SupersizeVaultClient {
     const balancePda = this.mapBalancePda(mapComponentPda, mint);
     const accountInfo = await this.mainChainConnection.getAccountInfo(balancePda);
     const currentlyDelegated = accountInfo?.owner.equals(DELEGATION_PROGRAM_ID) ?? false;
-      
-    if (currentlyDelegated) {
 
+    if (currentlyDelegated) {
       const undelegateTx = new Transaction();
       undelegateTx.add(
         await this.program.methods
@@ -173,7 +172,7 @@ export class SupersizeVaultClient {
           .accounts({ payer: this.engine.getSessionPayer(), mintOfToken: mint, map: mapComponentPda })
           .instruction(),
       );
-  
+
       const signers = [this.engine.getSessionKey()];
       const signature = await this.engine.getConnectionEphem().sendTransaction(undelegateTx, signers);
       await this.engine.getConnectionEphem().confirmTransaction(signature, "confirmed");
@@ -205,7 +204,10 @@ export class SupersizeVaultClient {
         })
         .instruction();
       console.log("delegateGame");
-      return await this.engine.processWalletTransaction("Deposit", new Transaction().add(depositIx).add(delegateGameIx));
+      return await this.engine.processWalletTransaction(
+        "Deposit",
+        new Transaction().add(depositIx).add(delegateGameIx),
+      );
     }
   }
 
@@ -309,7 +311,6 @@ export class SupersizeVaultClient {
     await this.engine.processWalletTransaction("Withdraw", withdrawTx);
   }
 
-
   async setupGameWallet(mapComponentPda: PublicKey, mint: PublicKey, validator: PublicKey) {
     if (!this.wallet) {
       throw new Error("Wallet not connected. Cannot set up a new game wallet.");
@@ -375,12 +376,13 @@ export class SupersizeVaultClient {
 
     const balPda = this.mapBalancePda(mapComponentPda, mint);
     console.log("Fetching balance for PDA:", balPda.toBase58());
-    const currentProgramEphem = this.engine.getProgramOnSpecificEphem(supersizeVaultIdl as Idl, this.engine.getEndpointEphemRpc());
+    const currentProgramEphem = this.engine.getProgramOnSpecificEphem(
+      supersizeVaultIdl as Idl,
+      this.engine.getEndpointEphemRpc(),
+    );
     const acc = await this.program.account.balance.fetchNullable(balPda);
     if (!acc) return 0;
-    const balanceAcc = await currentProgramEphem.account.balance.fetchNullable(
-      balPda
-    );
+    const balanceAcc = await currentProgramEphem.account.balance.fetchNullable(balPda);
     if (!balanceAcc) return "wrong_server";
     const conn = this.program.provider.connection;
     const { decimals } = await getMint(conn, mint);
@@ -395,12 +397,13 @@ export class SupersizeVaultClient {
     const balPda = this.userBalancePda(this.wallet, mint);
     console.log("Fetching balance for PDA:", balPda.toBase58());
     console.log("ephem endpoint", this.engine.getEndpointEphemRpc());
-    const currentProgramEphem = this.engine.getProgramOnSpecificEphem(supersizeVaultIdl as Idl, this.engine.getEndpointEphemRpc());
+    const currentProgramEphem = this.engine.getProgramOnSpecificEphem(
+      supersizeVaultIdl as Idl,
+      this.engine.getEndpointEphemRpc(),
+    );
     const acc = await this.program.account.balance.fetchNullable(balPda);
     if (!acc) return 0;
-    const balanceAcc = await currentProgramEphem.account.balance.fetchNullable(
-      balPda
-    );
+    const balanceAcc = await currentProgramEphem.account.balance.fetchNullable(balPda);
     console.log("balanceAcc", balanceAcc);
     if (!balanceAcc) return "wrong_server";
     const conn = this.program.provider.connection;
@@ -412,22 +415,21 @@ export class SupersizeVaultClient {
 
   async getGameWallet(): Promise<PublicKey | undefined> {
     const walletPda = this.gameWalletPda();
-    const walletAcc = await this.program.account.gameWallet.fetchNullable(
-      walletPda
-    );
+    const walletAcc = await this.program.account.gameWallet.fetchNullable(walletPda);
     return walletAcc?.wallet;
   }
 
   async getGameWalletEphem(endpoint: any): Promise<PublicKey | undefined> {
     const walletPda = this.gameWalletPda();
     const programSpecificEphem = this.engine.getProgramOnSpecificEphem(supersizeVaultIdl as Idl, endpoint);
-    const walletAcc = await programSpecificEphem.account.gameWallet.fetchNullable(
-      walletPda
-    );
+    const walletAcc = await programSpecificEphem.account.gameWallet.fetchNullable(walletPda);
     return walletAcc?.wallet;
   }
 
-  async findMyEphemEndpoint(setPreferredRegion: (region: string) => void) {
+  async findMyEphemEndpoint(
+    setEndpointEphemRpc: (endpoint: string) => void,
+    setPreferredRegion: (region: string) => void,
+  ) {
     await Promise.all(
       endpoints[NETWORK].map(async (endpoint) => {
         try {
@@ -435,31 +437,32 @@ export class SupersizeVaultClient {
           if (gwPdaCheck) {
             console.log("gwPdaCheck", gwPdaCheck.toString(), endpoint, getRegion(endpoint));
             setPreferredRegion(getRegion(endpoint));
-            this.engine.setEndpointEphemRpc(endpoint);
+            setEndpointEphemRpc(endpoint);
           }
         } catch (error) {
           console.error("Error in findMyEphemEndpoint:", error);
         }
-      })
+      }),
     );
   }
 
   async newGameWallet() {
     if (!this.wallet) throw new Error("Wallet not connected to new game wallet.");
-    
+
     const ephemIdentity = await this.engine.getConnectionEphem().getSlotLeader();
     const validator = new PublicKey(ephemIdentity);
-    
+
     try {
-      const undelegateTx = new Transaction()
-      .add(await this.program.methods.undelegateWallet(this.wallet).accounts({}).instruction());
+      const undelegateTx = new Transaction().add(
+        await this.program.methods.undelegateWallet(this.wallet).accounts({}).instruction(),
+      );
       const signers = [this.engine.getSessionKey()];
       const signature = await this.engine.getConnectionEphem().sendTransaction(undelegateTx, signers);
       await this.engine.getConnectionEphem().confirmTransaction(signature, "confirmed");
     } catch (error) {
       console.error("Error in newGameWallet:", error);
     }
-    
+
     const tx = new Transaction();
     tx.add(
       await this.program.methods
@@ -482,7 +485,7 @@ export class SupersizeVaultClient {
         fromPubkey: this.engine.getSessionPayer(),
         toPubkey: walletPda,
         lamports: 0, // 1 SOL
-      })
+      }),
     );
     await this.engine.processSessionEphemTransaction("testTx", checkTx);
   }

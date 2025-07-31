@@ -20,11 +20,11 @@ import { useMagicBlockEngine } from "./engine/MagicBlockEngineProvider";
 import { SupersizeVaultClient } from "./engine/SupersizeVaultClient";
 
 const AppRoutes = () => {
-  const engine = useMagicBlockEngine();
+  const { engine, setEndpointEphemRpc } = useMagicBlockEngine();
+  const [preferredRegion, setPreferredRegion] = useState<string>("");
   const [selectedGame, setSelectedGame] = useState<ActiveGame | null>(null);
   const [sessionWalletInUse, setSessionWalletInUse] = useState<boolean>(true); //(NETWORK === 'mainnet' ? false : true);
   const [username, setUsername] = useState<string>("");
-  const [preferredRegion, setPreferredRegion] = useState<string>("");
   const [tokenBalance, setTokenBalance] = useState<number>(0);
   const [activeGamesLoaded, setActiveGamesLoaded] = useState<FetchedGame[]>(
     /*(NETWORK === 'mainnet' 
@@ -63,14 +63,14 @@ const AppRoutes = () => {
     }
     const fetchGameWalletEphem = async () => {
       if (vaultClient) {
-        await vaultClient.findMyEphemEndpoint(setPreferredRegion);
+        await vaultClient.findMyEphemEndpoint(setEndpointEphemRpc, setPreferredRegion);
       } else {
         const pingResults = await pingEndpoints();
-        console.log('Vault is not initialized, fallback pinging endpoints', pingResults);
+        console.log("Vault is not initialized, fallback pinging endpoints", pingResults);
         if (pingResults.lowestPingEndpoint) {
           setPreferredRegion(getRegion(pingResults.lowestPingEndpoint.region));
-          engine.setEndpointEphemRpc(pingResults.lowestPingEndpoint.endpoint);
-          console.log("Set ephem endpoint to", engine.getEndpointEphemRpc());
+          setEndpointEphemRpc(pingResults.lowestPingEndpoint.endpoint);
+          console.log("Set ephem endpoint to", pingResults.lowestPingEndpoint.endpoint);
         }
       }
     };

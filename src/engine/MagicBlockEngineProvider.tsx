@@ -6,13 +6,19 @@ import { useSolanaWallets, useSendTransaction } from "@privy-io/react-auth/solan
 import { MagicBlockEngine } from "./MagicBlockEngine";
 import { deriveKeypairFromPublicKey } from "@utils/helper";
 import { useMemo } from "react";
+import { endpoints, NETWORK } from "@utils/constants";
 const SESSION_LOCAL_STORAGE = "magicblock-session-key";
 const SESSION_MIN_LAMPORTS = 0.02 * 1_000_000_000;
 const SESSION_MAX_LAMPORTS = 0.05 * 1_000_000_000;
 
-const MagicBlockEngineContext = React.createContext<MagicBlockEngine>({} as MagicBlockEngine);
+interface IMagicBlockEngineContext {
+  engine: MagicBlockEngine;
+  setEndpointEphemRpc: (endpoint: string) => void;
+}
 
-export function useMagicBlockEngine(): MagicBlockEngine {
+const MagicBlockEngineContext = React.createContext<IMagicBlockEngineContext>({} as IMagicBlockEngineContext);
+
+export function useMagicBlockEngine(): IMagicBlockEngineContext {
   return React.useContext(MagicBlockEngineContext);
 }
 
@@ -31,12 +37,12 @@ function MagicBlockEngineProviderInner({ children }: { children: React.ReactNode
   const pklist = useMemo<WalletWithMetadata[]>(
     () =>
       (user?.linkedAccounts.filter(
-        (account) =>
-          account.type === "wallet" &&
-          account.chainType === "solana"
+        (account) => account.type === "wallet" && account.chainType === "solana",
       ) as WalletWithMetadata[]) ?? [],
-    [user]
+    [user],
   );
+
+  const [endpointEphemRpc, setEndpointEphemRpc] = React.useState<string>(endpoints[NETWORK][2]);
 
   const walletContext = React.useMemo(() => {
     if (wallets && wallets[0]) {
@@ -46,17 +52,17 @@ function MagicBlockEngineProviderInner({ children }: { children: React.ReactNode
     //const pk = wallets && wallets[0] ? new PublicKey(wallets[0].address) : null;
 
     const pk_item = pklist && pklist[0] ? pklist[0] : null;
-    let pk : PublicKey | null = null;
+    let pk: PublicKey | null = null;
     let pk_type = "external";
-    if (pk_item ){
+    if (pk_item) {
       pk = new PublicKey(pk_item.address);
       if (pk && pk_item.connectorType == "embedded") {
         pk_type = "embedded";
       }
     }
     const pk_item_1 = pklist && pklist[1] ? pklist[1] : null;
-    let pk_1 : PublicKey | null = null;
-    if (pk_item_1 && pk_item_1.connectorType == "embedded"){
+    let pk_1: PublicKey | null = null;
+    if (pk_item_1 && pk_item_1.connectorType == "embedded") {
       pk_1 = new PublicKey(pk_item_1.address);
     }
     //walletTypeRef.current = pk_type;
@@ -69,15 +75,15 @@ function MagicBlockEngineProviderInner({ children }: { children: React.ReactNode
       sendTransaction: async (tx: Transaction, connection: Connection) => {
         const latestBlockhash = await connection.getLatestBlockhash();
         tx.recentBlockhash = latestBlockhash.blockhash;
-        tx.feePayer = pk ? pk : new PublicKey(wallets[0].address); 
+        tx.feePayer = pk ? pk : new PublicKey(wallets[0].address);
         let receipt;
-        if (pk_type == "embedded"){
-           const tx_receipt = await sendTransaction({ transaction: tx, connection });
-           receipt = tx_receipt.signature;
-           console.log(receipt)
-        }else{
-          const wallet = wallets.find(wallet => wallet.address === pk?.toString());
-          if (wallet){
+        if (pk_type == "embedded") {
+          const tx_receipt = await sendTransaction({ transaction: tx, connection });
+          receipt = tx_receipt.signature;
+          console.log(receipt);
+        } else {
+          const wallet = wallets.find((wallet) => wallet.address === pk?.toString());
+          if (wallet) {
             const tx_receipt = await wallet.sendTransaction!(tx, connection);
             receipt = tx_receipt;
           }
@@ -85,17 +91,18 @@ function MagicBlockEngineProviderInner({ children }: { children: React.ReactNode
         return receipt;
       },
       wallets: pk ? [{ adapter: { name: "Privy", icon: "" } }] : [],
-      select: () => login({
-        walletChainType: 'solana-only',
-        disableSignup: false
-      }),
+      select: () =>
+        login({
+          walletChainType: "solana-only",
+          disableSignup: false,
+        }),
       disconnect: logout,
     } as unknown as WalletContextState;
   }, [ready, authenticated, wallets, sendTransaction, login, logout]);
 
   const engine = React.useMemo(() => {
     let sessionKey = deriveKeypairFromPublicKey(new PublicKey("11111111111111111111111111111111"));
-    
+
     const sessionKeyString = localStorage.getItem(SESSION_LOCAL_STORAGE);
     if (sessionKeyString) {
       sessionKey = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(sessionKeyString)));
@@ -109,11 +116,25 @@ function MagicBlockEngineProviderInner({ children }: { children: React.ReactNode
     }
     */
 
-    return new MagicBlockEngine(walletContext, sessionKey, {
-      minLamports: SESSION_MIN_LAMPORTS,
-      maxLamports: SESSION_MAX_LAMPORTS,
-    }, walletTypeRef.current);
-  }, [walletContext]);
+    return new MagicBlockEngine(
+      walletContext,
+      sessionKey,
+      {
+        minLamports: SESSION_MIN_LAMPORTS,
+        maxLamports: SESSION_MAX_LAMPORTS,
+      },
+      walletTypeRef.current,
+      endpointEphemRpc,
+    );
+  }, [walletContext, endpointEphemRpc]);
 
-  return <MagicBlockEngineContext.Provider value={engine}>{children}</MagicBlockEngineContext.Provider>;
+  const contextValue = React.useMemo(
+    () => ({
+      engine,
+      setEndpointEphemRpc,
+    }),
+    [engine, setEndpointEphemRpc],
+  );
+
+  return <MagicBlockEngineContext.Provider value={contextValue}>{children}</MagicBlockEngineContext.Provider>;
 }

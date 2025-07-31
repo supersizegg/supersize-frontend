@@ -7,7 +7,7 @@ import { useMagicBlockEngine } from "../../engine/MagicBlockEngineProvider";
 import { Button } from "../util/Button";
 
 export function MenuBalance({ name, publicKey }: { name: string; publicKey: PublicKey }) {
-  const engine = useMagicBlockEngine();
+  const { engine } = useMagicBlockEngine();
 
   const [lamports, setLamports] = React.useState<number | undefined>(undefined);
   React.useEffect(() => {

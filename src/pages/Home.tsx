@@ -65,7 +65,7 @@ const Home = ({
   setTokenBalance,
 }: homeProps) => {
   const navigate = useNavigate();
-  const engine = useMagicBlockEngine();
+  const { engine, setEndpointEphemRpc } = useMagicBlockEngine();
   const activeGamesRef = useRef<FetchedGame[]>(activeGamesLoaded);
   const [inputValue, setInputValue] = useState<string>("");
   const pingResultsRef = useRef<{ endpoint: string; pingTime: number; region: string }[]>(
@@ -297,7 +297,7 @@ const Home = ({
   const handlePlayButtonClick = async (game: FetchedGame) => {
     let networkType = getNetwork(game.activeGame.endpoint);
     engine.setChain(networkType);
-    engine.setEndpointEphemRpc(game.activeGame.endpoint);
+    setEndpointEphemRpc(game.activeGame.endpoint);
     setSelectedGame(game.activeGame);
 
     if (game.playerInfo.playerStatus === "new_player") {
@@ -390,7 +390,7 @@ const Home = ({
       let stored = preferredRegion;
       if (stored) {
         selectedServer.current = stored;
-        const server_index = options.map(option => option.toLowerCase()).indexOf(stored.toLowerCase());
+        const server_index = options.map((option) => option.toLowerCase()).indexOf(stored.toLowerCase());
         setSelectedEndpoint(endpoints[NETWORK][server_index]);
         setIsLoadingCurrentGames(false);
         return;

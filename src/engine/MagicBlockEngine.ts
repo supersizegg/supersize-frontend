@@ -1,19 +1,10 @@
 import { Idl, Program, AnchorProvider } from "@coral-xyz/anchor";
 import { WalletContextState } from "@solana/wallet-adapter-react";
-import {
-  AccountInfo,
-  Commitment,
-  Connection,
-  Keypair,
-  LAMPORTS_PER_SOL,
-  PublicKey,
-  SystemProgram,
-  Transaction,
-} from "@solana/web3.js";
+import { AccountInfo, Commitment, Connection, Keypair, PublicKey, Transaction } from "@solana/web3.js";
 import { WalletName } from "@solana/wallet-adapter-base";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
 import * as anchor from "@coral-xyz/anchor";
-import { endpoints, NETWORK, RPC_CONNECTION } from "@utils/constants";
+import { NETWORK, RPC_CONNECTION } from "@utils/constants";
 import { log, warn } from "../utils/logger";
 import {
   createAssociatedTokenAccountInstruction as ixCreateATA,
@@ -33,8 +24,6 @@ const ENDPOINT_CHAIN_WS_DEVNET = ENDPOINT_CHAIN_RPC_DEVNET.replace("http", "ws")
 const connectionChainDevnet = new Connection(ENDPOINT_CHAIN_RPC_DEVNET, {
   wsEndpoint: ENDPOINT_CHAIN_WS_DEVNET,
 });
-
-const TRANSACTION_COST_LAMPORTS = 5000;
 
 interface SessionConfig {
   minLamports: number;
@@ -61,13 +50,13 @@ export class MagicBlockEngine {
     sessionKey: Keypair,
     sessionConfig: SessionConfig,
     walletType = "external",
+    endpointEphemRpc: string,
   ) {
     this.walletContext = walletContext;
     this.walletType = walletType;
     this.sessionKey = sessionKey;
     this.sessionConfig = sessionConfig;
-    // FIX: set to Asia by default for debugging
-    this.endpointEphemRpc = endpoints[NETWORK][2];
+    this.endpointEphemRpc = endpointEphemRpc;
     this.connectionEphem = new Connection(this.endpointEphemRpc, {
       wsEndpoint: this.endpointEphemRpc.replace("http", "ws"),
     });
@@ -83,10 +72,10 @@ export class MagicBlockEngine {
   }
 
   public setChain(network: string): void {
-    let NEW_ENDPOINT_CHAIN_RPC : string = RPC_CONNECTION[NETWORK];
-    if (network == "mainnet" || network == "devnet"){
+    let NEW_ENDPOINT_CHAIN_RPC: string = RPC_CONNECTION[NETWORK];
+    if (network == "mainnet" || network == "devnet") {
       NEW_ENDPOINT_CHAIN_RPC = RPC_CONNECTION[network];
-    }    
+    }
     const newConnectionChain = new Connection(NEW_ENDPOINT_CHAIN_RPC, {
       wsEndpoint: NEW_ENDPOINT_CHAIN_RPC.replace("http", "ws"),
     });
@@ -95,6 +84,7 @@ export class MagicBlockEngine {
     });
   }
 
+  /*
   public setEndpointEphemRpc(endpoint: string): void {
     console.log("setEndpointEphemRpc", endpoint);
     this.endpointEphemRpc = endpoint;
@@ -105,6 +95,7 @@ export class MagicBlockEngine {
       preflightCommitment: "processed",
     });
   }
+  */
 
   public getEndpointEphemRpc(): string {
     return this.endpointEphemRpc;
@@ -114,10 +105,10 @@ export class MagicBlockEngine {
     return new Program<T>(idl as T, this.provider);
   }
   getProgramOnSpecificChain<T extends Idl>(idl: object, thisNework: string): Program<T> {
-    let NEW_ENDPOINT_CHAIN_RPC : string = RPC_CONNECTION[NETWORK];
-    if (thisNework == "mainnet" || thisNework == "devnet"){
+    let NEW_ENDPOINT_CHAIN_RPC: string = RPC_CONNECTION[NETWORK];
+    if (thisNework == "mainnet" || thisNework == "devnet") {
       NEW_ENDPOINT_CHAIN_RPC = RPC_CONNECTION[thisNework];
-    }    
+    }
     const thisConnection = new Connection(NEW_ENDPOINT_CHAIN_RPC, {
       wsEndpoint: NEW_ENDPOINT_CHAIN_RPC.replace("http", "ws"),
     });
@@ -131,11 +122,11 @@ export class MagicBlockEngine {
   }
   getProgramOnSpecificEphem<T extends Idl>(idl: object, endpoint: string): Program<T> {
     let thisConnection: Connection = this.connectionEphem;
-    try{
+    try {
       thisConnection = new Connection(endpoint, {
         wsEndpoint: endpoint.replace("http", "ws"),
       });
-    }catch(error){
+    } catch (error) {
       console.error("Error getting program on specific ephem", error);
     }
     const thisProvider = new AnchorProvider(thisConnection, new NodeWallet(this.sessionKey), {
@@ -200,7 +191,9 @@ export class MagicBlockEngine {
 
   async processSessionChainTransaction(name: string, transaction: Transaction): Promise<string> {
     log(name, "sending");
-    const signature = await this.provider.connection.sendTransaction(transaction, [this.sessionKey], { skipPreflight: true });
+    const signature = await this.provider.connection.sendTransaction(transaction, [this.sessionKey], {
+      skipPreflight: true,
+    });
     await this.waitSignatureConfirmation(name, signature, this.provider.connection, "confirmed");
     return signature;
   }
@@ -248,7 +241,7 @@ export class MagicBlockEngine {
       let timeoutHandle: ReturnType<typeof setTimeout>;
       let done = false;
 
-      const origWarn = console.warn;    
+      // const origWarn = console.warn;
       // Override to no-op or filter
       console.warn = () => {};
 
@@ -261,11 +254,12 @@ export class MagicBlockEngine {
           try {
             connection.removeSignatureListener(subscriptionId);
           } catch (error) {
+            //
           }
           //log(name, commitment, signature, result.err);
           if (result.err) {
             //this.debugError(name, signature, connection);
-            reject(new Error(JSON.stringify(result.err)));  
+            reject(new Error(JSON.stringify(result.err)));
           } else {
             resolve();
           }
@@ -279,10 +273,11 @@ export class MagicBlockEngine {
         try {
           connection.removeSignatureListener(subscriptionId);
         } catch (error) {
+          //
         }
-        if(doFallbackCheck) {
+        if (doFallbackCheck) {
           doSingleFallbackCheck();
-        }else{
+        } else {
           reject(new Error(`Timeout waiting for transaction ${signature} confirmation`));
         }
       }, timeoutMs);
@@ -377,17 +372,17 @@ export class MagicBlockEngine {
     );
     await this.processSessionChainTransaction("DefundSessionToken", tx);
   }
-  
+
   getChainAccountInfo(address: PublicKey) {
     //return connectionChain.getAccountInfo(address);
     return this.provider.connection.getAccountInfo(address);
   }
-  
+
   getChainAccountInfoProcessed(address: PublicKey, thisNework: string) {
-    let NEW_ENDPOINT_CHAIN_RPC : string = RPC_CONNECTION[NETWORK];
-    if (thisNework == "mainnet" || thisNework == "devnet"){
+    let NEW_ENDPOINT_CHAIN_RPC: string = RPC_CONNECTION[NETWORK];
+    if (thisNework == "mainnet" || thisNework == "devnet") {
       NEW_ENDPOINT_CHAIN_RPC = RPC_CONNECTION[thisNework];
-    }    
+    }
     const thisConnection = new Connection(NEW_ENDPOINT_CHAIN_RPC, {
       wsEndpoint: NEW_ENDPOINT_CHAIN_RPC.replace("http", "ws"),
     });

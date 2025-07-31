@@ -6,14 +6,18 @@ import { Text } from "../util/Text";
 import { usePrivy } from "@privy-io/react-auth";
 import "./MenuWallet.scss";
 
-export function MenuWallet({setPreferredRegion}: {setPreferredRegion: (region: string) => void}) {
-  const engine = useMagicBlockEngine();
+export function MenuWallet({ setPreferredRegion }: { setPreferredRegion: (region: string) => void }) {
+  const { engine } = useMagicBlockEngine();
   const walletConnected = engine.getWalletConnected();
-  return <div className="menu-wallet">{walletConnected ? <MenuWalletConnected setPreferredRegion={setPreferredRegion}/> : <MenuWalletDisconnected />}</div>;
+  return (
+    <div className="menu-wallet">
+      {walletConnected ? <MenuWalletConnected setPreferredRegion={setPreferredRegion} /> : <MenuWalletDisconnected />}
+    </div>
+  );
 }
 
-function MenuWalletConnected({setPreferredRegion}: {setPreferredRegion: (region: string) => void}) {
-  const engine = useMagicBlockEngine();
+function MenuWalletConnected({ setPreferredRegion }: { setPreferredRegion: (region: string) => void }) {
+  const { engine } = useMagicBlockEngine();
 
   function truncateAddress(address: string): string {
     return address.slice(0, 4) + "..." + address.slice(-4);
@@ -45,11 +49,7 @@ function MenuWalletDisconnected() {
 
   return (
     <div className="wallet-disconnected desktop-only">
-      <Button
-        text="Sign in"
-        className="connect-wallet-button"
-        onClick={login}
-      />
+      <Button text="Sign in" className="connect-wallet-button" onClick={login} />
     </div>
   );
 }

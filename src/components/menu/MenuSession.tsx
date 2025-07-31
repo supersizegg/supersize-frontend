@@ -14,7 +14,7 @@ export interface TokenBalance {
 }
 
 export function MenuSession() {
-  const engine = useMagicBlockEngine();
+  const { engine } = useMagicBlockEngine();
 
   const [vaultClient, setVaultClient] = useState<SupersizeVaultClient | null>(null);
   const [status, setStatus] = useState<UserStatus>("loading");
@@ -26,7 +26,7 @@ export function MenuSession() {
   }>(null);
 
   useEffect(() => {
-    console.log(engine.getEndpointEphemRpc())
+    console.log(engine.getEndpointEphemRpc());
     if (engine && engine.getWalletConnected()) {
       setVaultClient(new SupersizeVaultClient(engine));
     } else {
@@ -44,10 +44,9 @@ export function MenuSession() {
     for (const mintStr of supportedMints) {
       const mint = new PublicKey(mintStr);
       const uiAmount = await vaultClient.getVaultBalance(mint);
-      if (uiAmount == "wrong_server"){
+      if (uiAmount == "wrong_server") {
         balances.push({ mint: mintStr, uiAmount: -1 });
-      }
-      else if (uiAmount >= 0) {
+      } else if (uiAmount >= 0) {
         balances.push({ mint: mintStr, uiAmount });
       }
     }
@@ -67,7 +66,7 @@ export function MenuSession() {
         setStatus("uninitialized");
       } else if (accountInfo.owner.equals(new PublicKey("DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh"))) {
         if (gwPdaCheck) {
-          if (gwPdaCheck.toString() !==  engine.getSessionPayer().toString()) {
+          if (gwPdaCheck.toString() !== engine.getSessionPayer().toString()) {
             setResetGameWallet(true);
           }
         }
@@ -75,7 +74,7 @@ export function MenuSession() {
         await refreshVaultBalances();
       } else {
         if (gwPdaCheck) {
-          if (gwPdaCheck.toString() !==  engine.getSessionPayer().toString()) {
+          if (gwPdaCheck.toString() !== engine.getSessionPayer().toString()) {
             setResetGameWallet(true);
           }
         }
@@ -136,12 +135,11 @@ export function MenuSession() {
   return (
     <div className="menu-session">
       <div className="session-bottom">
-
         {!engine.getWalletConnected() && <div className="loading-overlay">Sign in to play!</div>}
 
-        {(status === "loading" && engine.getWalletConnected()) && <div className="loading-overlay">Loading...</div>}
-    
-        {(status === "uninitialized" && engine.getWalletConnected()) && (
+        {status === "loading" && engine.getWalletConnected() && <div className="loading-overlay">Loading...</div>}
+
+        {status === "uninitialized" && engine.getWalletConnected() && (
           <div className="session-prompt">
             <p style={{ padding: "20px 0" }}>
               To play, you need to enable the game wallet. This requires one-time approval.
@@ -152,27 +150,30 @@ export function MenuSession() {
           </div>
         )}
 
-        {(engine.getWalletConnected() && (status === "ready_to_delegate" || status === "delegated")) && (
+        {engine.getWalletConnected() && (status === "ready_to_delegate" || status === "delegated") && (
           <>
             <div className="session-top row-inline">
               <div className="network-switch" style={{ display: "flex", alignItems: "center" }}>
-                <span className="session-label" style={{marginRight: '10px', display: "inline"}}>Game wallet
+                <span className="session-label" style={{ marginRight: "10px", display: "inline" }}>
+                  Game wallet
                   {status === "delegated" && !resetGameWallet && (
-                      <p style={{display: "inline", color: "#ff4d4f", marginLeft: "10px"}}>[active]</p>
+                    <p style={{ display: "inline", color: "#ff4d4f", marginLeft: "10px" }}>[active]</p>
                   )}
                 </span>
               </div>
-              
             </div>
 
             <input className="session-address" type="text" readOnly value={engine.getSessionPayer().toString()} />
             {(resetGameWallet || status === "ready_to_delegate") && (
               <div className="session-buttons">
-                <button className="btn-fund" onClick={() => {
-                  vaultClient?.newGameWallet();
-                  setResetGameWallet(false);
-                }}>
-                Need to reset game wallet
+                <button
+                  className="btn-fund"
+                  onClick={() => {
+                    vaultClient?.newGameWallet();
+                    setResetGameWallet(false);
+                  }}
+                >
+                  Need to reset game wallet
                 </button>
               </div>
             )}
@@ -198,7 +199,7 @@ export function MenuSession() {
                 </tr>
               </thead>
               <tbody>
-                {(status === "ready_to_delegate"  || status === "delegated") &&
+                {(status === "ready_to_delegate" || status === "delegated") &&
                   tokenBalances.map(({ mint, uiAmount }) => {
                     let meta = cachedTokenMetadata[mint];
                     if (!meta) return null;
@@ -210,7 +211,9 @@ export function MenuSession() {
                           {symbol}
                         </td>
                         <td className="balance-cell">
-                          {uiAmount == -1 ? "Wrong Server" : uiAmount.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                          {uiAmount == -1
+                            ? "Wrong Server"
+                            : uiAmount.toLocaleString(undefined, { maximumFractionDigits: 4 })}
                         </td>
                         <td>
                           <button

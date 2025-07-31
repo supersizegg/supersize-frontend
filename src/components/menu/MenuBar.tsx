@@ -10,7 +10,7 @@ type MenuBarProps = {
 };
 
 export function MenuBar({ tokenBalance }: MenuBarProps) {
-  const engine = useMagicBlockEngine();
+  const { engine } = useMagicBlockEngine();
 
   const stored = localStorage.getItem("user");
   const initialUser = stored ? JSON.parse(stored) : null;

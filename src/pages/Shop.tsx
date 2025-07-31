@@ -15,7 +15,7 @@ type ShopProps = {
 };
 
 const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
-  const engine = useMagicBlockEngine();
+  const { engine } = useMagicBlockEngine();
   const { fundWallet } = useFundWallet();
   const [waitingForFund, setWaitingForFund] = useState(false);
   const [price, setPrice] = useState<number | null>(null);
@@ -36,9 +36,7 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
       let amount = Math.round(usd * 1_000_000); // USDC has 6 decimals
 
       if (useSol) {
-        const priceRes = await fetch(
-          "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd",
-        );
+        const priceRes = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd");
         const priceData = await priceRes.json();
         const solPrice = priceData.solana.usd;
         const solAmount = usd / solPrice;

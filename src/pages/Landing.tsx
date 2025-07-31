@@ -13,7 +13,7 @@ type LandingProps = {
 };
 
 const Landing = ({ preferredRegion, tokenBalance }: LandingProps) => {
-  const engine = useMagicBlockEngine();
+  const { engine } = useMagicBlockEngine();
   const navigate = useNavigate();
   const openX = () => {
     window.open("https://x.com/SUPERSIZEgg", "_blank");
