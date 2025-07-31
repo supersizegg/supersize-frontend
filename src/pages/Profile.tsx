@@ -146,7 +146,7 @@ export default function Profile({
               setPreferredRegion={setPreferredRegion}
             />
           )}
-          {activeTab === "admin" && <AdminTab engine={engine} />}
+          {activeTab === "admin" && <AdminTab engine={engine} setEndpointEphemRpc={setEndpointEphemRpc} />}
         </div>
       </div>
       {/*
@@ -290,7 +290,12 @@ function ProfileTab({
   );
 }
 
-function AdminTab({ engine }: { engine: MagicBlockEngine }) {
+type AdminTabProps = {
+  engine: MagicBlockEngine;
+  setEndpointEphemRpc: (endpoint: string) => void;
+};
+
+function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
   const [vaultClient, setVaultClient] = useState<SupersizeVaultClient | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [myGames, setMyGames] = useState<ActiveGame[]>([]);
@@ -357,8 +362,6 @@ function AdminTab({ engine }: { engine: MagicBlockEngine }) {
     setGameOwner("");
     setGameWallet("");
     setCashoutStats({ buyInSum: null, buyInCount: null });
-
-    const { setEndpointEphemRpc } = useMagicBlockEngine();
 
     const mapEntityPda = FindEntityPda({
       worldId: newGameInfo.worldId,
