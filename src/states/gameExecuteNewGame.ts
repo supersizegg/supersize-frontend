@@ -91,9 +91,9 @@ export async function gameExecuteNewGame(
   const vaultClient = new SupersizeVaultClient(context.engine);
 
   const currentEndpoint = context.engine.getConnectionEphem();
-  let validator = new PublicKey(await currentEndpoint.getSlotLeader()); 
+  let validator = new PublicKey(await currentEndpoint.getSlotLeader());
   if (currentEndpoint.rpcEndpoint === endpoints[NETWORK][0]) {
-    validator = new PublicKey("EUhi4xecUqEUmGgBCoGomeEiUprwu2D2oM2QmwMjzM75git");
+    validator = new PublicKey("EUhi4xecUqEUmGgBCoGomeEiUprwu2D2oM2QmwMjzM75");
   }
   if (currentEndpoint.rpcEndpoint === endpoints[NETWORK][1]) {
     validator = new PublicKey("USQT2zbsRiK7dZqVzCktauygDXVAdAgWZbnHJyQo4TV");
@@ -102,7 +102,7 @@ export async function gameExecuteNewGame(
     validator = new PublicKey("ASLxD38WUHStVbUGm4BW7WZNSThwzZYTr6Qz4eohf3Xp");
   }
   await vaultClient.setupGameWallet(mapComponentPda, mint_of_token, validator);
-  
+
   await stepDelegateMap(context, setTransactions, showPrompt);
   await stepDelegateFood(context, setTransactions, showPrompt);
   await stepDelegatePlayers(context, setTransactions, showPrompt);
