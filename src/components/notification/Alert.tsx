@@ -8,12 +8,17 @@ type AlertProps = {
 };
 
 const Alert: React.FC<AlertProps> = ({ type, message, onClose, shouldExit }) => {
+  console.log("Alert component rendering:", { type, message, shouldExit });
   const [slideClass, setSlideClass] = useState(
     "translate-x-[calc(100%+3em)]"
   );
 
   useEffect(() => {
-    setSlideClass("translate-x-0");
+    // Add a small delay to ensure the component is mounted before animating
+    const timer = setTimeout(() => {
+      setSlideClass("translate-x-0");
+    }, 50);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -41,7 +46,7 @@ const Alert: React.FC<AlertProps> = ({ type, message, onClose, shouldExit }) => 
   return (
     <div
       className={`p-5 rounded-lg text-center text-sm transition-transform duration-300 ease-in-out 
-                  flex justify-center items-center w-[200px] break-words min-h-[50px] box-border z-[1000]
+                  flex justify-center items-center w-[200px] break-words min-h-[50px] box-border z-[9999]
                   ${slideClass}`}
       style={{
         backgroundColor: type === "success" ? "lightgreen" : "pink",

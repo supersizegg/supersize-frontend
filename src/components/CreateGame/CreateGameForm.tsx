@@ -11,6 +11,7 @@ type gameProps = {
   activeGamesLoaded: FetchedGame[];
   setActiveGamesLoaded: React.Dispatch<React.SetStateAction<FetchedGame[]>>;
   selectedServer: string;
+  userKey: string;
 };
 
 type FormData = [number, number, string, string, string];
@@ -20,10 +21,11 @@ const CreateGameForm: React.FC<gameProps> = ({
   activeGamesLoaded,
   setActiveGamesLoaded,
   selectedServer,
+  userKey,
 }) => {
   const { engine, setEndpointEphemRpc } = useMagicBlockEngine();
   const { publicKey } = useWallet();
-  const userKey = publicKey?.toString() || engine.getWalletPayer().toString() || "Connect Wallet";
+
   const [formData, setFormData] = useState<FormData>([
     game_size,
     1.0,
@@ -53,19 +55,19 @@ const CreateGameForm: React.FC<gameProps> = ({
   }, []);
 
   useEffect(() => {
-    try {
-      let userKey = engine.getWalletPayer().toString();
-      setFormData((prev) => ({ ...prev, 3: userKey }));
-    } catch (e) {
-      console.log(e);
-    }
-  }, [engine]);
-
-  useEffect(() => {
     const updatedFormData = [...formData] as FormData;
     updatedFormData[0] = game_size;
     setFormData(updatedFormData);
   }, [game_size]);
+
+  useEffect(() => {
+    try {
+      let userKey = engine.getWalletPayer().toString();
+      setFormData((prev) => ({ ...prev, 2: userKey }));
+    } catch (e) {
+      console.log(e);
+    }
+  }, [engine]);
 
   const handleChange = (index: number) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const { value } = e.target;
@@ -81,8 +83,10 @@ const CreateGameForm: React.FC<gameProps> = ({
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsModalOpen(true);
-    console.log(selectedServer);
-    setEndpointEphemRpc(selectedServer);
+    console.log("selectedServer", selectedServer);
+    const currentEndpoint = engine.getEndpointEphemRpc();
+    //setEndpointEphemRpc(selectedServer);
+    engine.setTempEndpointEphemRpc(selectedServer);
     gameExecuteNewGame(
       engine,
       formData[1],
@@ -95,7 +99,11 @@ const CreateGameForm: React.FC<gameProps> = ({
       showPrompt,
       setNewGameId,
       setGameCreated,
-    );
+    ).then(() => {
+      engine.setTempEndpointEphemRpc(currentEndpoint);
+    }).catch((e) => {
+      engine.setTempEndpointEphemRpc(currentEndpoint);
+    });
   };
 
   return (

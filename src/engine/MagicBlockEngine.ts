@@ -84,8 +84,7 @@ export class MagicBlockEngine {
     });
   }
 
-  /*
-  public setEndpointEphemRpc(endpoint: string): void {
+  public setTempEndpointEphemRpc(endpoint: string): void {
     console.log("setEndpointEphemRpc", endpoint);
     this.endpointEphemRpc = endpoint;
     this.connectionEphem = new Connection(endpoint, {
@@ -95,7 +94,6 @@ export class MagicBlockEngine {
       preflightCommitment: "processed",
     });
   }
-  */
 
   public getEndpointEphemRpc(): string {
     return this.endpointEphemRpc;

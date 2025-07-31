@@ -18,6 +18,7 @@ import { BN } from "@coral-xyz/anchor";
 import { HELIUS_API_KEY } from "@utils/constants";
 import { getAccount, NATIVE_MINT } from "@solana/spl-token";
 import { Circle } from "./types";
+import { SupersizeVaultClient } from "../engine/SupersizeVaultClient";
 
 export function getCustomErrorCode(error: any): number | undefined {
   let parsed: any = error;
@@ -336,45 +337,37 @@ export const waitSignatureConfirmation = async (
   });
 };
 
-export async function fetchTokenBalance(engine: MagicBlockEngine, activeGame: ActiveGame, isDevnet: boolean) : Promise<{
+export async function fetchTokenBalance(engine: MagicBlockEngine, activeGame: ActiveGame) : Promise<{
   tokenBalance: number,
   hasInsufficientTokenBalance: boolean,
 }> {
-  if (!activeGame || !activeGame.tokenMint) return { tokenBalance: 0, hasInsufficientTokenBalance: true };
-  let connection = engine.getConnectionChain();
-  let wallet = engine.getWalletPayer();
 
-  if (isDevnet){
-    connection = engine.getConnectionChainDevnet();
-    wallet = engine.getSessionPayer();
+  let vaultClient: SupersizeVaultClient | null = null;
+  if (engine && engine.getWalletConnected()) {
+    vaultClient = new SupersizeVaultClient(engine);
+  }else{
+    return { tokenBalance: 0, hasInsufficientTokenBalance: true };
   }
-  if (!wallet) return { tokenBalance: 0, hasInsufficientTokenBalance: true };
-
+  
+  if (!activeGame || !activeGame.tokenMint) return { tokenBalance: 0, hasInsufficientTokenBalance: true };
   try {
     if (!activeGame.tokenMint) return { tokenBalance: 0, hasInsufficientTokenBalance: true };
     const tokenMint = new PublicKey(activeGame.tokenMint);
     let balance = 0;
-    let denominator = 0;
-    if (tokenMint.equals(NATIVE_MINT)) {
-      const balanceInfo = await connection.getBalance(wallet);
-      balance = balanceInfo;
-      denominator = LAMPORTS_PER_SOL;
-    } else {
-      const tokenAccounts = await connection.getTokenAccountsByOwner(wallet, {
-        mint: tokenMint,
-      });
-      if (tokenAccounts.value.length > 0) {
-        const accountInfo = tokenAccounts.value[0].pubkey;
-        const balanceInfo = await connection.getTokenAccountBalance(accountInfo);
-        balance = parseInt(balanceInfo.value.amount) || 0;
-        denominator = 10 ** activeGame.decimals
-      }
+    const mintStr = "AsoX43Q5Y87RPRGFkkYUvu8CSksD9JXNEqWVGVsr8UEp";
+    const mint = new PublicKey(mintStr);
+    const uiAmount = await vaultClient?.getVaultBalance(mint);
+    if (uiAmount == "wrong_server") {
+      balance = 0;
+    } else if (uiAmount && uiAmount >= 0) {
+      balance = uiAmount;
     }
 
-    if (balance < activeGame.buy_in) {
-      return { tokenBalance: balance / denominator, hasInsufficientTokenBalance: true };
+    const denominator = 10 ** activeGame.decimals;
+    if (balance < activeGame.buy_in / denominator) {
+      return { tokenBalance: balance, hasInsufficientTokenBalance: true };
     } else {
-      return { tokenBalance: balance / denominator, hasInsufficientTokenBalance: false };
+      return { tokenBalance: balance, hasInsufficientTokenBalance: false };
     }
   } catch (error) {
     console.log("Error fetching token balance:", error);
@@ -710,7 +703,7 @@ export const getMyPlayerStatus = async (
       componentId: COMPONENT_PLAYER_ID,
       entity: playerEntityPda,
     });
-    
+
     let playersacc = playerFetchOnSpecificEphem(engine, playersComponentPda, endpoint);
     fetchPromises.push(
       Promise.all([

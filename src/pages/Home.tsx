@@ -338,11 +338,10 @@ const Home = ({
       const { tokenBalance, hasInsufficientTokenBalance } = await fetchTokenBalance(
         engine,
         game.activeGame,
-        networkType == "devnet",
       );
       setTokenBalance(tokenBalance);
       setHasInsufficientTokenBalance(hasInsufficientTokenBalance);
-
+      
       const result = await gameExecuteJoin(
         engine,
         game.activeGame,
@@ -715,6 +714,7 @@ const Home = ({
         />
       )}
       <NotificationContainer />
+
       <SignUpBanner engine={engine} preferredRegion={preferredRegion} />
     </div>
   );

@@ -13,7 +13,11 @@ export interface TokenBalance {
   uiAmount: number;
 }
 
-export function MenuSession() {
+type MenuSessionProps = {
+  setTokenBalance: (tokenBalance: number) => void;
+};
+
+export function MenuSession({ setTokenBalance }: MenuSessionProps) {
   const { engine } = useMagicBlockEngine();
 
   const [vaultClient, setVaultClient] = useState<SupersizeVaultClient | null>(null);
@@ -47,6 +51,9 @@ export function MenuSession() {
       if (uiAmount == "wrong_server") {
         balances.push({ mint: mintStr, uiAmount: -1 });
       } else if (uiAmount >= 0) {
+        if (mintStr === "AsoX43Q5Y87RPRGFkkYUvu8CSksD9JXNEqWVGVsr8UEp") {
+          setTokenBalance(uiAmount);
+        }
         balances.push({ mint: mintStr, uiAmount });
       }
     }

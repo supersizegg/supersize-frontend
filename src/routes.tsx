@@ -63,7 +63,9 @@ const AppRoutes = () => {
     }
     const fetchGameWalletEphem = async () => {
       if (vaultClient) {
-        await vaultClient.findMyEphemEndpoint(setEndpointEphemRpc, setPreferredRegion);
+        if (preferredRegion == "") {
+          await vaultClient.findMyEphemEndpoint(setEndpointEphemRpc, setPreferredRegion);
+        } 
       } else {
         const pingResults = await pingEndpoints();
         console.log("Vault is not initialized, fallback pinging endpoints", pingResults);
@@ -88,8 +90,8 @@ const AppRoutes = () => {
       setTokenBalance(balance);
     };
 
-    getTokenBalance();
     fetchGameWalletEphem();
+    getTokenBalance();
   }, [engine]);
 
   return (
@@ -152,6 +154,7 @@ const AppRoutes = () => {
             preferredRegion={preferredRegion}
             setPreferredRegion={setPreferredRegion}
             tokenBalance={tokenBalance}
+            setTokenBalance={setTokenBalance}
           />
         }
       />

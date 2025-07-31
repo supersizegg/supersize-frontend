@@ -8,13 +8,15 @@ const NotificationContainer: React.FC = () => {
 
   useEffect(() => {
     const unsubscribe = notificationService.subscribe((alerts) => {
+      console.log("NotificationContainer: Received alerts", alerts);
       setAlerts(alerts);
     });
     return unsubscribe;
   }, []);
 
+  console.log("NotificationContainer: Rendering with alerts:", alerts.length);
   return (
-    <div className="fixed bottom-10 right-10 z-[1000]">
+    <div className="fixed bottom-10 right-10 z-[9999]">
       {alerts.map((alert, index) => (
         <div
           key={alert.id}

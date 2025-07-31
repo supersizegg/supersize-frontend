@@ -101,6 +101,8 @@ export async function gameExecuteNewGame(
   if (currentEndpoint.rpcEndpoint === endpoints[NETWORK][2]) {
     validator = new PublicKey("ASLxD38WUHStVbUGm4BW7WZNSThwzZYTr6Qz4eohf3Xp");
   }
+  console.log("validator", validator.toString());
+  console.log("ephem rpc", context.engine.getEndpointEphemRpc());
   await vaultClient.setupGameWallet(mapComponentPda, mint_of_token, validator);
 
   await stepDelegateMap(context, setTransactions, showPrompt);

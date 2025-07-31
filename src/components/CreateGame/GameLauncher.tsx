@@ -62,6 +62,7 @@ const GameLauncher: React.FC<launchProps> = ({ activeGamesLoaded, setActiveGames
           activeGamesLoaded={activeGamesLoaded}
           setActiveGamesLoaded={setActiveGamesLoaded}
           selectedServer={selectedEndpoint}
+          userKey={"Enter Wallet Address"}
         />
       </div>
     </div>

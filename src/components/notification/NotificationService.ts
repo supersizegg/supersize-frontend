@@ -15,22 +15,23 @@ class NotificationService {
 
   subscribe(listener: Listener) {
     this.listeners.push(listener);
-    listener(this.alerts);
+    listener([...this.alerts]);
     return () => {
       this.listeners = this.listeners.filter((l) => l !== listener);
     };
   }
 
   private emit() {
+    const alertsCopy = [...this.alerts];
     for (const listener of this.listeners) {
-      listener(this.alerts);
+      listener(alertsCopy);
     }
   }
 
   addAlert(alert: Omit<AlertData, "id">): number {
-    const id = Date.now(); 
+    const id = Date.now();
     const newAlert: AlertData = { ...alert, id };
-    this.alerts.push(newAlert);
+    this.alerts = [...this.alerts, newAlert]; 
     this.emit();
     return id;
   }
@@ -43,12 +44,12 @@ class NotificationService {
   }
 
   removeAlert(id: number) {
-    this.alerts = this.alerts.filter((alert) => alert.id !== id);
+    this.alerts = this.alerts.filter((alert) => alert.id !== id); 
     this.emit();
   }
 
   getAlerts() {
-    return this.alerts;
+    return [...this.alerts];
   }
 }
 
