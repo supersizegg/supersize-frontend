@@ -266,18 +266,19 @@ export async function countMatchingTransactions(
   return matchingTxs.length;
 }
   
-export const deposit = async (
+export const gameTransfer = async (
     vaultClient: SupersizeVaultClient,
     amount: number,
     mapComponentPda: PublicKey,
     mint_of_token_being_sent: PublicKey,
+    deposit: boolean = true,
   ) => {
     if (amount <= 0) {
       console.error("Deposit amount must be greater than zero.");
       return;
     }
     try {
-      const desposittx = vaultClient.depositToGame(mint_of_token_being_sent, amount, mapComponentPda);
+      const desposittx = vaultClient.gameTranfer(mint_of_token_being_sent, amount, mapComponentPda, deposit);
       console.log("Deposit successful, transaction signature:", desposittx);
     } catch (error) {
       console.error("Error during deposit:", error);

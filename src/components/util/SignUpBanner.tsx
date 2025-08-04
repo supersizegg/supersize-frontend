@@ -12,10 +12,10 @@ const SignUpBanner: React.FC<SignUpBannerProps> = ({engine, preferredRegion}) =>
   return (
     <button
         className="
-        fixed bottom-11 left-10 z-50 
+        fixed bottom-11 right-10 z-50 
         flex items-center
         bg-[#2B2B2B] 
-        border-2 border-[#00FFA3]  
+        border-2 border-[#4fc124]  
         rounded-[24px]
         px-5 py-3
         shadow-inner
@@ -29,7 +29,7 @@ const SignUpBanner: React.FC<SignUpBannerProps> = ({engine, preferredRegion}) =>
     >
         <span className="text-white font-semibold text-base tracking-wide">
           {!engine.getWalletConnected() ? "Sign in and " : ""}
-           activate your vault to start winning money!
+           activate your vault to start collecting slimecoins!
         </span>
     </button>
   );

@@ -111,11 +111,11 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
     }
   };
 
-  const handleWithdraw = async (mint: string, uiAmount: number) => {
+  const handleWithdraw = async (mint: string, uiAmount: number, payoutWallet: PublicKey | null) => {
     if (!vaultClient || uiAmount <= 0) return;
     setStatus("loading");
     try {
-      await vaultClient.withdraw(new PublicKey(mint), uiAmount);
+      await vaultClient.withdraw(new PublicKey(mint), uiAmount, payoutWallet);
       await checkStatus();
     } catch (error) {
       console.error("Failed to withdraw:", error);
@@ -164,7 +164,7 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
                 <span className="session-label" style={{ marginRight: "10px", display: "inline" }}>
                   Game wallet
                   {status === "delegated" && !resetGameWallet && (
-                    <p style={{ display: "inline", color: "#ff4d4f", marginLeft: "10px" }}>[active]</p>
+                    <p style={{ display: "inline", color: "#4c9058", marginLeft: "10px" }}>[active]</p>
                   )}
                 </span>
               </div>
@@ -225,6 +225,7 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
                         <td>
                           <button
                             className="table-btn"
+                            /* style={{ opacity: engine?.getWalletType() === "embedded" ? "0" : "1" }} */
                             onClick={() =>
                               setDialog({
                                 type: "deposit",
@@ -260,6 +261,7 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
 
       {dialog && vaultClient && (
         <TokenTransferModal
+          engine={engine}
           vaultClient={vaultClient}
           kind={dialog.type}
           token={dialog.token}

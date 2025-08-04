@@ -32,7 +32,7 @@ function MagicBlockEngineProviderInner({ children }: { children: React.ReactNode
   const { wallets } = useSolanaWallets();
   const { sendTransaction } = useSendTransaction();
 
-  const walletTypeRef = React.useRef("embedded");
+  const walletTypeRef = React.useRef("external");
 
   const pklist = useMemo<WalletWithMetadata[]>(
     () =>
@@ -60,18 +60,18 @@ function MagicBlockEngineProviderInner({ children }: { children: React.ReactNode
         pk_type = "embedded";
       }
     }
+
     const pk_item_1 = pklist && pklist[1] ? pklist[1] : null;
     let pk_1: PublicKey | null = null;
     if (pk_item_1 && pk_item_1.connectorType == "embedded") {
       pk_1 = new PublicKey(pk_item_1.address);
     }
-    //walletTypeRef.current = pk_type;
+    walletTypeRef.current = pk_type;
     console.log(pklist, pk_type, pk?.toString());
     return {
       connected: ready && authenticated && !!pk,
       connecting: !ready,
       publicKey: pk,
-      embeddedWallet: pk_1,
       sendTransaction: async (tx: Transaction, connection: Connection) => {
         const latestBlockhash = await connection.getLatestBlockhash();
         tx.recentBlockhash = latestBlockhash.blockhash;

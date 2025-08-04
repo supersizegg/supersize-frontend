@@ -8,38 +8,31 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import { calculateK } from "@utils/helper";
-import { calculateY } from "@utils/helper";
+import { MagicBlockEngine } from "../../engine/MagicBlockEngine";
+import { PublicKey } from "@solana/web3.js";
 
 ChartJS.register(LineElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 interface GraphProps {
-  maxPlayers: number;
-  foodInWallet: number;
-  buyIn: number;
-  decimals: number;
+  engine: MagicBlockEngine;
+  mapComponentPda: PublicKey;
 }
 
-const Graph: React.FC<GraphProps> = ({ maxPlayers, foodInWallet, buyIn, decimals }) => {
+const Graph: React.FC<GraphProps> = ({ engine, mapComponentPda }) => {
   const [chartData, setChartData] = useState<any>(null);
   const [chartReady, setChartReady] = useState(false);
-  const epsilon = 0.01;
 
   useEffect(() => {
     setTimeout(() => {
-      console.log("buyIn", buyIn);
-      const k = calculateK(maxPlayers, epsilon);
-      const values = Array.from({ length: 100000 }, (_, i) => i);
-      const foodToAddValues = values.map((x) => calculateY(x, k) * 100);
-      const currentFoodToAdd = Math.max(0.5, Math.floor(calculateY(foodInWallet, k) * 100));
-      const roundedFoodInWallet = Math.round(foodInWallet);
+      const values = Array.from({ length: 30 }, (_, i) => i);
+
       
       const data = {
-        labels: values.map((x) => Number(((x / 1000) * (buyIn / 10 ** decimals)).toFixed(2))),
+        labels: values,
         datasets: [
           {
             label: "Food value multiplier",
-            data: foodToAddValues,
+            data: values,
             borderColor: "rgba(75,192,192,1)",
             borderWidth: 2,
             fill: false,
@@ -48,7 +41,7 @@ const Graph: React.FC<GraphProps> = ({ maxPlayers, foodInWallet, buyIn, decimals
           },
           {
             label: "Current Value",
-            data: values.map((x) => (x === roundedFoodInWallet ? currentFoodToAdd : null)),
+            data: values,
             borderColor: "rgba(255,0,0,1)",
             borderWidth: 3,
             pointRadius: 8,
@@ -61,7 +54,7 @@ const Graph: React.FC<GraphProps> = ({ maxPlayers, foodInWallet, buyIn, decimals
 
       setChartData(data);
     }, 0);
-  }, [maxPlayers, buyIn, decimals, foodInWallet]);
+  }, [engine, mapComponentPda]);
 
   const options = {
     responsive: true,

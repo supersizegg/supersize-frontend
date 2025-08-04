@@ -39,7 +39,7 @@
     }
 
     &.active {
-      background: #ff4d50;
+      background: #4c9058;
     }
   }
 }
@@ -127,6 +127,7 @@
   }
 
   .btn-save,
+  .btn-create-game,
   .btn-copy,
   .btn-create-referral {
     background: #0055ff;
@@ -137,6 +138,7 @@
     cursor: pointer;
     font-weight: 500;
     transition: background 0.2s;
+    margin-bottom: 1rem;
 
     &:hover {
       background: #0040cc;
@@ -215,6 +217,7 @@
 
   .btn-save,
   .btn-copy,
+  .btn-create-game,
   .btn-create-referral {
     background: #0055ff;
     border: none;
@@ -224,6 +227,7 @@
     cursor: pointer;
     font-weight: 500;
     transition: background 0.2s;
+    margin-bottom: 1rem;
 
     &:hover {
       background: #0040cc;

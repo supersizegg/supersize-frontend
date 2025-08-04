@@ -6,6 +6,7 @@ import GameComponent from "@components/Game/Game";
 import { MenuBar } from "@components/menu/MenuBar";
 import SignUpBanner from "../components/util/SignUpBanner";
 import { useMagicBlockEngine } from "../engine/MagicBlockEngineProvider";
+import Footer from "../components/Footer/Footer";
 
 type LandingProps = {
   preferredRegion: string;
@@ -15,9 +16,6 @@ type LandingProps = {
 const Landing = ({ preferredRegion, tokenBalance }: LandingProps) => {
   const { engine } = useMagicBlockEngine();
   const navigate = useNavigate();
-  const openX = () => {
-    window.open("https://x.com/SUPERSIZEgg", "_blank");
-  };
 
   return (
     <div className="landing-page">
@@ -55,36 +53,41 @@ const Landing = ({ preferredRegion, tokenBalance }: LandingProps) => {
         />
       </div>
       <MenuBar tokenBalance={tokenBalance} />
-      <div
-        onClick={openX}
-        className="follow-x-button  follow-btn"
-        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2b2d31")}
-        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#1d1f23")}
-      >
-        <img src={`${process.env.PUBLIC_URL}/x-logo.png`} alt="X" style={{ width: "16px", height: "16px" }} />
-        Follow
-      </div>
       <div className="panels">
-        <div className="panel" onClick={() => navigate("/home")}>
-          <div className="inner-panel">
-            <div className="overlay-panel" />
+        <div className="panel"
+          onMouseEnter={(e) => {
+            const goButton = e.currentTarget.querySelector<HTMLElement>(".inner-panel");
+            if (goButton) {
+              goButton.style.opacity = "0.85";
+            }
+          }}
+          onMouseLeave={(e) => {
+            const goButton = e.currentTarget.querySelector<HTMLElement>(".inner-panel");
+            if (goButton) {
+              goButton.style.opacity = "1";
+            }
+          }}>
+          <div className="inner-panel" onClick={() => navigate("/home")}>
+            <div className="overlay-panel"/>
             <img
-              src="/superblob.png"
+              src="/blobgame.png"
               alt="SUPER BLOB"
               className="panel-image"
-              style={{ width: "85%", height: "85%", margin: "auto", marginTop: "-20px" }}
+              style={{ width: "100%", height: "100%", margin: "auto"}}
             />
           </div>
-          <div className="panel-subtitle">multiplayer blob game </div>
+          <div className="panel-subtitle">Play now!</div>
         </div>
         <div className="panel disabled" style={{ pointerEvents: "none" }}>
           <div className="inner-panel">
             <div className="overlay-panel" />
-            <img src="/supersnake.png" alt="SUPER SNAKE" className="panel-image" />
+            <img src="/snakegame.png" alt="SUPER SNAKE" className="panel-image" 
+            style={{ width: "85%", height: "85%", margin: "auto", marginTop: "-20px" }}/>
           </div>
-          <div className="panel-subtitle">coming soon!</div>
+          <div className="panel-subtitle">coming soon</div>
         </div>
       </div>
+      {/*
       <div className="promo-callout" onClick={() => navigate("/wishlist")}>
         <div className="promo-icon">
           <img src="/slimeicon.png" alt="slime icon" className="promo-image" />
@@ -95,6 +98,9 @@ const Landing = ({ preferredRegion, tokenBalance }: LandingProps) => {
           app wishlist!
         </div>
       </div>
+      */}
+
+      <Footer/>
       <SignUpBanner engine={engine} preferredRegion={preferredRegion} />
     </div>
   );

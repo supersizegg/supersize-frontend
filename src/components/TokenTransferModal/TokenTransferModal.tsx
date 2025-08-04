@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { PublicKey } from "@solana/web3.js";
 import { SupersizeVaultClient } from "@engine/SupersizeVaultClient";
+import { MagicBlockEngine } from "@engine/MagicBlockEngine";
 import "./Modal.css";
 
 type Props = {
+  engine: MagicBlockEngine;
   vaultClient: SupersizeVaultClient;
   kind: "deposit" | "withdraw";
   token: { mint: string; symbol: string; decimals: number };
@@ -11,10 +13,11 @@ type Props = {
   fetchWalletBalance: (mint: string) => Promise<number>;
   onClose: () => void;
   onDone: () => void;
-  handleWithdraw: (mint: string, uiAmount: number) => Promise<void>;
+  handleWithdraw: (mint: string, uiAmount: number, payoutWallet: PublicKey | null) => Promise<void>;
 };
 
 const TokenTransferModal: React.FC<Props> = ({
+  engine,
   vaultClient,
   kind,
   token,
@@ -24,9 +27,11 @@ const TokenTransferModal: React.FC<Props> = ({
   onDone,
   handleWithdraw,
 }) => {
+  const wallet = engine.getWalletPayer();
   const [max, setMax] = useState<number>(0);
   const [value, setValue] = useState<number>(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [payoutWallet, setPayoutWallet] = useState<PublicKey | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -51,7 +56,7 @@ const TokenTransferModal: React.FC<Props> = ({
         await vaultClient.deposit(new PublicKey(token.mint), value);
         onDone();
       } else {
-        await handleWithdraw(token.mint, value);
+        await handleWithdraw(token.mint, value, payoutWallet);
       }
     } catch (error) {
       console.error(`Failed to ${kind}:`, error);
@@ -67,8 +72,39 @@ const TokenTransferModal: React.FC<Props> = ({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-container" onClick={(e) => e.stopPropagation()}>
         <h3 style={{ marginBottom: "0.5rem" }}>
-          {kind === "deposit" ? "Deposit to Game Vault" : "Withdraw to Main Wallet"}
+          {kind === "deposit" ? "Deposit" : "Withdraw"}
         </h3>
+
+        <p style={{ fontSize: "0.9rem", marginBottom: "0.5rem" }}>
+          {engine?.getWalletType() === "embedded" && 
+          kind === "withdraw"
+           ?(
+            <>
+            <label htmlFor="payoutWalletInput">Payout Wallet:</label>
+            <input
+              type="text"
+              id="payoutWalletInput"
+              value={payoutWallet ? payoutWallet.toString() : ""}
+              onChange={(e) => {
+                try {
+                  const newPayoutWallet = new PublicKey(e.target.value);
+                  setPayoutWallet(newPayoutWallet);
+                } catch (error) {
+                  console.error("Invalid PublicKey format:", error);
+                }
+              }}
+              placeholder="Enter payout wallet address"
+              style={{ width: "100%", marginBottom: "0.5rem", color: "black"}}
+            />
+            </>
+           )
+           : (
+            <>
+              {kind === "deposit" ? "From wallet:" : "To wallet:"} {wallet.toString().slice(0, 3) + "..." + wallet.toString().slice(-3)}
+            </>
+           )}
+        </p>
+
 
         <p style={{ fontSize: "0.9rem", marginBottom: "0.5rem" }}>
           Available: {max.toLocaleString(undefined, { maximumFractionDigits: token.decimals })}

@@ -17,6 +17,17 @@
   font-style: normal;
 }
 
+.branding {
+  font-size: 36px;
+  font-weight: 700;
+  font-family: "Lexend", sans-serif;
+  color: #fff;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .how-to-play-button {
   background: #ff4d50; /* bright, friendly green */
   color: #000; /* black text for strong contrast */
@@ -32,20 +43,16 @@
   background: #ff4d50; /* slightly darker green on hover */
   transform: scale(1.05);
 }
-.follow-x-button {
-    display: flex;
-    align-items: center;
-    background-color: #1d1f23; /* dark background */
-    color: #e7e9ea; /* light gray text */
-    border-radius: 9999px; /* fully rounded */
-    padding: 6px 12px; /* vertical and horizontal padding */
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    margin-left: 1em;
-    border: 1px solid #333; /* thin dark border */
-    gap: 8px; /* space between image and text */
-    transition: background 0.2s;
+
+.title-image-container {
+  padding-top: 10px;
+  width: 150px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  img {
+    width: 100%;
+  }
 }
 
 .menu-bar {

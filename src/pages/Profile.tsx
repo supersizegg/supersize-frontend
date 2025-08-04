@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { MenuBar } from "@components/menu/MenuBar";
 import { MenuSession } from "@components/menu/MenuSession";
 import { MenuWallet } from "@components/menu/MenuWallet";
-import FooterLink from "@components/Footer/Footer";
 import "./Profile.scss";
 import { anchor, BN, FindComponentPda, FindEntityPda } from "@magicblock-labs/bolt-sdk";
 import { ActiveGame, Food } from "@utils/types";
@@ -34,7 +33,7 @@ import {
   handleDeleteGame,
   handleReinitializeClick,
   countMatchingTransactions,
-  deposit,
+  gameTransfer,
 } from "@states/adminFunctions";
 import DepositInput from "@components/util/DepositInput";
 import CollapsiblePanel from "@components/util/CollapsiblePanel";
@@ -45,6 +44,7 @@ import BackButton from "@components/util/BackButton";
 import { endpoints, options, NETWORK } from "../utils/constants";
 import { SupersizeVaultClient } from "../engine/SupersizeVaultClient";
 import { getComponentMapOnChain, getComponentMapOnEphem } from "../states/gamePrograms";
+import { NavLink, useNavigate } from "react-router-dom";
 
 Chart.register(LineElement, PointElement, LinearScale, Title, Tooltip, Legend);
 
@@ -164,7 +164,6 @@ export default function Profile({
           await engine.defundSessionBackToWallet(amount);
         }
         }} /> */}
-      <FooterLink />
       <BackButton />
     </div>
   );
@@ -229,8 +228,8 @@ function ProfileTab({
   setPreferredRegion,
 }: ProfileTabProps) {
   const [input, setInput] = useState(username);
-  const icons = ["/snake.png", "/goat.png", "/gorilla.png", "/chick.png", "/pig.png", "/penguin.png"];
-  const [selectedIcon, setSelectedIcon] = useState("/chick.png");
+  const icons = ["/slimey2.png", "/ggoat.png", "/grhino.png", "/gsnake.png", "/gpig.png", "/gcroc.png"];
+  const [selectedIcon, setSelectedIcon] = useState("/slimey2.png");
 
   useEffect(() => {
     const stored = localStorage.getItem("user");
@@ -303,6 +302,7 @@ type AdminTabProps = {
 
 function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
   const [vaultClient, setVaultClient] = useState<SupersizeVaultClient | null>(null);
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [myGames, setMyGames] = useState<ActiveGame[]>([]);
   const [openPanelIndex, setOpenPanelIndex] = useState<number | null>(null);
@@ -315,6 +315,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
   const [foodComponentCheck, setFoodComponentCheck] = useState<string>("");
   const [depositValue, setDepositValue] = useState<string>("");
   const [currentFoodToAdd, setCurrentFoodToAdd] = useState<number>(0);
+  const [selectedMapComponentPda, setSelectedMapComponentPda] = useState<PublicKey | null>(null);
   const [cashoutStats, setCashoutStats] = useState<{
     buyInSum: number | null;
     buyInCount: number | null;
@@ -368,6 +369,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
     setGameOwner("");
     setGameWallet("");
     setCashoutStats({ buyInSum: null, buyInCount: null });
+    setSelectedMapComponentPda(null);
 
     const mapEntityPda = FindEntityPda({
       worldId: newGameInfo.worldId,
@@ -378,6 +380,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
       componentId: COMPONENT_MAP_ID,
       entity: mapEntityPda,
     });
+    setSelectedMapComponentPda(mapComponentPda);
 
     try {
       // p1: Process game and anteroom data
@@ -520,6 +523,12 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
 
   return (
     <div className="admin-tab">
+      <button
+        className="btn-create-game"
+        onClick={() => navigate("/create-game")}
+      >
+        <span>+ Create Game</span>
+      </button>
       {isLoading === true ? (
         <div className="loading-container">
           <Spinner /> <span>Loading games you own...</span>
@@ -598,7 +607,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                         componentId: COMPONENT_MAP_ID,
                         entity: mapEntityPda,
                       });
-                      deposit(vaultClient, parseFloat(depositValue), mapComponentPda, row.tokenMint);
+                      gameTransfer(vaultClient, parseFloat(depositValue), mapComponentPda, row.tokenMint);
                     }
                   }}
                 >
@@ -607,8 +616,20 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                 <button
                   className="btn-copy"
                   style={{ flex: "1 1 10%", margin: "10px" }}
-                  onClick={() => console.log("TODO: withdraw")}
-                >
+                  onClick={() => {
+                    if (row.tokenMint && vaultClient) {
+                      const mapEntityPda = FindEntityPda({
+                        worldId: row.worldId,
+                        entityId: new anchor.BN(0),
+                        seed: stringToUint8Array("origin"),
+                      });
+                      const mapComponentPda = FindComponentPda({
+                        componentId: COMPONENT_MAP_ID,
+                        entity: mapEntityPda,
+                      });
+                      gameTransfer(vaultClient, parseFloat(depositValue), mapComponentPda, row.tokenMint, false);
+                    }
+                  }}                >
                   Withdraw{" "}
                 </button>
               </div>
@@ -642,12 +663,12 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                 }}
               >
                 <CollapsiblePanel title="User Metrics" defaultOpen={false}>
+                  {selectedMapComponentPda && (
                   <Graph
-                    maxPlayers={row.max_players}
-                    foodInWallet={Math.floor(userTokenBalance / row.buy_in) * 1000}
-                    buyIn={row.buy_in}
-                    decimals={row.decimals}
+                    engine={engine}
+                    mapComponentPda={selectedMapComponentPda}
                   />
+                  )}
                 </CollapsiblePanel>
               </div>
 
@@ -660,119 +681,6 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                   justifyContent: "center",
                 }}
               >
-                <p
-                  style={{
-                    flex: "1 1 100%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    margin: "10px",
-                  }}
-                >
-                  {foodComponentCheck !== "success" ? (
-                    <>
-                      {foodComponentCheck !== "section not found" && foodComponentCheck !== "section incorrect" ? (
-                        <>
-                          Food components check
-                          <svg
-                            className="inline ml-[5px] mt-[2px] h-[20px] w-[20px] stroke-[white]"
-                            width="52"
-                            height="52"
-                            viewBox="0 0 38 38"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <g fill="none" fillRule="evenodd">
-                              <g transform="translate(1 1)" strokeWidth="2">
-                                <circle strokeOpacity=".5" cx="18" cy="18" r="18" />
-                                <path d="M36 18c0-9.94-8.06-18-18-18">
-                                  <animateTransform
-                                    attributeName="transform"
-                                    type="rotate"
-                                    from="0 18 18"
-                                    to="360 18 18"
-                                    dur="1s"
-                                    repeatCount="indefinite"
-                                  />
-                                </path>
-                              </g>
-                            </g>
-                          </svg>
-                        </>
-                      ) : (
-                        <div style={{ alignItems: "center", justifyContent: "center" }}>
-                          {incorrectFoodEntities.map((entityPda, idx) => (
-                            <>
-                              <div
-                                style={{
-                                  display: "flex",
-                                  flexDirection: "row",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                  marginBottom: "10px",
-                                }}
-                              >
-                                <a
-                                  href={`https://explorer.solana.com/address/${entityPda.foodComponentPda.toString()}?cluster=custom&customUrl=https%3A%2F%2F${row.endpoint.replace("https://", "")}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  Incorrect food section: {entityPda.foodComponentPda.toString().slice(0, 3)}...
-                                  {entityPda.foodComponentPda.toString().slice(-3)}
-                                </a>
-                                <button
-                                  key={idx}
-                                  className="btn-copy"
-                                  onClick={() =>
-                                    handleReinitializeClick(
-                                      engine,
-                                      row,
-                                      entityPda.foodEntityPda,
-                                      entityPda.foodComponentPda,
-                                      entityPda.x,
-                                      entityPda.y,
-                                      entityPda.seed,
-                                    )
-                                  }
-                                >
-                                  Reinitialize
-                                </button>
-                              </div>
-                            </>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      Food components check
-                      <svg
-                        className="w-5 h-5 rounded-full inline-block stroke-[2px] stroke-[#15bd12] stroke-miter-10 shadow-inner ml-[5px] mt-[2px]"
-                        style={{
-                          animation: "fill 0.4s ease-in-out 0.4s forwards, scale 0.3s ease-in-out 0.9s both;",
-                        }}
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 52 52"
-                      >
-                        <circle
-                          className="stroke-[2px] stroke-[#15bd12] stroke-miter-10 fill-[#15bd12]"
-                          style={{
-                            strokeDasharray:
-                              "166; stroke-dashoffset: 166; animation: stroke 0.6s cubic-bezier(0.650, 0.000, 0.450, 1.000) forwards;",
-                          }}
-                          cx="26"
-                          cy="26"
-                          r="25"
-                          fill="none"
-                        />
-                        <path
-                          className="stroke-[white] stroke-dasharray-[48] stroke-dashoffset-[48] transform-origin-[50%_50%] animation-stroke"
-                          fill="none"
-                          d="M14.1 27.2l7.1 7.2 16.7-16.8"
-                        />
-                      </svg>
-                    </>
-                  )}
-                </p>
                 <p
                   style={{
                     width: "100%",
@@ -935,6 +843,119 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                   </CollapsiblePanel>
                 </p>
               </div>
+              <p
+                  style={{
+                    flex: "1 1 100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    margin: "10px",
+                  }}
+                >
+                  {foodComponentCheck !== "success" ? (
+                    <>
+                      {foodComponentCheck !== "section not found" && foodComponentCheck !== "section incorrect" ? (
+                        <>
+                          Food components check
+                          <svg
+                            className="inline ml-[5px] mt-[2px] h-[20px] w-[20px] stroke-[white]"
+                            width="52"
+                            height="52"
+                            viewBox="0 0 38 38"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <g fill="none" fillRule="evenodd">
+                              <g transform="translate(1 1)" strokeWidth="2">
+                                <circle strokeOpacity=".5" cx="18" cy="18" r="18" />
+                                <path d="M36 18c0-9.94-8.06-18-18-18">
+                                  <animateTransform
+                                    attributeName="transform"
+                                    type="rotate"
+                                    from="0 18 18"
+                                    to="360 18 18"
+                                    dur="1s"
+                                    repeatCount="indefinite"
+                                  />
+                                </path>
+                              </g>
+                            </g>
+                          </svg>
+                        </>
+                      ) : (
+                        <div style={{ alignItems: "center", justifyContent: "center" }}>
+                          {incorrectFoodEntities.map((entityPda, idx) => (
+                            <>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "row",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  marginBottom: "10px",
+                                }}
+                              >
+                                <a
+                                  href={`https://explorer.solana.com/address/${entityPda.foodComponentPda.toString()}?cluster=custom&customUrl=https%3A%2F%2F${row.endpoint.replace("https://", "")}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  Incorrect food section: {entityPda.foodComponentPda.toString().slice(0, 3)}...
+                                  {entityPda.foodComponentPda.toString().slice(-3)}
+                                </a>
+                                <button
+                                  key={idx}
+                                  className="btn-copy"
+                                  onClick={() =>
+                                    handleReinitializeClick(
+                                      engine,
+                                      row,
+                                      entityPda.foodEntityPda,
+                                      entityPda.foodComponentPda,
+                                      entityPda.x,
+                                      entityPda.y,
+                                      entityPda.seed,
+                                    )
+                                  }
+                                >
+                                  Reinitialize
+                                </button>
+                              </div>
+                            </>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      Food components check
+                      <svg
+                        className="w-5 h-5 rounded-full inline-block stroke-[2px] stroke-[#15bd12] stroke-miter-10 shadow-inner ml-[5px] mt-[2px]"
+                        style={{
+                          animation: "fill 0.4s ease-in-out 0.4s forwards, scale 0.3s ease-in-out 0.9s both;",
+                        }}
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 52 52"
+                      >
+                        <circle
+                          className="stroke-[2px] stroke-[#15bd12] stroke-miter-10 fill-[#15bd12]"
+                          style={{
+                            strokeDasharray:
+                              "166; stroke-dashoffset: 166; animation: stroke 0.6s cubic-bezier(0.650, 0.000, 0.450, 1.000) forwards;",
+                          }}
+                          cx="26"
+                          cy="26"
+                          r="25"
+                          fill="none"
+                        />
+                        <path
+                          className="stroke-[white] stroke-dasharray-[48] stroke-dashoffset-[48] transform-origin-[50%_50%] animation-stroke"
+                          fill="none"
+                          d="M14.1 27.2l7.1 7.2 16.7-16.8"
+                        />
+                      </svg>
+                    </>
+                  )}
+                </p>
               <div
                 style={{
                   display: "flex",

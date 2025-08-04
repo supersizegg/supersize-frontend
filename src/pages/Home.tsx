@@ -36,6 +36,7 @@ import NotificationContainer from "@components/notification/NotificationContaine
 import NotificationService from "@components/notification/NotificationService";
 import BalanceWarning from "@components/notification/BalanceWarning";
 import SignUpBanner from "../components/util/SignUpBanner";
+import Footer from "../components/Footer/Footer";
 
 type homeProps = {
   selectedGame: ActiveGame | null;
@@ -513,37 +514,7 @@ const Home = ({
       </div>
       <MenuBar tokenBalance={tokenBalance} />
 
-      <div
-        className="banner"
-        style={{
-          position: "relative",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <img
-          src="/superblob-oneword.png"
-          alt="SUPER BLOB"
-          className="banner-title"
-          style={{ width: "100%", height: "100%", marginTop: "10%" }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            display: "none",
-            flexDirection: "column",
-            alignItems: "flex-end",
-            justifyContent: "center",
-            right: "-2em",
-            top: "3em",
-          }}
-        >
-          <img src={`${process.env.PUBLIC_URL}/snake.png`} alt="Banner" style={{ width: "200px", height: "auto" }} />
-        </div>
-      </div>
-      <div className="home-container" style={{ position: "relative" }}>
+      <div className="home-container" style={{ position: "relative", marginTop: "100px"}}>
         <div className="mobile-only mobile-alert">For the best experience, use a desktop or laptop.</div>
         <div className="table-container">
           <div className="filters-header">
@@ -703,7 +674,7 @@ const Home = ({
             </tbody>
           </table>
         </div>
-        <div className="mobile-alert">Connected to {selectedServer.current}</div>
+        <div className="mobile-alert">Game type: Blob Battle | Connected to {selectedServer.current}</div>
       </div>
       {selectedGame && hasInsufficientTokenBalance && (
         <BalanceWarning
@@ -715,6 +686,7 @@ const Home = ({
       )}
       <NotificationContainer />
 
+      <Footer />
       <SignUpBanner engine={engine} preferredRegion={preferredRegion} />
     </div>
   );

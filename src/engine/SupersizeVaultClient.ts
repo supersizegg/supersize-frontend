@@ -1,5 +1,5 @@
 import { BN, Idl, Program } from "@coral-xyz/anchor";
-import { Connection, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
+import { Connection, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction, TransactionInstruction } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync, getMint } from "@solana/spl-token";
 
 import supersizeVaultIdl from "../backend/target/idl/supersize_vault.json";
@@ -142,7 +142,7 @@ export class SupersizeVaultClient {
     await this.engine.processWalletTransaction("DelegateAccounts", tx);
   }
 
-  async depositToGame(mint: PublicKey, uiAmount: number, mapComponentPda: PublicKey) {
+  async gameTranfer(mint: PublicKey, uiAmount: number, mapComponentPda: PublicKey, deposit: boolean = true) {
     if (!this.wallet) throw new Error("Wallet not connected.");
 
     const mintInfo = await getMint(this.mainChainConnection, mint);
@@ -150,8 +150,20 @@ export class SupersizeVaultClient {
     const tokens = new BN(Math.round(uiAmount * 10 ** decimals));
     const userAta = getAssociatedTokenAddressSync(mint, this.wallet);
     console.log(uiAmount, tokens, decimals);
-    const depositIx = await this.program.methods
-      .depositToGame(tokens)
+    let transferIx : TransactionInstruction | null = null;
+    if (deposit) {
+      transferIx = await this.program.methods
+        .depositToGame(tokens)
+        .accounts({
+          mintOfToken: mint,
+          senderTokenAccount: userAta,
+          map: mapComponentPda,
+          payer: this.wallet,
+        })
+        .instruction();
+    } else {
+      transferIx = await this.program.methods
+      .withdrawFromGame(tokens)
       .accounts({
         mintOfToken: mint,
         senderTokenAccount: userAta,
@@ -159,6 +171,11 @@ export class SupersizeVaultClient {
         payer: this.wallet,
       })
       .instruction();
+    }
+
+    if (!transferIx) {
+      throw new Error("Transfer instruction not found.");
+    }
 
     const balancePda = this.mapBalancePda(mapComponentPda, mint);
     const accountInfo = await this.mainChainConnection.getAccountInfo(balancePda);
@@ -191,7 +208,7 @@ export class SupersizeVaultClient {
         })
         .instruction();
       console.log("delegateGame");
-      return await this.engine.processWalletTransaction("Deposit", transaction.add(depositIx).add(delegateGameIx));
+      return await this.engine.processWalletTransaction("Deposit", transaction.add(transferIx).add(delegateGameIx));
     } else {
       const ephemIdentity = await this.ephemConnection.getSlotLeader();
       const validator = new PublicKey(ephemIdentity);
@@ -206,7 +223,7 @@ export class SupersizeVaultClient {
       console.log("delegateGame");
       return await this.engine.processWalletTransaction(
         "Deposit",
-        new Transaction().add(depositIx).add(delegateGameIx),
+        new Transaction().add(transferIx).add(delegateGameIx),
       );
     }
   }
@@ -269,11 +286,15 @@ export class SupersizeVaultClient {
     await this.engine.getConnectionEphem().confirmTransaction(signature, "confirmed");
   }
 
-  async withdraw(mint: PublicKey, uiAmount: number) {
+  async withdraw(mint: PublicKey, uiAmount: number, payoutWallet: PublicKey | null = null) {
     if (!this.wallet) throw new Error("Wallet not connected to withdraw.");
 
     const { lamports } = await this.uiAmountToLamports(mint, uiAmount);
-    const userAta = getAssociatedTokenAddressSync(mint, this.wallet);
+
+    let userAta = getAssociatedTokenAddressSync(mint, this.wallet);
+    if (payoutWallet) {
+       userAta = getAssociatedTokenAddressSync(mint, payoutWallet);
+    }
 
     const currentlyDelegated = await this.isDelegated(mint);
     if (currentlyDelegated) {

@@ -6,19 +6,27 @@ import { useNavigate } from "react-router-dom";
 const Footer: React.FC = () => {
   const navigate = useNavigate();
 
+  const openX = () => {
+    window.open("https://x.com/SUPERSIZEgg", "_blank");
+  };
+
   return (
     <footer className="footerContainer desktop-only">
-      <span className="footerCopyright">{/* © Supersize Inc. 2025 */}</span>
 
       <div className="footerIcons">
-        <button
-            onClick={() => navigate("/create-game")}
-          >
-          <div className="coin-pill" style={{ position: "fixed", zIndex: "1", bottom: "2rem", right: "2.5rem", width: "170px", height: "50px"}}>
-            <div className="overlay-panel" style={{ borderRadius: "10px", border: "3px solid transparent"}}/>
-            <span style={{ position: "absolute", zIndex: "1", fontSize: "18px", fontWeight: "bold", margin: "auto"}}>+ Create Game</span>
-          </div>
-          </button>
+            <button onClick={() => navigate("/about")} className="help-btn">
+              <span className="desktop-only">?</span>
+              <span className="mobile-only">?</span>
+            </button>
+            <button
+              onClick={openX}
+              className="follow-x-button"
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2b2d31")}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#1d1f23")}
+            >
+              <img src={`${process.env.PUBLIC_URL}/x-logo.png`} alt="X" style={{ width: "16px", height: "16px" }} />
+              Follow
+            </button>
       </div>
     </footer>
   );

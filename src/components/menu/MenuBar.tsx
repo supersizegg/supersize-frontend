@@ -17,7 +17,7 @@ export function MenuBar({ tokenBalance }: MenuBarProps) {
 
   const [isMobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [username, setUsername] = React.useState<string>(initialUser?.name || "");
-  const [avatar, setAvatar] = React.useState<string>(initialUser?.icon || "/chick.png");
+  const [avatar, setAvatar] = React.useState<string>(initialUser?.icon || "/slimey2.png");
   const navigate = useNavigate();
   const toggleMobileMenu = () => setMobileMenuOpen(!isMobileMenuOpen);
   const closeMobileMenu = () => setMobileMenuOpen(false);
@@ -30,7 +30,7 @@ export function MenuBar({ tokenBalance }: MenuBarProps) {
     if (stored) {
       const user = JSON.parse(stored);
       if (user.name) name = user.name;
-      setAvatar(user.icon || "/chick.png");
+      setAvatar(user.icon || "/slimey2.png");
     }
     setUsername(name);
 
@@ -39,10 +39,10 @@ export function MenuBar({ tokenBalance }: MenuBarProps) {
       if (u) {
         const user = JSON.parse(u);
         if (user.name) setUsername(user.name);
-        setAvatar(user.icon || "/chick.png");
+        setAvatar(user.icon || "/slimey2.png");
       } else {
         setUsername("");
-        setAvatar("/chick.png");
+        setAvatar("/slimey2.png");
       }
     };
 
@@ -55,33 +55,19 @@ export function MenuBar({ tokenBalance }: MenuBarProps) {
       <div className="menu-bar-left">
         <div className="branding">
           <NavLink to="/">
-            <svg width="305" height="60">
-              <text
-                x="0"
-                y="40"
-                fill="#fff"
-                stroke="#4A4A4A"
-                strokeWidth="8px"
-                fontSize="48px"
-                fontFamily="'Lexend', sans-serif"
-                paintOrder="stroke"
-              >
-                supersize.gg
-              </text>
-            </svg>
+            <div className="title-image-container">
+              <img src="/slimecoinio_nobg.png" alt="title image" className="title-image" />
+            </div>
           </NavLink>
-          <button onClick={() => navigate("/about")} className="help-btn">
-            <span className="desktop-only">?</span>
-            <span className="mobile-only">?</span>
-          </button>
         </div>
+
       </div>
 
       <div className="menu-bar-right">
         <nav className="nav-links">
           <div className="nav-right">
             <div className="coin-icon">
-              <img src="/fallback-token.webp" alt="game token" className="coin-image" />
+              <img src="/slime.png" alt="game token" className="coin-image" />
             </div>
 
             <div className="coin-pill">
@@ -108,7 +94,7 @@ export function MenuBar({ tokenBalance }: MenuBarProps) {
               >
                 <div className="overlay-panel" style={{ borderRadius: "18px", border: "3px solid transparent" }} />
                 <img
-                  src={engine.getWalletConnected() ? avatar : "/chick.png"}
+                  src={engine.getWalletConnected() ? avatar : "/slimey2.png"}
                   alt="avatar"
                   style={{ width: "48px", height: "48px", position: "absolute", zIndex: "1", marginLeft: "10px" }}
                 />
