@@ -384,14 +384,14 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
 
     try {
       // p1: Process game and anteroom data
-      const processGameData = async () => {
+      const processGameData = async (client: SupersizeVaultClient) => {
         try {
           let balance = 0;
           if (newGameInfo.tokenMint) {
-            const balancePda = vaultClient?.mapBalancePda(mapComponentPda, newGameInfo.tokenMint);
+            const balancePda = client?.mapBalancePda(mapComponentPda, newGameInfo.tokenMint);
             if (balancePda) {
               setGameWallet(balancePda.toString());
-              const new_balance = await vaultClient?.getGameBalance(mapComponentPda, newGameInfo.tokenMint);
+              const new_balance = await client?.getGameBalance(mapComponentPda, newGameInfo.tokenMint);
               console.log("new_balance", new_balance);
               if (new_balance && new_balance !== "wrong_server") {
                 balance = new_balance;
@@ -503,7 +503,10 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
 
       const validEndpointResult = await getValidEndpoint(engine, mapComponentPda);
       setEndpointEphemRpc(validEndpointResult);
-      const updatedGameInfo = await processGameData();
+      engine.setTempEndpointEphemRpc(validEndpointResult);
+      const refreshedVaultClient = new SupersizeVaultClient(engine);
+      setVaultClient(refreshedVaultClient);
+      const updatedGameInfo = await processGameData(refreshedVaultClient);
       updatedGameInfo.endpoint = validEndpointResult;
       setMyGames((prevMyGames) =>
         prevMyGames.map((game) =>

@@ -25,9 +25,9 @@ const Graph: React.FC<GraphProps> = ({ engine, mapComponentPda }) => {
   useEffect(() => {
     const fetchData = async () => {
       const counts = await countTransactionsByDay(engine, mapComponentPda);
-      const labels = Array.from({ length: 7 }).map((_, i) => {
+      const labels = Array.from({ length: counts.length }).map((_, i) => {
         const d = new Date();
-        d.setDate(d.getDate() - (6 - i));
+        d.setDate(d.getDate() - (counts.length - 1 - i));
         return `${d.getMonth() + 1}/${d.getDate()}`;
       });
       setChartData({

@@ -318,14 +318,16 @@ export async function countTransactionsByDay(
   programId: PublicKey = new PublicKey("CLC46PuyXnSuZGmUrqkFbAh7WwzQm8aBPjSQ3HMP56kp"),
   days: number = 7,
 ): Promise<number[]> {
-  const now = Date.now() / 1000;
-  const startTime = now - days * 24 * 60 * 60;
+  const now = new Date();
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const startTime = startOfToday.getTime() / 1000 - days * 24 * 60 * 60;
 
   let signatures = await engine
     .getConnectionEphem()
     .getSignaturesForAddress(programId, { limit: 1000 });
 
-  signatures = signatures.filter((sig) => (sig.blockTime ?? now) > startTime);
+  signatures = signatures.filter((sig) => (sig.blockTime ?? 0) > startTime);
 
   const txPromises = signatures.map((sigInfo) =>
     engine
@@ -337,17 +339,17 @@ export async function countTransactionsByDay(
     (tx): tx is ParsedTransactionWithMeta => tx !== null,
   );
 
-  const counts = Array(days).fill(0);
+  const counts = Array(days + 1).fill(0);
   for (const tx of transactions) {
     if (
       tx.transaction.message.accountKeys.some((account) =>
         account.pubkey.equals(targetPubkey),
       )
     ) {
-      const blockTime = tx.blockTime ?? now;
-      const dayIndex = Math.floor((now - blockTime) / (24 * 60 * 60));
-      if (dayIndex < days) {
-        counts[days - dayIndex - 1]++;
+      const blockTime = tx.blockTime ?? startTime;
+      const dayIndex = Math.floor((blockTime - startTime) / (24 * 60 * 60));
+      if (dayIndex >= 0 && dayIndex <= days) {
+        counts[dayIndex]++;
       }
     }
   }
