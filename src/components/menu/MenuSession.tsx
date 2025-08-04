@@ -5,6 +5,7 @@ import { SupersizeVaultClient } from "../../engine/SupersizeVaultClient";
 import { cachedTokenMetadata } from "../../utils/constants";
 import TokenTransferModal from "../TokenTransferModal/TokenTransferModal";
 import "./MenuSession.scss";
+import NotificationService from "@components/notification/NotificationService";
 
 type UserStatus = "loading" | "uninitialized" | "ready_to_delegate" | "delegated";
 
@@ -120,6 +121,7 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
     } catch (error) {
       console.error("Failed to withdraw:", error);
       await checkStatus();
+      throw error;
     } finally {
       setDialog(null);
     }
@@ -175,9 +177,28 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
               <div className="session-buttons">
                 <button
                   className="btn-fund"
-                  onClick={() => {
-                    vaultClient?.newGameWallet();
-                    setResetGameWallet(false);
+                  onClick={async () => {
+                    const alertId = NotificationService.addAlert({
+                      type: "success",
+                      message: "reinitializing wallet...",
+                      shouldExit: false,
+                    });
+                    try {
+                      await vaultClient?.newGameWallet();
+                      setResetGameWallet(false);
+                    } catch (error) {
+                      console.error("Failed to reset game wallet:", error);
+                      const exitAlertId = NotificationService.addAlert({
+                        type: "error",
+                        message: "wallet reset failed",
+                        shouldExit: false,
+                      });
+                      setTimeout(() => {
+                        NotificationService.updateAlert(exitAlertId, { shouldExit: true });
+                      }, 3000);
+                    } finally {
+                      NotificationService.updateAlert(alertId, { shouldExit: true });
+                    }
                   }}
                 >
                   Need to reset game wallet

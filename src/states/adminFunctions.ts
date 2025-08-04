@@ -14,6 +14,7 @@ import { COMPONENT_MAP_ID } from "./gamePrograms";
 import { MagicBlockEngine } from "@engine/MagicBlockEngine";
 import { gameSystemInitSection } from "./gameSystemInitSection";
 import { SupersizeVaultClient } from "../engine/SupersizeVaultClient";
+import NotificationService from "@components/notification/NotificationService";
 
 export const handleUndelegatePlayer = async (
     engine: MagicBlockEngine,
@@ -28,6 +29,11 @@ export const handleUndelegatePlayer = async (
     const tx = new anchor.web3.Transaction().add(undelegateIx);
     tx.recentBlockhash = (await engine.getConnectionEphem().getLatestBlockhash()).blockhash;
     tx.feePayer = engine.getSessionPayer();
+    const alertId = NotificationService.addAlert({
+      type: "success",
+      message: "submitting undelegation...",
+      shouldExit: false,
+    });
     try {
       const playerundelsignature = await engine.processSessionEphemTransaction(
         "undelPlayer:" + playerData.playersComponentPda.toString(),
@@ -36,6 +42,16 @@ export const handleUndelegatePlayer = async (
       console.log("undelegate", playerundelsignature);
     } catch (error) {
       console.log("Error undelegating:", error);
+      const exitAlertId = NotificationService.addAlert({
+        type: "error",
+        message: "undelegation failed",
+        shouldExit: false,
+      });
+      setTimeout(() => {
+        NotificationService.updateAlert(exitAlertId, { shouldExit: true });
+      }, 3000);
+    } finally {
+      NotificationService.updateAlert(alertId, { shouldExit: true });
     }
 };
 
@@ -46,6 +62,11 @@ export const handleDelegatePlayer = async (
     playersComponentPda: PublicKey;
     playerEntityPda: PublicKey;
 }) => {
+    const alertId = NotificationService.addAlert({
+      type: "success",
+      message: "submitting delegation...",
+      shouldExit: false,
+    });
     try {
       const playerdelegateIx = createDelegateInstruction({
         entity: playerData.playerEntityPda,
@@ -58,6 +79,16 @@ export const handleDelegatePlayer = async (
       console.log(`delegation signature: ${playerdelsignature}`);
     } catch (error) {
       console.log("Error delegating:", error);
+      const exitAlertId = NotificationService.addAlert({
+        type: "error",
+        message: "delegation failed",
+        shouldExit: false,
+      });
+      setTimeout(() => {
+        NotificationService.updateAlert(exitAlertId, { shouldExit: true });
+      }, 3000);
+    } finally {
+      NotificationService.updateAlert(alertId, { shouldExit: true });
     }
 };
 
@@ -209,27 +240,42 @@ export const handleReinitializeClick = async (engine: MagicBlockEngine, gameInfo
       tx.add(delegateInstruction);
       tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 }));
       tx.add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1 }));
+      const alertId = NotificationService.addAlert({
+        type: "success",
+        message: "reinitializing food...",
+        shouldExit: false,
+      });
       try {
         const delSig = await engine.processSessionChainTransaction("redelegate", tx);
         console.log(`Delegated food batch: ${delSig}`);
+        const initFoodSig = await gameSystemInitSection(
+          engine,
+          gameInfo.worldPda,
+          foodEntityPda,
+          mapEntityPda,
+          x,
+          y,
+        );
+        console.log("initFoodSig", initFoodSig);
       } catch (e) {
         // @ts-ignore
         if (e.message.includes("ExternalAccountLamportSpend")) {
           console.log(e);
         } else {
+          console.log("Error reinitializing food:", e);
+          const exitAlertId = NotificationService.addAlert({
+            type: "error",
+            message: "reinitialize failed",
+            shouldExit: false,
+          });
+          setTimeout(() => {
+            NotificationService.updateAlert(exitAlertId, { shouldExit: true });
+          }, 3000);
           throw e;
         }
-      } 
-      
-      const initFoodSig = await gameSystemInitSection(
-        engine,
-        gameInfo.worldPda,
-        foodEntityPda,
-        mapEntityPda,
-        x,
-        y,
-      );
-      console.log("initFoodSig", initFoodSig);
+      } finally {
+        NotificationService.updateAlert(alertId, { shouldExit: true });
+      }
 };
 
 export async function countMatchingTransactions(
@@ -265,6 +311,48 @@ export async function countMatchingTransactions(
 
   return matchingTxs.length;
 }
+
+export async function countTransactionsByDay(
+  engine: MagicBlockEngine,
+  targetPubkey: PublicKey,
+  programId: PublicKey = new PublicKey("CLC46PuyXnSuZGmUrqkFbAh7WwzQm8aBPjSQ3HMP56kp"),
+  days: number = 7,
+): Promise<number[]> {
+  const now = Date.now() / 1000;
+  const startTime = now - days * 24 * 60 * 60;
+
+  let signatures = await engine
+    .getConnectionEphem()
+    .getSignaturesForAddress(programId, { limit: 1000 });
+
+  signatures = signatures.filter((sig) => (sig.blockTime ?? now) > startTime);
+
+  const txPromises = signatures.map((sigInfo) =>
+    engine
+      .getConnectionEphem()
+      .getParsedTransaction(sigInfo.signature, "confirmed"),
+  );
+
+  const transactions = (await Promise.all(txPromises)).filter(
+    (tx): tx is ParsedTransactionWithMeta => tx !== null,
+  );
+
+  const counts = Array(days).fill(0);
+  for (const tx of transactions) {
+    if (
+      tx.transaction.message.accountKeys.some((account) =>
+        account.pubkey.equals(targetPubkey),
+      )
+    ) {
+      const blockTime = tx.blockTime ?? now;
+      const dayIndex = Math.floor((now - blockTime) / (24 * 60 * 60));
+      if (dayIndex < days) {
+        counts[days - dayIndex - 1]++;
+      }
+    }
+  }
+  return counts;
+}
   
 export const gameTransfer = async (
     vaultClient: SupersizeVaultClient,
@@ -277,10 +365,31 @@ export const gameTransfer = async (
       console.error("Deposit amount must be greater than zero.");
       return;
     }
+    const action = deposit ? "deposit" : "withdraw";
+    const alertId = NotificationService.addAlert({
+      type: "success",
+      message: `submitting ${action}...`,
+      shouldExit: false,
+    });
     try {
-      const desposittx = vaultClient.gameTranfer(mint_of_token_being_sent, amount, mapComponentPda, deposit);
-      console.log("Deposit successful, transaction signature:", desposittx);
+      const desposittx = await vaultClient.gameTranfer(
+        mint_of_token_being_sent,
+        amount,
+        mapComponentPda,
+        deposit,
+      );
+      console.log(`${action} successful, transaction signature:`, desposittx);
     } catch (error) {
-      console.error("Error during deposit:", error);
+      console.error(`Error during ${action}:`, error);
+      const exitAlertId = NotificationService.addAlert({
+        type: "error",
+        message: `${action} failed`,
+        shouldExit: false,
+      });
+      setTimeout(() => {
+        NotificationService.updateAlert(exitAlertId, { shouldExit: true });
+      }, 3000);
+    } finally {
+      NotificationService.updateAlert(alertId, { shouldExit: true });
     }
-};
+  };

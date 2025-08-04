@@ -3,6 +3,7 @@ import { PublicKey } from "@solana/web3.js";
 import { SupersizeVaultClient } from "@engine/SupersizeVaultClient";
 import { MagicBlockEngine } from "@engine/MagicBlockEngine";
 import "./Modal.css";
+import NotificationService from "@components/notification/NotificationService";
 
 type Props = {
   engine: MagicBlockEngine;
@@ -51,6 +52,11 @@ const TokenTransferModal: React.FC<Props> = ({
     if (value === 0 || isProcessing) return;
 
     setIsProcessing(true);
+    const alertId = NotificationService.addAlert({
+      type: "success",
+      message: `submitting ${kind}...`,
+      shouldExit: false,
+    });
     try {
       if (kind === "deposit") {
         await vaultClient.deposit(new PublicKey(token.mint), value);
@@ -60,8 +66,16 @@ const TokenTransferModal: React.FC<Props> = ({
       }
     } catch (error) {
       console.error(`Failed to ${kind}:`, error);
-      alert(`The ${kind} transaction failed.`);
+      const exitAlertId = NotificationService.addAlert({
+        type: "error",
+        message: `${kind} failed`,
+        shouldExit: false,
+      });
+      setTimeout(() => {
+        NotificationService.updateAlert(exitAlertId, { shouldExit: true });
+      }, 3000);
     } finally {
+      NotificationService.updateAlert(alertId, { shouldExit: true });
       setIsProcessing(false);
     }
   };

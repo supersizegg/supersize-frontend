@@ -24,8 +24,8 @@ import { getAccount } from "@solana/spl-token";
 import { cachedTokenMetadata } from "@utils/constants";
 import { Spinner } from "@components/util/Spinner";
 import Graph from "../components/util/Graph";
-import { Chart, LineElement, PointElement, LinearScale, Title, Tooltip, Legend } from "chart.js";
 import { getTopLeftCorner, getRegion } from "@utils/helper";
+import NotificationContainer from "@components/notification/NotificationContainer";
 import GameComponent from "@components/Game/Game";
 import {
   handleUndelegatePlayer,
@@ -46,7 +46,6 @@ import { SupersizeVaultClient } from "../engine/SupersizeVaultClient";
 import { getComponentMapOnChain, getComponentMapOnEphem } from "../states/gamePrograms";
 import { NavLink, useNavigate } from "react-router-dom";
 
-Chart.register(LineElement, PointElement, LinearScale, Title, Tooltip, Legend);
 
 type profileProps = {
   randomFood: Food[];
@@ -164,6 +163,7 @@ export default function Profile({
           await engine.defundSessionBackToWallet(amount);
         }
         }} /> */}
+      <NotificationContainer />
       <BackButton />
     </div>
   );
@@ -501,20 +501,15 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
         setCashoutStats({ buyInSum: buyInSum / 10 ** newGameInfo.decimals, buyInCount: count });
       };
 
-      let updatedGameInfo;
-      let validEndpointResult;
-      [updatedGameInfo, validEndpointResult] = await Promise.all([
-        processGameData(),
-        getValidEndpoint(engine, mapComponentPda),
-      ]);
-      updatedGameInfo.endpoint = validEndpointResult;
-      setMyGames((prevMyGames) => {
-        if (prevMyGames.some((game) => game.worldId === updatedGameInfo.worldId)) {
-          return prevMyGames;
-        }
-        return [updatedGameInfo, ...prevMyGames];
-      });
+      const validEndpointResult = await getValidEndpoint(engine, mapComponentPda);
       setEndpointEphemRpc(validEndpointResult);
+      const updatedGameInfo = await processGameData();
+      updatedGameInfo.endpoint = validEndpointResult;
+      setMyGames((prevMyGames) =>
+        prevMyGames.map((game) =>
+          game.worldId === updatedGameInfo.worldId ? updatedGameInfo : game,
+        ),
+      );
       await Promise.all([processFoodComponents(), processPlayers(), countMetrics()]);
     } catch (error) {
       console.error("Error in handlePanelOpen:", error);
