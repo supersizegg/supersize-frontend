@@ -12,7 +12,8 @@ const BackButton: React.FC = () => {
       "
       onClick={() => navigate("/home")}
     >
-      lobby
+      <div style={{ fontSize: "12px", textAlign: "left", margin: 0, lineHeight: "1" }}>back to</div>
+      <div style={{ fontSize: "18px", textAlign: "left", margin: 0, lineHeight: "1" }}>lobby</div>
       {/*<img src="/back-button.png" alt="Back" />*/}
     </button>
   );

@@ -676,7 +676,7 @@ const Home = ({
             </tbody>
           </table>
         </div>
-        <div className="mobile-alert">Game type: Blob Battle | Connected to {selectedServer.current}</div>
+        <div className="mobile-alert">Playing Blob Battle | Connected to {selectedServer.current}</div>
       </div>
       {selectedGame && hasInsufficientTokenBalance && (
         <BalanceWarning

@@ -22,7 +22,6 @@ const NotFound = () => {
           Go back to Games{" "}
         </button>
       </div>
-      <BackButton />
     </div>
   );
 };
