@@ -76,19 +76,22 @@ export function updateMyPlayer(
         setGameEnded(1);
       }
     }
-    const result = averageCircleCoordinates(player.circles);
-    setCurrentPlayer({
-      name: player.name,
-      authority: player.authority,
-      score: player.score,
-      removal: player.removalTime,
-      x: result.avgX,
-      y: result.avgY,
-      target_x: player.targetX,
-      target_y: player.targetY,
-      circles: player.circles,
-      timestamp: performance.now(),
-    } as Blob);
+    else {
+      const result = averageCircleCoordinates(player.circles);
+      setCurrentPlayer({
+        name: player.name,
+        authority: player.authority,
+        score: player.score,
+        removal: player.removalTime,
+        join: player.joinTime,
+        x: result.avgX,
+        y: result.avgY,
+        target_x: player.targetX,
+        target_y: player.targetY,
+        circles: player.circles,
+        timestamp: performance.now(),
+      } as Blob);
+    }
   }else{
     setGameEnded(2);
   }
@@ -106,6 +109,7 @@ export function updatePlayers(
         name: player.name,
         authority: player.authority,
         score: player.score,
+        join: player.joinTime,
         removal: player.removalTime,
         x: result.avgX,
         y: result.avgY,
@@ -160,10 +164,12 @@ export function handleMapComponentChange(
   accountInfo: AccountInfo<Buffer>,
   engine: MagicBlockEngine,
   setCurrentGameSize: (gameSize: number) => void,
+  setCurrentActivePlayers: (activePlayers: number) => void,
 ) {
   const coder = getComponentMapOnEphem(engine).coder;
   const parsedData = coder.accounts.decode("map", accountInfo.data);
   setCurrentGameSize(parsedData.size);
+  setCurrentActivePlayers(parsedData.activePlayers);
 }
 
 // Subscribe to the game state
@@ -184,6 +190,7 @@ export function subscribeToGame(
   setAllFood: (callback: (prevAllFood: any[][]) => any[][]) => void,
   setFoodListLen: (callback: (prevFoodListLen: number[]) => number[]) => void,
   setCurrentGameSize: (gameSize: number) => void,
+  setCurrentActivePlayers: (activePlayers: number) => void,
 ) {
   for (let i = 0; i < foodEntities.length; i++) {
     const foodComponenti = FindComponentPda({
@@ -257,6 +264,6 @@ export function subscribeToGame(
     if (!accountInfo) {
       return;
     }
-    handleMapComponentChange(accountInfo, engine, setCurrentGameSize);
+    handleMapComponentChange(accountInfo, engine, setCurrentGameSize, setCurrentActivePlayers);
   });
 }

@@ -20,6 +20,7 @@ export interface Blob {
   authority: PublicKey | null;
   score: number;
   removal: BN;
+  join: BN;
   x: number;
   y: number;
   target_x: number;

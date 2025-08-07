@@ -1,6 +1,7 @@
 import React from "react";
 import { PublicKey } from "@solana/web3.js";
 import "./GameLeaderboard.css";
+import "../../pages/Landing.scss";
 import { getOpponentColor } from "@utils/helper";
 
 interface LeaderboardItem {
@@ -31,6 +32,8 @@ const getDisplayName = (item: LeaderboardItem): string => {
 const GameLeaderboard: React.FC<LeaderboardProps> = ({ leaderboard, currentPlayer, gameInfo }) => {
   return (
     <div className="game-leaderboard">
+      <div className="overlay-panel" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", borderRadius: "5px",
+         border: "3px solid transparent" }} />
       <div className="title">Leaderboard</div>
       <ul>
         {leaderboard.map((item, index) => {
@@ -44,9 +47,9 @@ const GameLeaderboard: React.FC<LeaderboardProps> = ({ leaderboard, currentPlaye
             <li
               key={item.authority ? item.authority.toString() : `${item.name}-${index}`}
               className={isCurrentPlayer ? "me" : ""}
-              style={{ color: getOpponentColor(item.authority, "unnamed") }}
+              style={{ color: "#4FCF5A" }}
             >
-              <b>{displayName}</b> {/* <span>{item.score / 10 ** gameInfo.decimals}</span> */}
+              <b>{displayName}</b> <span>{(item.score / 10 ** gameInfo.decimals).toFixed(2)}</span> 
             </li>
           );
         })}

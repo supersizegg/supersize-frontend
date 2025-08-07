@@ -98,6 +98,7 @@ export default function Profile({
             score: 0,
             circles: [{ x: 5000, y: 5000, radius: 0, size: 0, speed: 0 }],
             removal: new BN(0),
+            join: new BN(0),
             x: 5000,
             y: 5000,
             target_x: 5000,
@@ -108,6 +109,7 @@ export default function Profile({
           newTarget={{ x: 0, y: 0 }}
           gameSize={10000}
           buyIn={0}
+          gameEnded={0}
         />
       </div>
       <MenuBar tokenBalance={tokenBalance} />
@@ -684,7 +686,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                     width: "100%",
                   }}
                 >
-                  <CollapsiblePanel title="Players" defaultOpen={true}>
+                  <CollapsiblePanel title="Players" defaultOpen={false}>
                     <p style={{ margin: "5px" }}>* player components should always be delegated</p>
                     <div style={{ overflowY: "scroll", maxHeight: "200px" }}>
                       <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -735,7 +737,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                                       {player.delegated ? (
                                         <button
                                           className="btn-copy"
-                                          style={{ maxHeight: "40px" }}
+                                          style={{ maxHeight: "40px", display: "none" }}
                                           onClick={() => handleUndelegatePlayer(engine, player)}
                                         >
                                           Undelegate

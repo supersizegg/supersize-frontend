@@ -182,18 +182,21 @@ export class SupersizeVaultClient {
     const currentlyDelegated = accountInfo?.owner.equals(DELEGATION_PROGRAM_ID) ?? false;
 
     if (currentlyDelegated) {
-      const undelegateTx = new Transaction();
-      undelegateTx.add(
-        await this.program.methods
-          .undelegateGame()
-          .accounts({ payer: this.engine.getSessionPayer(), mintOfToken: mint, map: mapComponentPda })
-          .instruction(),
-      );
+      try {
+        const undelegateTx = new Transaction();
+        undelegateTx.add(
+          await this.program.methods
+            .undelegateGame()
+            .accounts({ payer: this.engine.getSessionPayer(), mintOfToken: mint, map: mapComponentPda })
+            .instruction(),
+        );
 
-      const signers = [this.engine.getSessionKey()];
-      const signature = await this.engine.getConnectionEphem().sendTransaction(undelegateTx, signers);
-      await this.engine.getConnectionEphem().confirmTransaction(signature, "confirmed");
-
+        const signers = [this.engine.getSessionKey()];
+        const signature = await this.engine.getConnectionEphem().sendTransaction(undelegateTx, signers);
+        await this.engine.getConnectionEphem().confirmTransaction(signature, "confirmed");
+      } catch (error) {
+        console.log("Error in undelegateGame:", error);
+      }
       console.log("undelegateGame");
 
       const transaction = new Transaction();

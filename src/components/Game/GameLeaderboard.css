@@ -3,12 +3,14 @@
   padding: 10px;
   color: #fff;
   font-family: "Open Sans", "Roboto", sans-serif;
-  font-size: 16.1px;
+  font-size: 16px;
+  background: linear-gradient(to bottom, #ffffff40, #6c6c6c10);
+  backdrop-filter: blur(20px);
+  box-shadow: 0px 1px 24px -1px rgba(0, 0, 0, 0.1);
   top: 10px;
-  right: 10px;
+  left: 10px;
   text-align: center;
   border-radius: 5px;
-  border: 1px solid gray;
   z-index: 9999;
   max-width: 240px;
   overflow: hidden;

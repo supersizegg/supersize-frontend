@@ -53,7 +53,7 @@ const Graph: React.FC<GraphProps> = ({ engine, mapComponentPda }) => {
   };
 
   return (
-    <div style={{ width: "600px", margin: "0 auto" }}>
+    <div style={{ width: "480px", margin: "0 auto" }}>
       {chartData ? (
         <Bar data={chartData} options={options} />
       ) : (

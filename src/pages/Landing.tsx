@@ -40,6 +40,7 @@ const Landing = ({ preferredRegion, tokenBalance }: LandingProps) => {
             score: 0,
             circles: [{ x: 5000, y: 5000, radius: 0, size: 0, speed: 0 }],
             removal: new BN(0),
+            join: new BN(0),
             x: 5000,
             y: 5000,
             target_x: 5000,
@@ -50,6 +51,7 @@ const Landing = ({ preferredRegion, tokenBalance }: LandingProps) => {
           newTarget={{ x: 0, y: 0 }}
           gameSize={10000}
           buyIn={0}
+          gameEnded={0}
         />
       </div>
       <MenuBar tokenBalance={tokenBalance} />
@@ -84,7 +86,7 @@ const Landing = ({ preferredRegion, tokenBalance }: LandingProps) => {
             <img src="/snakegame.png" alt="SUPER SNAKE" className="panel-image" 
             style={{ width: "85%", height: "85%", margin: "auto", marginTop: "-20px" }}/>
           </div>
-          <div className="panel-subtitle">coming soon</div>
+          <div className="panel-subtitle">Coming soon</div>
         </div>
       </div>
       {/*

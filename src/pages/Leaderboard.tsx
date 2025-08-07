@@ -214,6 +214,7 @@ const Leaderboard: React.FC<LeaderboardProps>  = ({ randomFood, tokenBalance }) 
             score: 0,
             circles: [{x: 5000, y: 5000, radius: 0, size: 0, speed: 0}],
             removal: new BN(0),
+            join: new BN(0),
             x: 5000,
             y: 5000,
             target_x: 5000,
@@ -224,6 +225,7 @@ const Leaderboard: React.FC<LeaderboardProps>  = ({ randomFood, tokenBalance }) 
           newTarget={{ x: 0, y: 0 }}
           gameSize={10000}
           buyIn={0}
+          gameEnded={0}
         />
       </div>
       <MenuBar tokenBalance={tokenBalance} />

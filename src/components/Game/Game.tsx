@@ -11,6 +11,7 @@ interface GameComponentProps {
   gameSize: number;
   buyIn: number;
   newTarget: { x: number; y: number; };
+  gameEnded: number;
 }
 
 const SMOOTHING_FACTOR = 0.1;
@@ -23,6 +24,7 @@ const GameComponent: React.FC<GameComponentProps> = ({
   gameSize,
   buyIn,
   newTarget,
+  gameEnded,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const screenSizeRef = useRef(screenSize);
@@ -43,6 +45,12 @@ const GameComponent: React.FC<GameComponentProps> = ({
   const previousPlayersRef = useRef<Blob[]>(playersRef.current);
   const playersOnchainRef = useRef<Blob[]>([]);
   
+  const gameEndedRef = useRef(gameEnded);
+
+  useEffect(() => {
+    gameEndedRef.current = gameEnded;
+  }, [gameEnded]);
+
   useEffect(() => {
     /*
     console.log("screenSize in game", screenSize);
@@ -205,6 +213,10 @@ const GameComponent: React.FC<GameComponentProps> = ({
   };
 
   const loop = (time: number) => {
+    if(gameEndedRef.current != 0) {
+      return;
+    }
+    
     const dt = time - previousTime.current;
     previousTime.current = time;
 

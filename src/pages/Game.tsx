@@ -17,7 +17,7 @@ import { gameSystemMove } from "../states/gameSystemMove";
 import { gameSystemSpawnFood } from "../states/gameSystemSpawnFood";
 import { decodeFood, stringToUint8Array, calculateWindowSize } from "@utils/helper";
 import { useSoundManager } from "../hooks/useSoundManager";
-
+import "./Landing.scss";
 import "./game.scss";
 import { averageCircleCoordinates } from "../utils/helper";
 
@@ -58,6 +58,8 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
   const [allFood, setAllFood] = useState<Food[][]>([]);
   const [visibleFood, setVisibleFood] = useState<Food[][]>([]);
   const [foodListLen, setFoodListLen] = useState<number[]>([]);
+  const [currentActivePlayers, setCurrentActivePlayers] = useState(gameInfo.active_players);
+  const [currentRank, setCurrentRank] = useState(0);
 
   const playersComponentSubscriptionId = useRef<number[] | null>([]);
   const foodComponentSubscriptionId = useRef<number[] | null>([]);
@@ -71,6 +73,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
   const allplayersRef = useRef<Blob[]>([]);
   const playersRef = useRef<Blob[]>([]);
   const currentGameSizeRef = useRef(gameInfo.size);
+  const gameEndedRef = useRef(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const { playBoostSound } = useSoundManager(soundEnabled);
 
@@ -288,6 +291,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
       authority: null,
       score: 0,
       removal: new BN(0),
+      join: new BN(0),
       x: 0,
       y: 0,
       target_x: 0,
@@ -326,6 +330,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
       setAllFood,
       setFoodListLen,
       setCurrentGameSize,
+      setCurrentActivePlayers,
     );
   }, [gameInfo]);
 
@@ -345,6 +350,9 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
   };
 
   useEffect(() => {
+    if (gameEnded != 0) {
+      gameEndedRef.current = true;
+    }
     endGame();
   }, [gameEnded]);
 
@@ -433,10 +441,12 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
   }, []);
 
   useEffect(() => {
-    if (currentPlayer) {
+    if (currentPlayer && !gameEndedRef.current) {
       const playersWithAuthority = allplayersRef.current.filter(
         (player) => player.authority !== null && player.circles.length > 0,
       );
+      const sortedPlayers = playersWithAuthority.sort((a, b) => b.score - a.score);
+      setCurrentRank(sortedPlayers.findIndex((player) => player.authority?.toString() === currentPlayer.authority?.toString()) + 1);
       updateLeaderboard(playersWithAuthority, setLeaderboard);
       const newVisiblePlayers: Blob[] = playersWithAuthority.reduce((accumulator: Blob[], playerx) => {
         if (currentPlayer && playerx.authority && currentPlayer.authority) {
@@ -450,6 +460,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
                 name: playerx.name,
                 authority: playerx.authority,
                 score: playerx.score,
+                join: playerx.join,
                 removal: playerx.removal,
                 x: playerx.x,
                 y: playerx.y,
@@ -469,7 +480,9 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
 
   useEffect(() => {
     const intervalId = setInterval(() => {
-      processNewFoodTransaction();
+      if (!gameEndedRef.current) {
+        processNewFoodTransaction();
+      }
     }, 50);
 
     return () => clearInterval(intervalId);
@@ -484,7 +497,8 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
         foodEntities.current &&
         playerEntities.current &&
         allplayersRef.current &&
-        foodListLen
+        foodListLen && 
+        !gameEndedRef.current
       ) {
         gameSystemMove(
           engine,
@@ -528,71 +542,152 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
   return (
     <div className="gameWrapper w-screen h-screen overflow-hidden">
       <GameLeaderboard gameInfo={gameInfo} leaderboard={leaderboard} currentPlayer={currentPlayer} />
-
-      <div className="flex items-center fixed top-0 left-0 m-2.5 z-[9999]">
-        <button
-          onClick={() => setSoundEnabled((prev) => !prev)}
-          onMouseEnter={() => {
-            exitHovered.current = true;
-          }}
-          onMouseLeave={() => {
-            exitHovered.current = false;
-          }}
-          className="soundToggleButton flex items-center justify-center mr-2"
-          style={{
-            border: "1px solid #fff",
-            background: "rgba(255, 255, 255, 0.25)",
-            color: "#fff",
-            borderRadius: "8px",
-            padding: "6px 10px",
-          }}
-        >
-          {soundEnabled ? (
-            <span role="img" aria-label="Sound On">
-              🔊
-            </span>
-          ) : (
-            <span role="img" aria-label="Sound Off">
-              🔇
-            </span>
-          )}
-        </button>
-
-        <button
-          className="exitButton"
-          style={{ border: "1px solid #fff", background: "rgb(255 255 255 / 25%)", color: "#fff", borderRadius: "8px" }}
+      <div
+        className="flex flex-col items-center fixed top-0 -translate-x-1/2 left-[50%] m-2.5 z-[9999] gap-2"
+      >        
+      {/*
+          <button
+            onClick={() => setSoundEnabled((prev) => !prev)}
+            onMouseEnter={() => {
+              exitHovered.current = true;
+            }}
+            onMouseLeave={() => {
+              exitHovered.current = false;
+            }}
+            className="soundToggleButton flex items-center justify-center mr-2"
+            style={{
+              border: "1px solid #fff",
+              background: "rgba(255, 255, 255, 0.25)",
+              color: "#fff",
+              borderRadius: "8px",
+              padding: "6px 10px",
+            }}
+          >
+            {soundEnabled ? (
+              <span role="img" aria-label="Sound On">
+                🔊
+              </span>
+            ) : (
+              <span role="img" aria-label="Sound Off">
+                🔇
+              </span>
+            )}
+          </button>
+          */}
+        <div
+          className="exitgame-panel relative flex items-center justify-center cursor-pointer"
+          style={{ width: "290px", height: "85px", borderRadius: "20px",
+            display: gameEnded !== 0 ? "none" : "flex",
+           }}
           onClick={handleExitClick}
-          onMouseEnter={() => {
+          onMouseEnter={(e) => {
             exitHovered.current = true;
+            e.currentTarget.style.boxShadow = "0px 0px 10px 10px #4FCF5A80";
           }}
-          onMouseLeave={() => {
+          onMouseLeave={(e) => {
             exitHovered.current = false;
+            e.currentTarget.style.boxShadow = "none";
           }}
         >
-          Cash Out [ESC]
-        </button>
-        {playerExiting && countdown.current > 0 && (
-          <div className="text-[#f07171] font-[Terminus] text-xl text-right ml-2.5">
-            Disconnecting in {(countdown.current / 100).toFixed(2)} seconds
-          </div>
-        )}
-        {currentPlayer && (currentPlayer.score * 2500) / gameInfo.buy_in > 250000 && (
-          <div className="text-[#ffa500] font-[Terminus] text-xl text-right ml-2.5 font-bold animate-pulse animate-glow">
-            Approaching max size!!
-          </div>
-        )}
-      </div>
+          <div
+            className="overlay-panel"
+            style={{ position: "absolute", borderRadius: "20px", width: "100%", height: "100%",
+              border: "6px solid #4FCF5A", zIndex: "9999" }}
+          />
+          <div
+            className="exitButton relative flex flex-col items-center justify-center gap-1 px-4"
+            style={{
+              width: "100%",
+              height: "100%",
+              background: "linear-gradient(180deg, #03AA12 0%, #055F0D 100%)",
+              borderRadius: "20px",
+              border: "none",
+            }}
+          >
+            <span
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontSize: "16px",
+                lineHeight: "20px",
+                fontWeight: 500,
+                letterSpacing: "0.25px",
+                color: "#FFFFFF",
+              }}
+            >
+              Cash out {gameInfo.token}
+            </span>
 
-      <div className={`fixed bottom-0 left-0 m-2 z-[9999] text-white text-base font-[terminus] flex flex-col text-xl`}>
-        <div>
-          <span className="opacity-50">{gameInfo.token}: </span>
-          <span className="opacity-100">{currentPlayer ? currentPlayer.score / 10 ** gameInfo.decimals : null}</span>
+            <span
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontSize: "32px",
+                lineHeight: "40px",
+                fontWeight: 700,
+                letterSpacing: "0",
+                color: "#FFFFFF",
+              }}
+            >
+              {currentPlayer
+                ? (currentPlayer.score / 10 ** gameInfo.decimals).toFixed(2)
+                : "--"}{" "}
+            </span>
+          </div>
+        </div>
+
+        <div className="game-popup flex items-center">
+          {playerExiting && countdown.current > 0 && (
+            <div className="text-[#f07171] font-[Terminus] text-xl text-right ml-2.5">
+              Disconnecting in {(countdown.current / 100).toFixed(2)} seconds
+            </div>
+          )}
+          {currentPlayer &&
+            (currentPlayer.score * 2500) / gameInfo.buy_in > 240000 && (
+              <div className="text-[#ffa500] font-[Terminus] text-xl text-right ml-2.5 font-bold animate-pulse animate-glow">
+                Approaching max size!!
+              </div>
+            )}
         </div>
       </div>
+      
+      <div style={{ position: "fixed", top: "1rem", right: "1rem", display: "flex",
+        alignItems: "center", zIndex: "9999", flexDirection: "column", background: "linear-gradient(to bottom, #ffffff40, #6c6c6c10)",
+        borderRadius: "20px", padding: "10px", backdropFilter: "blur(20px)", boxShadow: "0px 1px 24px -1px rgba(0, 0, 0, 0.1)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
+      <div className="coin-icon">
+          <img src="/slime.png" alt="game token" className="coin-image" />
+      </div>
+      <div className="coin-pill" style={{ width: "120px", height: "42px", position: "relative" }}>
+        <div className="overlay-panel" style={{ borderRadius: "10px", border: "3px solid transparent", position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }} />
+        <span style={{ position: "absolute", zIndex: "1", marginLeft: "8px" }}>
+          {currentPlayer
+                ? ((currentPlayer.score - gameInfo.buy_in) / 10 ** gameInfo.decimals).toFixed(2)
+                : "--"}{" "}
+        </span>
+      </div>
+      </div>
+      <div style={{ color:"#FFFFFF80", fontSize: "12px", marginTop: "5px" }}>1 mass = {(gameInfo.buy_in / 2500) / 10 ** gameInfo.decimals} {gameInfo.token}</div>
+      </div>
 
-      <div className={`fixed bottom-0 right-0 m-2 z-[9999] text-white text-base font-[terminus] flex flex-col text-xl`}>
+      <div className={`fixed bottom-0 left-[50%] -translate-x-1/2 z-[9999] text-white text-base font-[terminus] flex flex-col text-xl`}
+      style={{
+        opacity: "0.9",
+        borderTopLeftRadius: "20px",
+        borderTopRightRadius: "20px",
+        padding: "10px",
+        width: "700px",
+        textAlign: "center",
+        background: "linear-gradient(to bottom, #ffffff40, #6c6c6c10)",
+        backdropFilter: "blur(20px)", boxShadow: "0px 1px 24px -1px rgba(0, 0, 0, 0.1)",
+      }}>
         <div>
-          <span className="opacity-100">Press space to split!</span>
+          <span className="opacity-70">rank: {currentRank} | </span>
+          <span className="opacity-70">players: {currentActivePlayers}  | </span>
+          { currentPlayer && gameEndedRef.current ?
+          (<span className="opacity-70">duration: {currentPlayer && currentPlayer.join && currentPlayer.removal ? ((currentPlayer.removal.toNumber() - currentPlayer.join.toNumber() + 5).toFixed(0)) : "0"} seconds | </span>
+          ) : 
+          (<span className="opacity-70">duration: {currentPlayer && currentPlayer.join ? ((Date.now() / 1000) - currentPlayer.join.toNumber()).toFixed(0) : "0"} seconds | </span>
+          )}
+          <span className="opacity-70">mass eaten: {currentPlayer ? (currentPlayer.score - gameInfo.buy_in) / (gameInfo.buy_in / 2500) : "0"}</span>
         </div>
       </div>
 
@@ -612,13 +707,21 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
           newTarget={target}
           gameSize={currentGameSizeRef.current}
           buyIn={gameInfo.buy_in}
+          gameEnded={gameEnded}
         />
       </div>
 
       <div className={`block w-screen h-screen`}>
         {gameEnded === 1 && (
-          <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-black z-[9999]">
-            <div className="bg-black flex flex-col items-center justify-center">
+          <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-[#00000080] z-[9999]">
+            <div className="bg-black flex flex-col items-center justify-center"
+              style={{
+                background: "linear-gradient(to bottom, #ffffff40, #6c6c6c10)",
+                borderRadius: "20px",
+                padding: "20px",
+                backdropFilter: "blur(20px)",
+                boxShadow: "0px 1px 24px -1px rgba(0, 0, 0, 0.1)",
+              }}>
               <p className=" p-0 m-1 text-center text-white text-xl inline">
                 <b>Game over.</b> You got eaten!
               </p>
@@ -630,8 +733,15 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
         )}
 
         {gameEnded === 2 && (
-          <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-black z-[9999]">
-            <div className="bg-black flex flex-col items-center justify-center select-text">
+          <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-[#00000080] z-[9999]">
+            <div className="flex flex-col items-center justify-center select-text"
+            style={{
+              background: "linear-gradient(to bottom, #ffffff40, #6c6c6c10)",
+              borderRadius: "20px",
+              padding: "20px",
+              backdropFilter: "blur(20px)",
+              boxShadow: "0px 1px 24px -1px rgba(0, 0, 0, 0.1)",
+            }}>
               <p className=" p-0 m-1 text-center text-white inline">
                 <b className="text-[50px]">
                   Payout: {currentPlayer ? currentPlayer.score / 10 ** gameInfo.decimals : ""}
@@ -661,7 +771,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
         )}
 
         {gameEnded === 3 && (
-          <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-black z-[9999]">
+          <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-transparent z-[9999]">
             <div className="bg-black flex flex-col items-center justify-center select-text">
               <p className="font-[Terminus] text-red-600 text-center text-sm m-0 p-0">
                 Error encountered during payout
