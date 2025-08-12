@@ -82,6 +82,30 @@ const Home = ({
   const [hasInsufficientTokenBalance, setHasInsufficientTokenBalance] = useState(false);
   //const [tokenBalance, setTokenBalance] = useState(-1);
 
+  useEffect(() => {
+    const savePlayerAddress = async () => {
+      const sessionWalletAddress = engine.getSessionPayer().toString();
+
+      if (sessionWalletAddress) {
+        try {
+          await fetch("https://supersize.miso.one/api/v1/blob-player", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              wallet: sessionWalletAddress,
+            }),
+          });
+        } catch (error) {
+          console.error("Failed to save player address:", error);
+        }
+      }
+    };
+
+    savePlayerAddress();
+  }, [engine]);
+
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(event.target.value);
   };
@@ -335,13 +359,10 @@ const Home = ({
         playerStatus: updatedPlayerInfo.playerStatus,
         newplayerEntityPda: updatedPlayerInfo.newPlayerEntityPda,
       };
-      const { tokenBalance, hasInsufficientTokenBalance } = await fetchTokenBalance(
-        engine,
-        game.activeGame,
-      );
+      const { tokenBalance, hasInsufficientTokenBalance } = await fetchTokenBalance(engine, game.activeGame);
       setTokenBalance(tokenBalance);
       setHasInsufficientTokenBalance(hasInsufficientTokenBalance);
-      
+
       const result = await gameExecuteJoin(
         engine,
         game.activeGame,

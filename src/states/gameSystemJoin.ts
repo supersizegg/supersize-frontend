@@ -5,6 +5,7 @@ import { FindComponentPda } from "@magicblock-labs/bolt-sdk";
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
 import { COMPONENT_PLAYER_ID, COMPONENT_MAP_ID, SYSTEM_BUY_IN_ID, SUPERSIZE_VAULT_PROGRAM_ID } from "./gamePrograms";
 import { ActiveGame } from "@utils/types";
+import { SupersizeVaultClient } from "../engine/SupersizeVaultClient";
 
 export async function gameSystemJoin(
   engine: MagicBlockEngine,
@@ -19,8 +20,10 @@ export async function gameSystemJoin(
   }
 
   const sessionWallet = engine.getSessionPayer();
-
   const mintOfToken = gameInfo.tokenMint!;
+
+  const vault = new SupersizeVaultClient(engine);
+  await vault.ensureDelegatedForJoin(mintOfToken);
 
   const mapComponentPda = FindComponentPda({
     componentId: COMPONENT_MAP_ID,
@@ -46,56 +49,6 @@ export async function gameSystemJoin(
     [mapComponentPda.toBuffer(), mintOfToken.toBuffer()],
     SUPERSIZE_VAULT_PROGRAM_ID,
   );
-
-  /*
-  console.log([
-      {
-        pubkey: SUPERSIZE_VAULT_PROGRAM_ID,
-        isSigner: false,
-        isWritable: false,
-      },
-      {
-        pubkey: gameWalletPda,
-        isSigner: false,
-        isWritable: true,
-      },
-      {
-        pubkey: userBalancePda,
-        isSigner: false,
-        isWritable: true,
-      },
-      {
-        pubkey: gameBalancePda,
-        isSigner: false,
-        isWritable: true,
-      },
-      {
-        pubkey: newplayerEntityPda,
-        isSigner: false,
-        isWritable: false,
-      },
-      {
-        pubkey: mapComponentPda,
-        isSigner: false,
-        isWritable: false,
-      },
-      {
-        pubkey: mintOfToken,
-        isSigner: false,
-        isWritable: false,
-      },
-      {
-        pubkey: parentKey,
-        isSigner: false,
-        isWritable: false,
-      },
-      {
-        pubkey: sessionWallet,
-        isSigner: true,
-        isWritable: true,
-      },
-    ]);
-  */
 
   const applyJoinSystem = await ApplySystem({
     authority: sessionWallet,

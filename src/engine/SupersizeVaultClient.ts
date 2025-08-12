@@ -57,6 +57,13 @@ export class SupersizeVaultClient {
     return accountInfo?.owner.equals(DELEGATION_PROGRAM_ID) ?? false;
   }
 
+  async isWalletDelegated(): Promise<boolean> {
+    if (!this.wallet) return false;
+    const gwPda = this.gameWalletPda(this.wallet);
+    const gwInfo = await this.mainChainConnection.getAccountInfo(gwPda);
+    return gwInfo?.owner.equals(DELEGATION_PROGRAM_ID) ?? false;
+  }
+
   async setupUserAccounts(mint: PublicKey) {
     if (!this.wallet) throw new Error("Wallet not connected to set up accounts.");
 
@@ -140,6 +147,18 @@ export class SupersizeVaultClient {
       );
 
     await this.engine.processWalletTransaction("DelegateAccounts", tx);
+  }
+
+  async ensureDelegatedForJoin(mint: PublicKey): Promise<void> {
+    if (!this.wallet) throw new Error("Wallet not connected.");
+
+    await this.setupUserAccounts(mint);
+
+    const [walletDelegated, userDelegated] = await Promise.all([this.isWalletDelegated(), this.isDelegated(mint)]);
+
+    if (!walletDelegated || !userDelegated) {
+      await this.delegateAll(mint);
+    }
   }
 
   async depositToGame(mint: PublicKey, uiAmount: number, mapComponentPda: PublicKey) {
@@ -252,6 +271,22 @@ export class SupersizeVaultClient {
 
       await this.engine.processWalletTransaction("Deposit", new Transaction().add(depositIx).add(delegateIx));
     }
+
+    const balancePda = this.userBalancePda(this.wallet, mint);
+    // Workaround to sync the account in ER immediately
+    const syncBalTx = new Transaction().add(
+      SystemProgram.transfer({
+        fromPubkey: this.engine.getSessionPayer(),
+        toPubkey: balancePda,
+        lamports: 0,
+      }),
+    );
+
+    try {
+      await this.engine.processSessionEphemTransaction("syncAccount", syncBalTx);
+    } catch (err) {
+      console.log("Ephemeral syncBalTx failed:", err);
+    }
   }
 
   private async undelegateAll(mint: PublicKey) {
@@ -277,6 +312,7 @@ export class SupersizeVaultClient {
 
     const currentlyDelegated = await this.isDelegated(mint);
     if (currentlyDelegated) {
+      console.log("Undelegating before withdrawal...");
       await this.undelegateAll(mint);
     }
 
@@ -309,6 +345,22 @@ export class SupersizeVaultClient {
     );
 
     await this.engine.processWalletTransaction("Withdraw", withdrawTx);
+
+    const balancePda = this.userBalancePda(this.wallet, mint);
+    // Workaround to sync the account in ER immediately
+    const syncBalTx = new Transaction().add(
+      SystemProgram.transfer({
+        fromPubkey: this.engine.getSessionPayer(),
+        toPubkey: balancePda,
+        lamports: 0,
+      }),
+    );
+
+    try {
+      await this.engine.processSessionEphemTransaction("syncAccount", syncBalTx);
+    } catch (err) {
+      console.log("Ephemeral syncBalTx failed:", err);
+    }
   }
 
   async setupGameWallet(mapComponentPda: PublicKey, mint: PublicKey, validator: PublicKey) {

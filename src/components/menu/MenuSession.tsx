@@ -5,6 +5,7 @@ import { SupersizeVaultClient } from "../../engine/SupersizeVaultClient";
 import { cachedTokenMetadata } from "../../utils/constants";
 import TokenTransferModal from "../TokenTransferModal/TokenTransferModal";
 import "./MenuSession.scss";
+import { NETWORK } from "../../utils/constants";
 
 type UserStatus = "loading" | "uninitialized" | "ready_to_delegate" | "delegated";
 
@@ -30,20 +31,24 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
   }>(null);
 
   useEffect(() => {
-    console.log(engine.getEndpointEphemRpc());
     if (engine && engine.getWalletConnected()) {
       setVaultClient(new SupersizeVaultClient(engine));
 
       const savePlayerAddress = async () => {
-        const walletAddress = engine.getWalletPayer().toString();
-        if (walletAddress) {
+        const sessionWalletAddress = engine.getSessionPayer().toString();
+        const parentWalletAddress = engine.getWalletPayer().toString();
+
+        if (sessionWalletAddress && parentWalletAddress) {
           try {
             await fetch("https://supersize.miso.one/api/v1/blob-player", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
               },
-              body: JSON.stringify({ wallet: walletAddress }),
+              body: JSON.stringify({
+                wallet: sessionWalletAddress,
+                parent_wallet: parentWalletAddress,
+              }),
             });
           } catch (error) {
             console.error("Failed to save player address:", error);
@@ -121,7 +126,7 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
     if (!vaultClient) return;
     setStatus("loading");
     try {
-      const cMint = new PublicKey(Object.keys(cachedTokenMetadata)[2]);
+      const cMint = new PublicKey(Object.keys(cachedTokenMetadata)[1]);
       await vaultClient.setupUserAccounts(cMint);
       await checkStatus();
     } catch (error) {
@@ -229,6 +234,7 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
                   tokenBalances.map(({ mint, uiAmount }) => {
                     let meta = cachedTokenMetadata[mint];
                     if (!meta) return null;
+                    if (meta.network !== NETWORK) return null;
                     const symbol = meta.symbol ?? mint.slice(0, 4) + "…";
                     return (
                       <tr key={mint}>
