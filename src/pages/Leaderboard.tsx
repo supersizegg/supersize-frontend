@@ -42,6 +42,7 @@ interface BlobPlayersApiResponse {
 
 interface BlobPlayer {
   wallet: string;
+  parent_wallet?: string;
   balance: number;
 }
 
@@ -289,8 +290,8 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ randomFood, tokenBalance }) =
                 {leaderboardData.map((player, i) => (
                   <tr key={i} className={player.wallet === userInfo.address ? "player-row-highlight" : ""}>
                     <td>{(currentPage - 1) * limit + i + 1}</td>
-                    <td>{player.wallet}</td>
-                    <td className="text-right">{player.balance ? player.balance.toLocaleString() : ""}</td>
+                    <td>{player.parent_wallet ? player.parent_wallet : player.wallet}</td>
+                    <td className="text-right">{player.balance ? player.balance.toLocaleString() : "0"}</td>
                   </tr>
                 ))}
               </tbody>
