@@ -19,15 +19,17 @@ import { decodeFood, stringToUint8Array, calculateWindowSize } from "@utils/help
 import { useSoundManager } from "../hooks/useSoundManager";
 import "./Landing.scss";
 import "./game.scss";
-import { averageCircleCoordinates } from "../utils/helper";
+import { averageCircleCoordinates, formatBuyIn } from "../utils/helper";
+import SignUpBanner from "../components/util/SignUpBanner";
 
 type gameProps = {
   gameInfo: ActiveGame;
   myPlayerEntityPda: PublicKey | null;
   sessionWalletInUse: boolean;
+  preferredRegion: string;
 };
 
-const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) => {
+const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse, preferredRegion }: gameProps) => {
   const navigate = useNavigate();
   const { engine } = useMagicBlockEngine();
 
@@ -52,7 +54,8 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
   const [gameEnded, setGameEnded] = useState(0);
   const [currentGameSize, setCurrentGameSize] = useState(gameInfo.size);
   const [cashoutTx, setCashoutTx] = useState<string | null>(null);
-
+  const [isFree, setIsFree] = useState(false);
+  
   const [leaderboard, setLeaderboard] = useState<Blob[]>([]);
   const [allplayers, setAllPlayers] = useState<Blob[]>([]);
   const [allFood, setAllFood] = useState<Food[][]>([]);
@@ -118,14 +121,14 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
     }
 
     setPlayerExiting(true);
-    countdown.current = 5;
+    countdown.current = 500;
     const myplayerComponent = FindComponentPda({
       componentId: COMPONENT_PLAYER_ID,
       entity: currentPlayerEntity.current,
     });
 
     try {
-      gameSystemExit(engine, gameInfo, currentPlayerEntity.current, entityMatch.current).then(async () => {
+      gameSystemExit(preferredRegion, engine, gameInfo, currentPlayerEntity.current, entityMatch.current).then(async () => {
         if (currentPlayerEntity.current && currentPlayer) {
           const playerData = await playerFetchOnEphem(engine, myplayerComponent);
           if (playerData) {
@@ -136,10 +139,6 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
     } catch (error) {
       console.log("error", error);
     }
-
-    //const interval = setInterval(() => {
-    //  countdown.current = countdown.current - 1;
-    //}, 1000);
 
     let startTime = Date.now();
 
@@ -154,7 +153,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
           }
           const currentTime = Date.now();
           const elapsedTime = currentTime - startTime;
-          //console.log("elapsedTime", elapsedTime);
+          //console.log("elapsedTime", elapsedTime, countdown.current);
           countdown.current = Math.max(0, Math.floor(500 - elapsedTime / 10));
 
           if (elapsedTime > 5000) {
@@ -166,7 +165,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
             }
             console.log("5 seconds have passed");
             try {
-              gameSystemExit(engine, gameInfo, currentPlayerEntity.current, entityMatch.current).then((exitTx) => {
+              gameSystemExit(preferredRegion, engine, gameInfo, currentPlayerEntity.current, entityMatch.current).then((exitTx) => {
                 setCashoutTx(exitTx);
               });
             } catch (error) {
@@ -310,6 +309,9 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
     const mapData = mapFetchOnEphem(engine, mapComponent).then((mapData) => {
       if (mapData) {
         setCurrentGameSize(mapData.size);
+        if(mapData.name.startsWith("f-")) {
+          setIsFree(true);
+        }
       }
     });
 
@@ -628,7 +630,8 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
               }}
             >
               {currentPlayer
-                ? (currentPlayer.score / 10 ** gameInfo.decimals).toFixed(2)
+                ? formatBuyIn(Math.round((currentPlayer.score / 10 ** gameInfo.decimals) *  100) / 100)
+                //(currentPlayer.score / 10 ** gameInfo.decimals).toFixed(2)
                 : "--"}{" "}
             </span>
           </div>
@@ -649,18 +652,18 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
         </div>
       </div>
       
-      <div style={{ position: "fixed", top: "1rem", right: "1rem", display: "flex",
+      <div style={{ position: "fixed", top: "1rem", right: "1rem", display: "flex", width: "200px",
         alignItems: "center", zIndex: "9999", flexDirection: "column", background: "linear-gradient(to bottom, #ffffff40, #6c6c6c10)",
         borderRadius: "20px", padding: "10px", backdropFilter: "blur(20px)", boxShadow: "0px 1px 24px -1px rgba(0, 0, 0, 0.1)" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "18px", transform: "translateX(-20px)" }}>
       <div className="coin-icon">
           <img src="/slime.png" alt="game token" className="coin-image" />
       </div>
-      <div className="coin-pill" style={{ width: "120px", height: "42px", position: "relative" }}>
+      <div className="coin-pill flex text-center" style={{position: "relative" }}>
         <div className="overlay-panel" style={{ borderRadius: "10px", border: "3px solid transparent", position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }} />
-        <span style={{ position: "absolute", zIndex: "1", marginLeft: "8px" }}>
-          {currentPlayer
-                ? ((currentPlayer.score - gameInfo.buy_in) / 10 ** gameInfo.decimals).toFixed(2)
+        <span style={{ position: "absolute", zIndex: "1", transform: "translateX(calc(77px - 50%))" }}>
+        {currentPlayer
+                  ? formatBuyIn(Math.round(((currentPlayer.score - (isFree ? 0 : gameInfo.buy_in)) / 10 ** gameInfo.decimals) *  1000) / 1000)
                 : "--"}{" "}
         </span>
       </div>
@@ -685,9 +688,9 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
           { currentPlayer && gameEndedRef.current ?
           (<span className="opacity-70">duration: {currentPlayer && currentPlayer.join && currentPlayer.removal ? ((currentPlayer.removal.toNumber() - currentPlayer.join.toNumber() + 5).toFixed(0)) : "0"} seconds | </span>
           ) : 
-          (<span className="opacity-70">duration: {currentPlayer && currentPlayer.join ? ((Date.now() / 1000) - currentPlayer.join.toNumber()).toFixed(0) : "0"} seconds | </span>
+          (<span className="opacity-70">duration: {currentPlayer && currentPlayer.join ? ((Date.now() / 1000) - currentPlayer.join.toNumber()).toFixed(0) : "0"}s | </span>
           )}
-          <span className="opacity-70">mass eaten: {currentPlayer ? (currentPlayer.score - gameInfo.buy_in) / (gameInfo.buy_in / 2500) : "0"}</span>
+          <span className="opacity-70">mass eaten: {currentPlayer ? ((currentPlayer.score - (isFree ? 0 : gameInfo.buy_in)) / (gameInfo.buy_in / 2500)).toFixed(0) : "0"}</span>
         </div>
       </div>
 
@@ -744,7 +747,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
             }}>
               <p className=" p-0 m-1 text-center text-white inline">
                 <b className="text-[50px]">
-                  Payout: {currentPlayer ? currentPlayer.score / 10 ** gameInfo.decimals : ""}
+                  Payout: {currentPlayer ? formatBuyIn(Math.round((currentPlayer.score / 10 ** gameInfo.decimals) * 1000) / 1000) : ""}
                 </b>
               </p>
               <div className="flex items-center justify-center" style={{ flexDirection: "column" }}>
@@ -767,6 +770,8 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse }: gameProps) =>
                 Return home
               </button>
             </div>
+
+            <SignUpBanner engine={engine} preferredRegion={preferredRegion} />
           </div>
         )}
 

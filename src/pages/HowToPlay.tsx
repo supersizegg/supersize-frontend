@@ -58,23 +58,21 @@ const HowToPlay: React.FC<HowToPlayProps> = ({ tokenBalance }) => {
       <div className="how-to-play-container" style={{ position: "relative", zIndex: 1 }}>
         <div className="faq-list">
           <details className="faq-item">
-            <summary>Superblob</summary>
+            <summary>Blob Battle</summary>
             <ul>
-              <li>Join a game: Every Supersize game has a token and a buy in. Pay to spawn as a blob.</li>
+              <li>Join a game: join a free game to start collecting slimecoins or pay slimecoins to enter a high stakes game.</li>
               <li>
-                Boost: Your blob follows your mouse. Spend tokens (gold food) to boost forward. Use the{" "}
-                <b>left click</b> to boost.
+                Eat mass: mass = slimecoins. Eat pieces of mass to grow in size and earn slimecoins. In high stakes games, mass is worth more slimecoins.
               </li>
               <li>
-                Eat food: Food = tokens. Eat food to grow in size and earn tokens. Purple food is 7x the green food.
+                Eat blobs: Bigger blobs can eat smaller blobs to gain their mass and slimecoins. 
               </li>
               <li>
-                Eat players: Bigger players can eat smaller players to gain their mass and steal their tokens. Bigger
-                players move slower.
+                Split:  Press space to split all you blobs greater than 50 mass into two, shooting the new blobs forward at high speed.
+                You can only have a maximum of 8 blobs at a time.
               </li>
               <li>
-                Cash out: Exit the game anytime to cash out your tokens. There is a 5 second delay on exit and a 3% fee
-                on cash out.
+                Cash out: Exit the game anytime to cash out your slimecoins. There is a 5 second delay on exit.
               </li>
             </ul>
           </details>
@@ -82,48 +80,44 @@ const HowToPlay: React.FC<HowToPlayProps> = ({ tokenBalance }) => {
             <summary>How to deposit</summary>
             <ul>
               <li>
-                If using an external wallet (phantom, backpack, solflare...) as linked wallet
+                If using an external wallet (phantom, backpack, solflare...) 
                 <ul>
                   <li>
-                    deposit → deposit from linked wallet → enter amount → deposit → sign transaction → tokens in your
-                    account
+                    go to profile → deposit → enter amount → confirm deposit → sign transaction → tokens in your account
                   </li>
                 </ul>
               </li>
               <li>
-                If NOT using an external wallet as linked wallet
+                If not using an external wallet 
                 <ul>
-                  <li>It’s NOT recommended to deposit from an unlinked wallet.</li>
                   <li>It is recommended to open a new account with your depositing wallet as the linked wallet.</li>
-                  <li>Or you can fund the existing linked wallet and buy supercoin in the supermarket</li>
                 </ul>
               </li>
             </ul>
           </details>
           <details className="faq-item" open={section === "buy"}>
-            <summary>How to buy SUPER SLIME tokens</summary>
+            <summary>How to buy slimecoins</summary>
             <ul>
               <li>
-                On the app – supermarket
+                On the app
                 <ul>
                   <li>
                     With CRYPTO
                     <ul>
                       <li>
-                        If using an external wallet (phantom, backpack, solflare...) as linked wallet
+                        If using an external wallet (phantom, backpack, solflare...) 
                         <ul>
-                          <li>buy with crypto → enter amount → buy → sign transaction → tokens in your account</li>
+                          <li>go to market → buy → go to profile → deposit slimecoins to your account</li>
                         </ul>
                       </li>
                       <li>
-                        If NOT using an external wallet as linked wallet
+                        If not using an external wallet 
                         <ul>
-                          <li>your linked wallet must have above 0.005 SOL</li>
                           <li>
                             your linked wallet must have enough SOL for the purchase. You can send SOL to your linked
                             wallet address.
                           </li>
-                          <li>buy with crypto → enter amount → buy → tokens in your account</li>
+                          <li>go to market → buy → go to profile → deposit slimecoins to your account</li>
                         </ul>
                       </li>
                     </ul>
@@ -131,7 +125,7 @@ const HowToPlay: React.FC<HowToPlayProps> = ({ tokenBalance }) => {
                   <li>
                     With CASH
                     <ul>
-                      <li>buy with cash → proceed with stripe → tokens in your account</li>
+                      <li>Coming soon</li>
                     </ul>
                   </li>
                 </ul>
@@ -139,35 +133,34 @@ const HowToPlay: React.FC<HowToPlayProps> = ({ tokenBalance }) => {
               <li>
                 Externally
                 <ul>
-                  <li>Super slime tokens can be bought or sold on exchanges like jup.ag</li>
+                  <li>Slimecoins can be bought or sold on exchanges like jup.ag</li>
                 </ul>
               </li>
             </ul>
           </details>
           <details className="faq-item" open={section === "sell"}>
-            <summary>How to sell SUPER SLIME tokens for cash</summary>
+            <summary>How to sell slimecoins</summary>
             <ul>
               <li>
-                If using an external wallet (phantom, backpack, solflare...) as linked wallet
+                If using an external wallet (phantom, backpack, solflare...)
                 <ul>
                   <li>
-                    withdraw → withdraw to linked wallet → enter amount → withdraw → sign transaction → tokens in your
-                    wallet
+                    go to profile → withdraw → enter amount → confirm withdraw → sign transaction → tokens in your wallet
                   </li>
                   <li>sell on jup.ag</li>
                 </ul>
               </li>
               <li>
-                If NOT using an external wallet as linked wallet
+                If not using an external wallet 
                 <ul>
-                  <li>If you don’t already have a wallet create one with phantom.</li>
+                  <li>If you don’t already have an external wallet create one with phantom.</li>
                   <li>
                     then you must buy at least 0.005 SOL and send it to your new wallet. Then go to jup.ag and purchase
-                    1 supercoin. Then proceed with the withdrawal.
+                    1 slimecoin. Then proceed with the withdrawal.
                   </li>
                   <li>
-                    withdraw → withdraw to another wallet → paste address of wallet that will receive the tokens (wallet
-                    must be holding more than 0 supercoins) → enter amount → withdraw → tokens in your wallet
+                    go to profile → withdraw → paste address of wallet that will receive the tokens (wallet
+                    must be holding more than 0 slimecoins) → enter amount → confirm withdraw → tokens in your wallet
                   </li>
                   <li>sell on jup.ag</li>
                 </ul>

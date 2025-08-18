@@ -57,6 +57,14 @@ export class SupersizeVaultClient {
     return accountInfo?.owner.equals(DELEGATION_PROGRAM_ID) ?? false;
   }
 
+  async initializeVault(mint: PublicKey) {
+    if (!this.wallet) throw new Error("Wallet not connected to initialize vault.");
+
+    const initializeTx = new Transaction();
+    initializeTx.add(await this.program.methods.initialize().accounts({ mintOfToken: mint, signer: this.wallet }).instruction());
+    await this.engine.processWalletTransaction("InitializeVault", initializeTx);
+  }
+  
   async setupUserAccounts(mint: PublicKey) {
     if (!this.wallet) throw new Error("Wallet not connected to set up accounts.");
 
@@ -272,6 +280,16 @@ export class SupersizeVaultClient {
 
       await this.engine.processWalletTransaction("Deposit", new Transaction().add(depositIx).add(delegateIx));
     }
+
+    const checkBalancePda = this.userBalancePda(this.wallet, mint);
+    const checkTx = new Transaction().add(
+      SystemProgram.transfer({
+        fromPubkey: this.engine.getSessionPayer(),
+        toPubkey: checkBalancePda,
+        lamports: 0, 
+      }),
+    );
+    await this.engine.processSessionEphemTransaction("testTx", checkTx);
   }
 
   private async undelegateAll(mint: PublicKey) {
@@ -333,6 +351,16 @@ export class SupersizeVaultClient {
     );
 
     await this.engine.processWalletTransaction("Withdraw", withdrawTx);
+
+    const checkBalancePda = this.userBalancePda(this.wallet, mint);
+    const checkTx = new Transaction().add(
+      SystemProgram.transfer({
+        fromPubkey: this.engine.getSessionPayer(),
+        toPubkey: checkBalancePda,
+        lamports: 0, 
+      }),
+    );
+    await this.engine.processSessionEphemTransaction("testTx", checkTx);
   }
 
   async setupGameWallet(mapComponentPda: PublicKey, mint: PublicKey, validator: PublicKey) {

@@ -20,6 +20,7 @@ export function createUnloadedGame(
       image: `${process.env.PUBLIC_URL}/token.png`,
       token: "LOADING",
       buy_in: 0,
+      is_free: false,
       decimals: 0,
       endpoint,
       permissionless,

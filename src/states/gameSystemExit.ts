@@ -8,12 +8,15 @@ import { COMPONENT_PLAYER_ID, COMPONENT_MAP_ID, SYSTEM_EXIT_GAME_ID, SUPERSIZE_V
 import { ActiveGame } from "@utils/types";
 
 export async function gameSystemExit(
+  preferredRegion: string,
   engine: MagicBlockEngine,
   gameInfo: ActiveGame,
   currentPlayerEntity: PublicKey,
   entityMatch: PublicKey,
 ) {
-  const parentKey = engine.getWalletPayer();
+  const isGuest = (preferredRegion == undefined || preferredRegion == "" || !engine.getWalletConnected());
+  const parentKey = isGuest ? new PublicKey("DdGB1EpmshJvCq48W1LvB1csrDnC4uataLnQbUVhp6XB") : engine.getWalletPayer();
+
   if (!parentKey) {
     throw new Error("User wallet is not connected.");
   }
@@ -46,6 +49,13 @@ export async function gameSystemExit(
     SYSTEM_EXIT_GAME_ID,
   );
 
+  console.log("preferredRegion", preferredRegion);
+  console.log("isGuest", isGuest);
+  console.log("do_payout", !isGuest);
+  console.log("parentKey", parentKey.toBase58());
+  console.log("gameWalletPda", gameWalletPda.toBase58());
+  console.log("userBalancePda", userBalancePda.toBase58());
+
   const applySystem = await ApplySystem({
     authority: engine.getSessionPayer(),
     world: gameInfo.worldPda,
@@ -61,6 +71,7 @@ export async function gameSystemExit(
     ],
     systemId: SYSTEM_EXIT_GAME_ID,
     args: {
+      do_payout: !isGuest,  
       timestamp: performance.now(),
     },
     extraAccounts: [

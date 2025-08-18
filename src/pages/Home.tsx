@@ -336,14 +336,17 @@ const Home = ({
         playerStatus: updatedPlayerInfo.playerStatus,
         newplayerEntityPda: updatedPlayerInfo.newPlayerEntityPda,
       };
-      const { tokenBalance, hasInsufficientTokenBalance } = await fetchTokenBalance(
-        engine,
-        game.activeGame,
-      );
-      setTokenBalance(tokenBalance);
-      setHasInsufficientTokenBalance(hasInsufficientTokenBalance);
+      if (!game.activeGame.is_free){
+        const { tokenBalance, hasInsufficientTokenBalance } = await fetchTokenBalance(
+          engine,
+          game.activeGame,
+        );
+        setTokenBalance(tokenBalance);
+        setHasInsufficientTokenBalance(hasInsufficientTokenBalance);
+      }
       
       const result = await gameExecuteJoin(
+        preferredRegion,
         engine,
         game.activeGame,
         game.activeGame.buy_in,
@@ -611,7 +614,7 @@ const Home = ({
                   </td>
                   <td style={{ color: "#898989" }}>
                     {row.activeGame.isLoaded ? (
-                      formatBuyIn(row.activeGame.buy_in / 10 ** row.activeGame.decimals)
+                      row.activeGame.is_free ? "Free" : formatBuyIn(row.activeGame.buy_in / 10 ** row.activeGame.decimals)
                     ) : (
                       <Spinner />
                     )}

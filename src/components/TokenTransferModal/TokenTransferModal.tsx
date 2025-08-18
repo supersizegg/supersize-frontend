@@ -121,22 +121,22 @@ const TokenTransferModal: React.FC<Props> = ({
 
 
         <p style={{ fontSize: "0.9rem", marginBottom: "0.5rem" }}>
-          Available: {max.toLocaleString(undefined, { maximumFractionDigits: token.decimals })}
+          Available: {max.toLocaleString(undefined, { maximumFractionDigits: 3 })}
         </p>
 
         <input
           type="range"
           min={0}
           max={max}
-          step={Math.pow(10, -token.decimals)}
+          step={Math.pow(10, -3)} //-token.decimals
           value={value}
           onChange={(e) => setValue(parseFloat(e.target.value))}
           style={{ width: "100%" }}
         />
 
         <div style={{ textAlign: "center", marginTop: "0.5rem" }}>
-          {value.toLocaleString(undefined, { maximumFractionDigits: token.decimals })} {token.symbol} ({pct.toFixed(0)}
-          %)
+          {value.toLocaleString(undefined, { maximumFractionDigits: 3})} {token.symbol} ({pct.toFixed(0)} 
+          %) 
         </div>
 
         <button

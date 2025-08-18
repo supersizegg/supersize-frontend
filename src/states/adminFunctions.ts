@@ -1,6 +1,6 @@
 import { createTransferInstruction } from "@solana/spl-token";
 import { createDelegateInstruction } from "@magicblock-labs/bolt-sdk";
-import { AccountMeta, ComputeBudgetProgram, ParsedTransactionWithMeta } from "@solana/web3.js";
+import { AccountMeta, ComputeBudgetProgram, ParsedTransactionWithMeta, Transaction } from "@solana/web3.js";
 import { COMPONENT_SECTION_ID } from "./gamePrograms";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { getAssociatedTokenAddress } from "@solana/spl-token";
@@ -357,6 +357,7 @@ export async function countTransactionsByDay(
 }
   
 export const gameTransfer = async (
+    engine: MagicBlockEngine,
     vaultClient: SupersizeVaultClient,
     amount: number,
     mapComponentPda: PublicKey,
@@ -380,6 +381,23 @@ export const gameTransfer = async (
         mapComponentPda,
         deposit,
       );
+      const successAlertId = NotificationService.addAlert({
+        type: "success",
+        message: `${action} successful`,
+        shouldExit: false,
+      });
+      setTimeout(() => {
+        NotificationService.updateAlert(successAlertId, { shouldExit: true });
+      }, 3000);
+      const checkBalancePda = vaultClient.mapBalancePda(mapComponentPda, mint_of_token_being_sent);
+      const checkTx = new Transaction().add(
+        SystemProgram.transfer({
+          fromPubkey: engine.getSessionPayer(),
+          toPubkey: checkBalancePda,
+          lamports: 0, 
+        }),
+      );
+      await engine.processSessionEphemTransaction("testTx", checkTx);
       console.log(`${action} successful, transaction signature:`, desposittx);
     } catch (error) {
       console.error(`Error during ${action}:`, error);

@@ -7,13 +7,17 @@ import { COMPONENT_PLAYER_ID, COMPONENT_MAP_ID, SYSTEM_BUY_IN_ID, SUPERSIZE_VAUL
 import { ActiveGame } from "@utils/types";
 
 export async function gameSystemJoin(
+  preferredRegion: string,
   engine: MagicBlockEngine,
   gameInfo: ActiveGame,
   newplayerEntityPda: PublicKey,
   mapEntityPda: PublicKey,
   playerName: string,
 ) {
-  const parentKey = engine.getWalletPayer();
+  const parentKey = (preferredRegion == undefined || preferredRegion == "" || !engine.getWalletConnected()) ? 
+  new PublicKey("DdGB1EpmshJvCq48W1LvB1csrDnC4uataLnQbUVhp6XB") : 
+  engine.getWalletPayer();
+
   if (!parentKey) {
     throw new Error("User wallet is not connected.");
   }
@@ -47,6 +51,10 @@ export async function gameSystemJoin(
     SUPERSIZE_VAULT_PROGRAM_ID,
   );
 
+  console.log("preferredRegion", preferredRegion);
+  console.log("gameWalletPda", gameWalletPda.toString());
+  console.log("userBalancePda", userBalancePda.toString());
+  console.log("gameBalancePda", gameBalancePda.toString());
   /*
   console.log([
       {

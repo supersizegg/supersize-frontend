@@ -51,9 +51,8 @@ const GameLauncher: React.FC<launchProps> = ({ activeGamesLoaded, setActiveGames
         <p className="launch-game-description">Select server:</p>
         <SelectRegion items={["Europe", "America", "Asia"]} onSelect={setSelectedServer} selectedItem={selectedServer} />
         <p className="info-text">
-          Deploying a game creates a new Supersize world that lasts forever and is owned by you. The deployment cost is
-          refundable if you decide to close the game accounts in your profile.{" "}
-          <b>The game owner recieves a 1% fee charged on each player exit.</b>
+          The deployment cost is refundable if you decide to delete the game. 
+          <b> It's recommended that you deposit tokens to your game's vault after deployment.</b>{" "}
         </p>
       </div>
       <div className="create-game-form-container">

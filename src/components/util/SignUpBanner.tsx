@@ -29,7 +29,7 @@ const SignUpBanner: React.FC<SignUpBannerProps> = ({engine, preferredRegion}) =>
     >
         <span className="text-white font-semibold text-base tracking-wide">
           {!engine.getWalletConnected() ? "Sign in and " : ""}
-           activate your vault to start collecting slimecoins!
+           activate your vault to start stacking coins!
         </span>
     </button>
   );

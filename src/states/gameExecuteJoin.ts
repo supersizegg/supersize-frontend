@@ -20,6 +20,7 @@ type PlayerInfo = {
 };
 
 export async function gameExecuteJoin(
+  preferredRegion: string,
   engine: MagicBlockEngine,
   selectGameId: ActiveGame,
   buyIn: number,
@@ -52,7 +53,7 @@ export async function gameExecuteJoin(
   });
   
   try {
-    let buyInResult = await gameSystemJoin(engine, selectGameId, newplayerEntityPda, mapEntityPda, playerName);
+    let buyInResult = await gameSystemJoin(preferredRegion, engine, selectGameId, newplayerEntityPda, mapEntityPda, playerName);
     if (!buyInResult.success) {
       return { success: false, error: buyInResult.error, message: "buyin_failed" };
     }

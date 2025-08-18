@@ -5,8 +5,8 @@ const ModGame = () => {
     <div className="flex w-full h-full text-white flex-col">
       <h1 className="m-[2vw] text-[35px]">Mod Your Game</h1>
       <p className="ml-[2vw] text-[24px] w-[80%]">
-        Make your game stand out. Add everything from custom features and gameplay mechanics to in-game drops. Supersize
-        is a real-time fully onchain game powered by Magicblock engine.
+        Make your game stand out. Add everything from custom features and gameplay mechanics to in-game drops. Slimecoin.io
+        is a fully onchain game on Solana powered by Magicblock engine.
         <br />
         <br />
       </p>

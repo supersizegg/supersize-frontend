@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import GameLauncher from "@components/CreateGame/GameLauncher";
-import EarnFees from "@components/InfoPanel/EarnFees";
+import AllCoins from "@components/InfoPanel/AllCoins";
 import ModGame from "@components/InfoPanel/ModGame";
 import { MenuBar } from "@components/menu/MenuBar";
 import FooterLink from "@components/Footer/Footer";
@@ -64,7 +64,7 @@ const CreateGame: React.FC<CreateGameProps> = ({ activeGamesLoaded, setActiveGam
           {tab === 0 ? (
             <GameLauncher activeGamesLoaded={activeGamesLoaded} setActiveGamesLoaded={setActiveGamesLoaded} />
           ) : tab === 1 ? (
-            <EarnFees />
+            <AllCoins />
           ) : (
             <ModGame />
           )}

@@ -42,6 +42,7 @@ export type ActiveGame = {
   token: string;
   tokenMint?: PublicKey;
   buy_in: number;
+  is_free: boolean;
   decimals: number;
   endpoint: string;
 };

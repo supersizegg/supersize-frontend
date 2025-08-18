@@ -45,6 +45,7 @@ import { endpoints, options, NETWORK } from "../utils/constants";
 import { SupersizeVaultClient } from "../engine/SupersizeVaultClient";
 import { getComponentMapOnChain, getComponentMapOnEphem } from "../states/gamePrograms";
 import { NavLink, useNavigate } from "react-router-dom";
+import { fetchWalletTokenBalance } from "../utils/helper";
 
 
 type profileProps = {
@@ -129,6 +130,7 @@ export default function Profile({
         <div className="profile-content">
           {activeTab === "wallet" && (
             <GeneralTab
+              engine={engine}
               sessionWalletInUse={sessionWalletInUse}
               username={username}
               setSessionWalletInUse={setSessionWalletInUse}
@@ -172,6 +174,7 @@ export default function Profile({
 }
 
 type GeneralTabProps = {
+  engine: MagicBlockEngine;
   sessionWalletInUse: boolean;
   username: string;
   sessionLamports: number | undefined;
@@ -184,6 +187,7 @@ type GeneralTabProps = {
 };
 
 function GeneralTab({
+  engine,
   sessionWalletInUse,
   username,
   sessionLamports,
@@ -194,10 +198,10 @@ function GeneralTab({
   setPreferredRegion,
   setTokenBalance,
 }: GeneralTabProps) {
+  
   return (
     <div className="general-tab">
       <MenuWallet setPreferredRegion={setPreferredRegion} />
-
       <MenuSession
         setTokenBalance={setTokenBalance}
       //username={username}
@@ -317,6 +321,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
   const [foodComponentCheck, setFoodComponentCheck] = useState<string>("");
   const [depositValue, setDepositValue] = useState<string>("");
   const [currentFoodToAdd, setCurrentFoodToAdd] = useState<number>(0);
+  const [initVaultInput, setInitVaultInput] = useState("");
   const [selectedMapComponentPda, setSelectedMapComponentPda] = useState<PublicKey | null>(null);
   const [cashoutStats, setCashoutStats] = useState<{
     buyInSum: number | null;
@@ -529,6 +534,24 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
       >
         <span>+ Create Game</span>
       </button>
+      <div className="row-inline input-group" style={{ 
+        display: engine.getWalletPayer().toString() == "Gqg46QwPF1QX5aquTLo6rjAikMhYS6nvZy6RVminma22" 
+        || engine.getWalletPayer().toString() == "DdGB1EpmshJvCq48W1LvB1csrDnC4uataLnQbUVhp6XB" ? "flex" : "none" }}>
+        <input
+          className="input-field rounded-lg p-2 font-weight-500"
+          style={{ color: "black" }}
+          type="text"
+          placeholder="Enter mint address"
+          value={initVaultInput}
+          onChange={(e) => setInitVaultInput(e.target.value)}
+        />
+        <button
+          className="btn-create-game ml-2"
+          onClick={() => vaultClient?.initializeVault(new PublicKey(initVaultInput))}
+        >
+          <span>Init vault</span>
+        </button>
+      </div>
       {isLoading === true ? (
         <div className="loading-container">
           <Spinner /> <span>Loading games you own...</span>
@@ -607,7 +630,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                         componentId: COMPONENT_MAP_ID,
                         entity: mapEntityPda,
                       });
-                      gameTransfer(vaultClient, parseFloat(depositValue), mapComponentPda, row.tokenMint);
+                      gameTransfer(engine, vaultClient, parseFloat(depositValue), mapComponentPda, row.tokenMint);
                     }
                   }}
                 >
@@ -627,9 +650,9 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                         componentId: COMPONENT_MAP_ID,
                         entity: mapEntityPda,
                       });
-                      gameTransfer(vaultClient, parseFloat(depositValue), mapComponentPda, row.tokenMint, false);
+                      gameTransfer(engine, vaultClient, parseFloat(depositValue), mapComponentPda, row.tokenMint, false);
                     }
-                  }}                >
+                  }}>
                   Withdraw{" "}
                 </button>
               </div>

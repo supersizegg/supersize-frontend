@@ -70,7 +70,7 @@ const AppRoutes = () => {
         const pingResults = await pingEndpoints();
         console.log("Vault is not initialized, fallback pinging endpoints", pingResults);
         if (pingResults.lowestPingEndpoint) {
-          setPreferredRegion(getRegion(pingResults.lowestPingEndpoint.region));
+          //setPreferredRegion(getRegion(pingResults.lowestPingEndpoint.region));
           setEndpointEphemRpc(pingResults.lowestPingEndpoint.endpoint);
           console.log("Set ephem endpoint to", pingResults.lowestPingEndpoint.endpoint);
         }
@@ -134,6 +134,7 @@ const AppRoutes = () => {
               gameInfo={selectedGame}
               myPlayerEntityPda={myPlayerEntityPda}
               sessionWalletInUse={sessionWalletInUse}
+              preferredRegion={preferredRegion}
             />
           }
         />

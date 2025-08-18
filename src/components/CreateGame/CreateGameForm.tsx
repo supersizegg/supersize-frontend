@@ -62,8 +62,11 @@ const CreateGameForm: React.FC<gameProps> = ({
 
   useEffect(() => {
     try {
-      let userKey = engine.getWalletPayer().toString();
-      setFormData((prev) => ({ ...prev, 2: userKey }));
+      //let userKey = engine.getWalletPayer().toString();
+      //setFormData((prev) => ({ ...prev, 2: userKey }));
+      const updatedFormData = [...formData] as FormData;
+      updatedFormData[2] = engine.getWalletPayer().toString();
+      setFormData(updatedFormData);
     } catch (e) {
       console.log(e);
     }
@@ -72,12 +75,14 @@ const CreateGameForm: React.FC<gameProps> = ({
   const handleChange = (index: number) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const { value } = e.target;
     const updatedFormData = [...formData] as FormData;
-    if (index > 2) {
-      updatedFormData[index] = value as string;
-    } else {
-      updatedFormData[index] = parseFloat(value) as number;
+    if(updatedFormData) {
+      if (index >= 2) {
+        updatedFormData[index] = value as string;
+      } else {
+        updatedFormData[index] = parseFloat(value) as number;
+      }
+      setFormData(updatedFormData);
     }
-    setFormData(updatedFormData);
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {

@@ -4,6 +4,7 @@ import "./MenuBar.scss";
 import "../../pages/Landing.scss";
 import { useMagicBlockEngine } from "../../engine/MagicBlockEngineProvider";
 import { useEffect } from "react";
+import { formatBuyIn } from "../../utils/helper";
 
 type MenuBarProps = {
   tokenBalance: number;
@@ -70,10 +71,10 @@ export function MenuBar({ tokenBalance }: MenuBarProps) {
               <img src="/slime.png" alt="game token" className="coin-image" />
             </div>
 
-            <div className="coin-pill">
+            <div className="coin-pill flex text-center">
               <div className="overlay-panel" style={{ borderRadius: "10px", border: "3px solid transparent" }} />
-              <span style={{ position: "absolute", zIndex: "1", marginLeft: "8px" }}>
-                {engine.getWalletConnected() ? tokenBalance.toFixed(1) : "0"}
+              <span style={{ position: "absolute", zIndex: "1", transform: "translateX(calc(77px - 50%))" }}>
+                {engine.getWalletConnected() ? formatBuyIn(Math.round(tokenBalance * 10) / 10) : "0"}
               </span>
             </div>
             <NavLink to="/profile">

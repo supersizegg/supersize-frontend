@@ -2,10 +2,12 @@ import React, { useState, useEffect, useCallback } from "react";
 import { PublicKey } from "@solana/web3.js";
 import { useMagicBlockEngine } from "../../engine/MagicBlockEngineProvider";
 import { SupersizeVaultClient } from "../../engine/SupersizeVaultClient";
-import { cachedTokenMetadata } from "../../utils/constants";
+import { cachedTokenMetadata, NETWORK } from "../../utils/constants";
 import TokenTransferModal from "../TokenTransferModal/TokenTransferModal";
 import "./MenuSession.scss";
 import NotificationService from "@components/notification/NotificationService";
+import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
+import { formatBuyIn, fetchWalletTokenBalance } from "../../utils/helper";
 
 type UserStatus = "loading" | "uninitialized" | "ready_to_delegate" | "delegated";
 
@@ -25,6 +27,7 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
   const [status, setStatus] = useState<UserStatus>("loading");
   const [resetGameWallet, setResetGameWallet] = useState(false);
   const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
+  const [walletBalance, setWalletBalance] = useState<number>(0);
   const [dialog, setDialog] = useState<null | {
     type: "deposit" | "withdraw";
     token: TokenBalance & { symbol: string; decimals: number };
@@ -63,6 +66,7 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
   }, [vaultClient]);
 
   const checkStatus = useCallback(async () => {
+
     if (!vaultClient) return;
 
     setStatus("loading");
@@ -93,6 +97,11 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
       console.error("Failed to check status:", e);
       setStatus("uninitialized");
     }
+
+    if (!engine.getWalletConnected()) return;
+    const { balance, tokenName } = await fetchWalletTokenBalance(engine, NETWORK !== "mainnet");
+    setWalletBalance(balance);
+
   }, [vaultClient, engine, refreshVaultBalances]);
 
   useEffect(() => {
@@ -103,7 +112,10 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
     if (!vaultClient) return;
     setStatus("loading");
     try {
-      const cMint = new PublicKey(Object.keys(cachedTokenMetadata)[2]);
+      let cMint = new PublicKey(Object.keys(cachedTokenMetadata)[1]);
+      if (NETWORK !== "mainnet") {
+        cMint = new PublicKey(Object.keys(cachedTokenMetadata)[2]);
+      }
       await vaultClient.setupUserAccounts(cMint);
       await checkStatus();
     } catch (error) {
@@ -117,6 +129,14 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
     setStatus("loading");
     try {
       await vaultClient.withdraw(new PublicKey(mint), uiAmount, payoutWallet);
+      const successAlertId = NotificationService.addAlert({
+        type: "success",
+        message: `withdraw successful`,
+        shouldExit: false,
+      });
+      setTimeout(() => {
+        NotificationService.updateAlert(successAlertId, { shouldExit: true });
+      }, 3000);
       await checkStatus();
     } catch (error) {
       console.error("Failed to withdraw:", error);
@@ -143,11 +163,20 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
 
   return (
     <div className="menu-session">
+        {engine.getWalletConnected() && (status === "ready_to_delegate" || status === "delegated") && (
+          <>
+            <div className="flex justify-center items-center m-0 p-0 background-transparent"
+              style={{ display: walletBalance > 0 ? "flex" : "none" }}
+            > 
+              {walletBalance.toFixed(2)} USDC available to deposit
+            </div>
+          </>
+      )}
       <div className="session-bottom">
         {!engine.getWalletConnected() && <div className="loading-overlay">Sign in to play!</div>}
 
         {status === "loading" && engine.getWalletConnected() && <div className="loading-overlay">Loading...</div>}
-
+        
         {status === "uninitialized" && engine.getWalletConnected() && (
           <div className="session-prompt">
             <p style={{ padding: "20px 0" }}>
@@ -161,54 +190,10 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
 
         {engine.getWalletConnected() && (status === "ready_to_delegate" || status === "delegated") && (
           <>
-            <div className="session-top row-inline">
-              <div className="network-switch" style={{ display: "flex", alignItems: "center" }}>
-                <span className="session-label" style={{ marginRight: "10px", display: "inline" }}>
-                  Game wallet
-                  {status === "delegated" && !resetGameWallet && (
-                    <p style={{ display: "inline", color: "#4c9058", marginLeft: "10px" }}>[active]</p>
-                  )}
-                </span>
-              </div>
-            </div>
-
-            <input className="session-address" type="text" readOnly value={engine.getSessionPayer().toString()} />
-            {(resetGameWallet || status === "ready_to_delegate") && (
-              <div className="session-buttons">
-                <button
-                  className="btn-fund"
-                  onClick={async () => {
-                    const alertId = NotificationService.addAlert({
-                      type: "success",
-                      message: "reinitializing wallet...",
-                      shouldExit: false,
-                    });
-                    try {
-                      await vaultClient?.newGameWallet();
-                      setResetGameWallet(false);
-                    } catch (error) {
-                      console.error("Failed to reset game wallet:", error);
-                      const exitAlertId = NotificationService.addAlert({
-                        type: "error",
-                        message: "wallet reset failed",
-                        shouldExit: false,
-                      });
-                      setTimeout(() => {
-                        NotificationService.updateAlert(exitAlertId, { shouldExit: true });
-                      }, 3000);
-                    } finally {
-                      NotificationService.updateAlert(alertId, { shouldExit: true });
-                    }
-                  }}
-                >
-                  Need to reset game wallet
-                </button>
-              </div>
-            )}
             <div
               style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}
             >
-              <h3 style={{ margin: 0 }}>Game Vault</h3>
+              <h3 style={{ margin: 0 }}>Vault</h3>
               <button
                 className="table-btn outline"
                 onClick={checkStatus}
@@ -241,7 +226,9 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
                         <td className="balance-cell">
                           {uiAmount == -1
                             ? "Wrong Server"
-                            : uiAmount.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                            : formatBuyIn(Math.round(uiAmount * 1000) / 1000) 
+                            //uiAmount.toLocaleString(undefined, { maximumFractionDigits: 4 })
+                          }
                         </td>
                         <td>
                           <button
@@ -276,6 +263,116 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
                   })}
               </tbody>
             </table>
+
+            <div className="session-top row-inline">
+              <div className="network-switch" style={{ display: "flex", alignItems: "center" }}>
+                <span className="session-label" style={{ marginRight: "10px", display: "inline" }}>
+                  Session wallet
+                  {status === "delegated" && !resetGameWallet && (
+                    <p style={{ display: "inline", color: "#4c9058", marginLeft: "10px" }}>[active]</p>
+                  )}
+                  <div 
+                    style={{ 
+                      display: "inline-block",
+                      backgroundColor: "#4c9058",
+                      borderRadius: "5px",
+                      color: "#ffffff",
+                      border: "none",
+                      padding: "0px 5px",
+                      cursor: "pointer",
+                      marginLeft: "10px",
+                      fontSize: "12px",
+                    }}>
+                  <button
+                    className="copy-icon-button"
+                    onClick={(e) => {
+                      navigator.clipboard.writeText(engine.getSessionPayer().toString());
+                      const button = e.currentTarget;
+                      button.style.transform = "translateY(0px)";
+                      button.textContent = "Copied";
+                      setTimeout(() => {
+                          button.innerHTML = '<img src="/copy.png" alt="Copy" width="15" height="15"/>';
+                          button.style.transform = "translateY(3px)";
+                      }, 600);
+                    }}
+                    title="Copy to clipboard"
+                  >
+                      <img src="/copy.png" alt="Copy" width={15} height={15} style={{ transform: "translateY(3px)" }} />
+                  </button>
+                  </div>
+                  <div 
+                    style={{ 
+                      display: "inline-block",
+                      backgroundColor: "#4c9058",
+                      borderRadius: "5px",
+                      color: "#ffffff",
+                      border: "none",
+                      padding: "0px 5px",
+                      cursor: "pointer",
+                      marginLeft: "10px",
+                      fontSize: "12px",
+                    }}>
+                  <button
+                    className="copy-icon-button"
+                    onClick={() => {
+                      const privateKey = engine.getSessionKey();
+                      const secretKeyArray = Object.values(privateKey.secretKey);
+                      const secretKeyBuffer = Buffer.from(secretKeyArray);
+                      const base58Key = bs58.encode(secretKeyBuffer);
+                      const json = JSON.stringify({ base58Key });
+                      const blob = new Blob([json], { type: "application/json" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = "session-wallet-key.json";
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    title="export private key"
+                  >
+                      Export Private Key
+                  </button>
+                  </div>
+                  <p className="info-text" style={{ marginTop: "5px", textAlign: "center", width: "320px" }}>
+                    Session wallet is not used to store funds
+                  </p>
+                </span>
+              </div>               
+            </div>
+
+            {(resetGameWallet || status === "ready_to_delegate") && (
+              <div className="session-buttons">
+                <button
+                  className="btn-fund"
+                  onClick={async () => {
+                    const alertId = NotificationService.addAlert({
+                      type: "success",
+                      message: "reinitializing wallet...",
+                      shouldExit: false,
+                    });
+                    try {
+                      await vaultClient?.newGameWallet();
+                      setResetGameWallet(false);
+                    } catch (error) {
+                      console.error("Failed to reset game wallet:", error);
+                      const exitAlertId = NotificationService.addAlert({
+                        type: "error",
+                        message: "wallet reset failed",
+                        shouldExit: false,
+                      });
+                      setTimeout(() => {
+                        NotificationService.updateAlert(exitAlertId, { shouldExit: true });
+                      }, 3000);
+                    } finally {
+                      NotificationService.updateAlert(alertId, { shouldExit: true });
+                    }
+                  }}
+                >
+                  Need to reset session wallet
+                </button>
+                <div className="flex" style={{ fontSize: "12px", color: "#FFF" }}>*this will not affect your vault balance</div>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -292,6 +389,14 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
           onDone={async () => {
             if (dialog.type === "deposit") {
               setDialog(null);
+              const successAlertId = NotificationService.addAlert({
+                type: "success",
+                message: `deposit successful`,
+                shouldExit: false,
+              });
+              setTimeout(() => {
+                NotificationService.updateAlert(successAlertId, { shouldExit: true });
+              }, 3000);
               await checkStatus();
             } else {
               //

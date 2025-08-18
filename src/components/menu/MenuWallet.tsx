@@ -27,6 +27,7 @@ function MenuWalletConnected({ setPreferredRegion }: { setPreferredRegion: (regi
   const addressBase58 = publicKey.toBase58();
 
   return (
+    <div className="flex justify-center items-center m-0 p-0">
     <div className="wallet-connected desktop-only">
       <div className="wallet-info">
         <Text value={truncateAddress(addressBase58)} />
@@ -40,6 +41,23 @@ function MenuWalletConnected({ setPreferredRegion }: { setPreferredRegion: (regi
       >
         <img src="/icons/logout.svg" className="logout-icon" alt="Disconnect" />
       </button>
+    </div>
+    <div className="copy-wallet-address ml-2">
+      <button
+        className="copy-icon-button"
+        onClick={(e) => {
+          navigator.clipboard.writeText(addressBase58);
+          const button = e.currentTarget;
+          button.textContent = "Copied";
+          setTimeout(() => {
+              button.innerHTML = '<img src="/copy.png" alt="Copy" width="20" height="20" style="margin-top: 5px;"/>';
+          }, 600);
+        }}
+        title="Copy to clipboard"
+      >
+          <img src="/copy.png" alt="Copy" width={20} height={20} style={{ marginTop: "5px" }}/>
+      </button>
+    </div>
     </div>
   );
 }
