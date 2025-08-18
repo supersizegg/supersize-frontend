@@ -69,7 +69,7 @@ type LeaderboardProps = {
   tokenBalance: number;
 };
 
-const Leaderboard: React.FC<LeaderboardProps>  = ({ randomFood, tokenBalance }) => {
+const Leaderboard: React.FC<LeaderboardProps> = ({ randomFood, tokenBalance }) => {
   const [season, setSeason] = useState<Season>({
     icon: `${process.env.PUBLIC_URL}/token.png`,
     name: "BONK",
@@ -199,7 +199,7 @@ const Leaderboard: React.FC<LeaderboardProps>  = ({ randomFood, tokenBalance }) 
 
   return (
     <div className="main-container">
-       <div
+      <div
         className="game"
         style={{
           display: "block",
@@ -218,7 +218,7 @@ const Leaderboard: React.FC<LeaderboardProps>  = ({ randomFood, tokenBalance }) 
             name: "",
             authority: null,
             score: 0,
-            circles: [{x: 5000, y: 5000, radius: 0, size: 0, speed: 0}],
+            circles: [{ x: 5000, y: 5000, radius: 0, size: 0, speed: 0 }],
             removal: new BN(0),
             join: new BN(0),
             x: 5000,
@@ -227,7 +227,7 @@ const Leaderboard: React.FC<LeaderboardProps>  = ({ randomFood, tokenBalance }) 
             target_y: 5000,
             timestamp: 0,
           }}
-          screenSize={{width: window.innerWidth, height: window.innerHeight }}
+          screenSize={{ width: window.innerWidth, height: window.innerHeight }}
           newTarget={{ x: 0, y: 0 }}
           gameSize={10000}
           buyIn={0}

@@ -34,7 +34,6 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
   }>(null);
 
   useEffect(() => {
-    console.log(engine.getEndpointEphemRpc());
     if (engine && engine.getWalletConnected()) {
       setVaultClient(new SupersizeVaultClient(engine));
 
@@ -240,6 +239,7 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
                   tokenBalances.map(({ mint, uiAmount }) => {
                     let meta = cachedTokenMetadata[mint];
                     if (!meta) return null;
+                    if (meta.network !== NETWORK) return null;
                     const symbol = meta.symbol ?? mint.slice(0, 4) + "…";
                     return (
                       <tr key={mint}>

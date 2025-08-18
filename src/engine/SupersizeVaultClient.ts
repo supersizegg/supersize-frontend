@@ -358,6 +358,7 @@ export class SupersizeVaultClient {
 
     const currentlyDelegated = await this.isDelegated(mint);
     if (currentlyDelegated) {
+      console.log("Undelegating before withdrawal...");
       await this.undelegateAll(mint);
     }
 

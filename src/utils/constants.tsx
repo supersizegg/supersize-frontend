@@ -239,7 +239,6 @@ export const activeGamesList: {
 
 export const options = ["Europe", "America", "Asia"];
 
-
 export const cachedTokenMetadata: Record<
   string,
   { name: string; symbol: string; decimals?: number; image: string; network: string; raydium?: boolean }
