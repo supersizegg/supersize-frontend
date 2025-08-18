@@ -1,125 +1,297 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useReducer, useRef } from "react";
 import { MenuBar } from "@components/menu/MenuBar";
 import BackButton from "@components/util/BackButton";
 import GameComponent from "@components/Game/Game";
 import TradingViewWidget from "@components/util/TradingViewWidget";
 import { BN } from "@coral-xyz/anchor";
-import { PublicKey, VersionedTransaction } from "@solana/web3.js";
-import { SupersizeVaultClient } from "@engine/SupersizeVaultClient";
+import { VersionedTransaction } from "@solana/web3.js";
 import { useMagicBlockEngine } from "@engine/MagicBlockEngineProvider";
-import { useFundWallet } from "@privy-io/react-auth/solana";
 import "./Shop.scss";
 
-type ShopProps = {
-  tokenBalance: number;
+const TOKEN_NAME = "PYUSD";
+const OUTPUT_MINT = "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo";
+const OUTPUT_DECIMALS = 6;
+const SOL_MINT = "So11111111111111111111111111111111111111112";
+
+const USD_MIN = 1;
+const USD_MAX = 50;
+const USD_STEP = 1;
+
+const COINGECKO_SOL = "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd";
+const COINGECKO_TOKEN =
+  "https://api.coingecko.com/api/v3/simple/price?ids=paypal-usd&vs_currencies=usd&include_24hr_change=true";
+
+const API_URLS = {
+  BASE_HOST: "https://api-v3.raydium.io",
+  SWAP_HOST: "https://transaction-v1.raydium.io",
+  PRIORITY_FEE: "/main/auto-fee",
 };
+
+const RAY_SWAP_HOST = API_URLS.SWAP_HOST;
+const RAY_PRIORITY_FEE = `${API_URLS.BASE_HOST}${API_URLS.PRIORITY_FEE}`;
+const SLIPPAGE_BPS = 100;
+const TX_VERSION = "V0";
+
+interface ShopProps {
+  tokenBalance: number;
+}
+
+type State = {
+  usd: number;
+  solPrice: number | null;
+  tokenPrice: number | null;
+  token24hChange: number | null;
+  estOut: string | null;
+  fees: string | null;
+  waiting: boolean;
+  status: { type: "idle" | "info" | "success" | "error"; message: string } | null;
+};
+
+type Action =
+  | { type: "SET_USD"; usd: number }
+  | {
+      type: "SET_MARKET";
+      solPrice?: number | null;
+      tokenPrice?: number | null;
+      token24hChange?: number | null;
+    }
+  | { type: "SET_ESTIMATE"; out: string | null; fees: string | null }
+  | { type: "WAIT"; on: boolean }
+  | { type: "STATUS"; status: State["status"] };
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case "SET_USD":
+      return { ...state, usd: action.usd };
+    case "SET_MARKET":
+      return {
+        ...state,
+        solPrice: action.solPrice ?? state.solPrice,
+        tokenPrice: action.tokenPrice ?? state.tokenPrice,
+        token24hChange: action.token24hChange ?? state.token24hChange,
+      };
+    case "SET_ESTIMATE":
+      return { ...state, estOut: action.out, fees: action.fees };
+    case "WAIT":
+      return { ...state, waiting: action.on };
+    case "STATUS":
+      return { ...state, status: action.status };
+    default:
+      return state;
+  }
+}
+
+function clamp(n: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, n));
+}
+
+function formatUSD(n: number | null) {
+  if (n == null || Number.isNaN(n)) return "–";
+  return `$${n.toFixed(2)}`;
+}
+
+function formatNumber(n: number | null, maxFrac = 6) {
+  if (n == null || Number.isNaN(n)) return "–";
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: maxFrac }).format(n);
+}
+
+function toUiAmountFromRaw(raw: unknown, decimals: number): number {
+  const n = typeof raw === "string" ? Number(raw) : Number(raw as any);
+  if (!Number.isFinite(n)) return 0;
+  return n / Math.pow(10, decimals);
+}
+
+async function fetchJSON<T>(url: string, signal?: AbortSignal): Promise<T> {
+  const res = await fetch(url, { signal, headers: { Accept: "application/json" } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+async function retry<T>(fn: (signal: AbortSignal) => Promise<T>, attempts = 3, baseDelayMs = 400): Promise<T> {
+  const ctrl = new AbortController();
+  try {
+    for (let i = 0; i < attempts; i++) {
+      try {
+        return await fn(ctrl.signal);
+      } catch (e) {
+        if (i === attempts - 1) throw e;
+        await new Promise((r) => setTimeout(r, baseDelayMs * Math.pow(2, i)));
+      }
+    }
+    return null as never;
+  } finally {
+    ctrl.abort();
+  }
+}
 
 const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
   const { engine } = useMagicBlockEngine();
-  const { fundWallet } = useFundWallet();
-  const [waitingForFund, setWaitingForFund] = useState(false);
-  const [price, setPrice] = useState<number | null>(null);
-  const [change, setChange] = useState<number | null>(null);
 
-  const BONK_MINT = "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263";
-  const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
-  const SOL_MINT = "So11111111111111111111111111111111111111112";
+  const [state, dispatch] = useReducer(reducer, {
+    usd: 5,
+    solPrice: null,
+    tokenPrice: null,
+    token24hChange: null,
+    estOut: null,
+    fees: null,
+    waiting: false,
+    status: null,
+  });
 
-  const buyBonk = async (usd: number, useSol = false) => {
-    if (!engine.getWalletConnected()) {
-      alert("Please sign in first");
+  const pollingRef = useRef<number | null>(null);
+  const walletConnected = useMemo(() => !!engine?.getWalletConnected?.(), [engine]);
+
+  useEffect(() => {
+    let canceled = false;
+
+    const pull = async () => {
+      try {
+        const [sol, tok] = await Promise.all([
+          retry<{ solana: { usd: number } }>((signal) => fetchJSON(COINGECKO_SOL, signal)),
+          retry<{ "paypal-usd": { usd: number; usd_24h_change: number } }>((signal) =>
+            fetchJSON(COINGECKO_TOKEN, signal),
+          ),
+        ]);
+        if (canceled) return;
+        dispatch({
+          type: "SET_MARKET",
+          solPrice: sol.solana.usd,
+          tokenPrice: tok["paypal-usd"].usd,
+          token24hChange: tok["paypal-usd"].usd_24h_change,
+        });
+      } catch {
+        if (!canceled)
+          dispatch({
+            type: "STATUS",
+            status: { type: "error", message: "Live prices unavailable. Retrying..." },
+          });
+      }
+    };
+
+    pull();
+    pollingRef.current = window.setInterval(pull, 60 * 1000);
+    return () => {
+      if (pollingRef.current) window.clearInterval(pollingRef.current);
+      canceled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let canceled = false;
+
+    const getEstimate = async () => {
+      if (!state.solPrice) return;
+      const usd = clamp(state.usd, USD_MIN, USD_MAX);
+      const solAmount = usd / state.solPrice;
+      if (!Number.isFinite(solAmount) || solAmount <= 0) return;
+      const lamports = Math.floor(solAmount * 1e9);
+      if (lamports <= 0) return;
+
+      try {
+        const computeUrl =
+          `${RAY_SWAP_HOST}/compute/swap-base-in` +
+          `?inputMint=${SOL_MINT}&outputMint=${OUTPUT_MINT}` +
+          `&amount=${lamports}&slippageBps=${SLIPPAGE_BPS}&txVersion=${TX_VERSION}`;
+
+        const compute = await retry<any>((signal) => fetchJSON(computeUrl, signal));
+        if (canceled) return;
+
+        const outRaw = compute?.data?.amountOut ?? compute?.data?.outputAmount ?? compute?.data?.outAmount ?? null;
+
+        const out = outRaw != null ? toUiAmountFromRaw(outRaw, OUTPUT_DECIMALS) : null;
+
+        dispatch({
+          type: "SET_ESTIMATE",
+          out: out && out > 0 ? `${formatNumber(out, Math.min(OUTPUT_DECIMALS, 6))} ${TOKEN_NAME}` : null,
+          fees: null,
+        });
+      } catch {
+        if (!canceled) dispatch({ type: "SET_ESTIMATE", out: null, fees: null });
+      }
+    };
+
+    getEstimate();
+    return () => {
+      canceled = true;
+    };
+  }, [state.usd, state.solPrice]);
+
+  const buyToken = async () => {
+    if (!engine || !engine.getWalletConnected?.()) {
+      dispatch({
+        type: "STATUS",
+        status: { type: "error", message: "Please sign in to continue." },
+      });
       return;
     }
 
     try {
-      let inputMint = USDC_MINT;
-      let amount = Math.round(usd * 1_000_000); // USDC has 6 decimals
+      dispatch({ type: "WAIT", on: true });
+      dispatch({ type: "STATUS", status: { type: "info", message: "Preparing your swap…" } });
 
-      if (useSol) {
-        const priceRes = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd");
-        const priceData = await priceRes.json();
-        const solPrice = priceData.solana.usd;
-        const solAmount = usd / solPrice;
-        if (engine.getWalletType() === "embedded" && !waitingForFund) {
-          try {
-            await fundWallet(engine.getWalletPayer().toBase58(), {
-              amount: solAmount.toString(),
-            });
-          } catch (e) {
-            console.error(e);
-          }
-          setWaitingForFund(true);
-          return;
-        }
-        amount = Math.round(solAmount * 1_000_000_000); // SOL has 9 decimals
-        inputMint = SOL_MINT;
-      }
+      const sol = await retry<{ solana: { usd: number } }>((signal) => fetchJSON(COINGECKO_SOL, signal));
+      const solPrice = sol.solana.usd;
+      dispatch({ type: "SET_MARKET", solPrice });
 
-      setWaitingForFund(false);
+      const usd = clamp(state.usd, USD_MIN, USD_MAX);
+      const solAmount = usd / solPrice;
+      const lamports = Math.floor(solAmount * 1e9);
+      if (!Number.isFinite(lamports) || lamports <= 0) throw new Error("Invalid amount");
 
-      const quoteRes = await fetch(
-        `https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${BONK_MINT}&amount=${amount}&slippageBps=100`,
-      );
-      const quote = await quoteRes.json();
-      const swapRes = await fetch("https://quote-api.jup.ag/v6/swap", {
+      const feeTiers = await retry<any>((signal) => fetchJSON(RAY_PRIORITY_FEE, signal));
+      const computeUnitPriceMicroLamports = String(feeTiers?.data?.default?.h ?? 6000);
+
+      const computeUrl =
+        `${RAY_SWAP_HOST}/compute/swap-base-in` +
+        `?inputMint=${SOL_MINT}&outputMint=${OUTPUT_MINT}` +
+        `&amount=${lamports}&slippageBps=${SLIPPAGE_BPS}&txVersion=${TX_VERSION}`;
+      const swapResponse = await retry<any>((signal) => fetchJSON(computeUrl, signal));
+
+      const txRes = await fetch(`${RAY_SWAP_HOST}/transaction/swap-base-in`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          quoteResponse: quote,
-          userPublicKey: engine.getWalletPayer().toBase58(),
-          wrapAndUnwrapSol: useSol,
+          computeUnitPriceMicroLamports,
+          swapResponse,
+          txVersion: TX_VERSION,
+          wallet: engine.getWalletPayer().toBase58(),
+          wrapSol: true,
+          unwrapSol: false,
         }),
       });
-      const swapJson = await swapRes.json();
-      const tx = VersionedTransaction.deserialize(Buffer.from(swapJson.swapTransaction, "base64"));
-      const walletContext = (engine as any).walletContext;
-      const signature = await walletContext.sendTransaction(tx, engine.getConnectionChain());
-      await engine.getConnectionChain().confirmTransaction(signature, "confirmed");
+      if (!txRes.ok) throw new Error(`Raydium swap HTTP ${txRes.status}`);
+      const txJson = await txRes.json();
 
-      const vaultClient = new SupersizeVaultClient(engine);
-      const bonkAmount = parseInt(quote.outAmount) / 100000; // BONK has 5 decimals
-      await vaultClient.deposit(new PublicKey(BONK_MINT), bonkAmount);
-      alert("Purchase complete!");
-      setWaitingForFund(false);
-    } catch (e) {
+      const txs: string[] = txJson?.data?.map((d: any) => d.transaction) ?? [];
+      if (!txs.length) throw new Error("No transaction returned by Raydium.");
+
+      //@ts-expect-error
+      const walletContext: any = engine.walletContext as any;
+      for (const b64 of txs) {
+        const tx = VersionedTransaction.deserialize(Buffer.from(b64, "base64"));
+        const sig = await walletContext.sendTransaction(tx, engine.getConnectionChain());
+        await engine.getConnectionChain().confirmTransaction(sig, "confirmed");
+      }
+
+      dispatch({
+        type: "STATUS",
+        status: {
+          type: "success",
+          message: `Success! You bought ${state.estOut ?? "tokens"}. Go to profile to deposit them for play.`,
+        },
+      });
+    } catch (e: any) {
       console.error(e);
-      alert("Failed to buy BONK");
-      setWaitingForFund(false);
+      const msg = typeof e?.message === "string" ? e.message : "Failed to complete purchase.";
+      dispatch({ type: "STATUS", status: { type: "error", message: msg } });
+    } finally {
+      dispatch({ type: "WAIT", on: false });
     }
   };
 
-  useEffect(() => {
-    const fetchPrice = async () => {
-      try {
-        const res = await fetch(
-          "https://api.coingecko.com/api/v3/simple/price?ids=bonk&vs_currencies=usd&include_24hr_change=true",
-        );
-        const data = await res.json();
-        setPrice(data.bonk.usd);
-        setChange(data.bonk.usd_24h_change);
-      } catch (e) {
-        console.error(e);
-      }
-    };
-    fetchPrice();
-    const id = setInterval(fetchPrice, 60000);
-    return () => clearInterval(id);
-  }, []);
-
   return (
-    <div className="shop-page main-container">
-      <div
-        className="game"
-        style={{
-          display: "block",
-          position: "absolute",
-          top: "0",
-          left: "0",
-          height: "100%",
-          width: "100%",
-          zIndex: 0,
-        }}
-      >
+    <div className="shop-page">
+      <div className="game-bg" aria-hidden>
         <GameComponent
           players={[]}
           visibleFood={[]}
@@ -136,57 +308,118 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
             target_y: 5000,
             timestamp: 0,
           }}
-          screenSize={{ width: window.innerWidth, height: window.innerHeight }}
+          screenSize={{
+            width: typeof window !== "undefined" ? window.innerWidth : 0,
+            height: typeof window !== "undefined" ? window.innerHeight : 0,
+          }}
           newTarget={{ x: 0, y: 0 }}
           gameSize={10000}
           buyIn={0}
           gameEnded={0}
         />
       </div>
+
       <MenuBar tokenBalance={tokenBalance} />
-      <div className="shop-content" style={{ position: "relative", zIndex: 1 }}>
-        <div className="shop-panel">
-          <h1 className="shop-title">supermarket</h1>
-          <div className="conversion-widget">
-            <div className="left">
-              <span className="amount">1</span>
-              <img
-                src="/coin.png"
-                className="bonk-icon"
-                title="DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263"
-                alt="BONK"
-              />
-              <img src="/transaction.png" style={{ width: "20px", height: "20px", marginLeft: "10px" }} />
+
+      <div className="shop-content">
+        <div className="left-col">
+          <div className="ticker" role="group" aria-label={`${TOKEN_NAME} price and 24 hour change`}>
+            <div className="ticker-left">
+              <span className="ticker-amount">1</span>
+              <img src="/slime.png" className="asset-icon" alt={TOKEN_NAME} />
+              <img src="/transaction.png" className="arrow-icon" alt="to" />
             </div>
-            <div className="right">
-              <span className="price">{price !== null ? `$${price.toFixed(5)}` : "--"}</span>
-              <img src="/usdc.png" className="usd-icon" alt="USD" />
-              {change !== null && (
-                <div className="change" style={{ color: change >= 0 ? "#2ECC71" : "#E74C3C" }}>
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-                    {change >= 0 ? <path d="M6 2l4 8H2l4-8z" /> : <path d="M6 10L2 2h8L6 10z" />}
+            <div className="ticker-right">
+              <span className="price">{state.tokenPrice != null ? formatUSD(state.tokenPrice) : "–"}</span>
+              <img src="/usdc.png" className="asset-icon" alt="USD" />
+              {state.token24hChange != null && (
+                <div
+                  className="change"
+                  data-direction={state.token24hChange >= 0 ? "up" : "down"}
+                  aria-label={`24 hour change ${state.token24hChange.toFixed(2)} percent`}
+                >
+                  <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden>
+                    {state.token24hChange >= 0 ? <path d="M6 2l4 8H2l4-8z" /> : <path d="M6 10L2 2h8L6 10z" />}
                   </svg>
-                  <span>{change >= 0 ? `+${change.toFixed(2)}` : change.toFixed(2)}%</span>
+                  <span>
+                    {state.token24hChange >= 0
+                      ? `+${state.token24hChange.toFixed(2)}`
+                      : state.token24hChange.toFixed(2)}
+                    %
+                  </span>
                 </div>
               )}
             </div>
           </div>
+
           <div className="chart-container">
             <TradingViewWidget />
           </div>
         </div>
-        <div className="action-column">
-          <button className="buy-button" onClick={() => buyBonk(1, true)}>
-            buy $1 of Bonk
+
+        <div className="right-col">
+          <div className="slider-row">
+            <input
+              id="usd"
+              type="number"
+              min={USD_MIN}
+              max={USD_MAX}
+              step={USD_STEP}
+              inputMode="decimal"
+              className="usd-input"
+              aria-label="US dollars to spend"
+              value={state.usd}
+              onChange={(e) => {
+                const v = clamp(Number(e.target.value || 0), USD_MIN, USD_MAX);
+                dispatch({ type: "SET_USD", usd: v });
+              }}
+            />
+            <span className="usd-suffix">USD</span>
+          </div>
+
+          <input
+            type="range"
+            min={USD_MIN}
+            max={USD_MAX}
+            step={USD_STEP}
+            aria-label="Dollars slider"
+            value={state.usd}
+            onChange={(e) => dispatch({ type: "SET_USD", usd: Number(e.target.value) })}
+            className="shop-range"
+          />
+
+          <div className="estimate-box" aria-live="polite">
+            <div className="estimate-line">
+              <span>You will buy</span>
+              <strong>{state.estOut ?? "–"}</strong>
+            </div>
+            <div className="estimate-line-muted">
+              <span>With</span>
+              <strong>{formatUSD(state.usd)}</strong>
+            </div>
+          </div>
+
+          <button
+            className="buy-btn"
+            onClick={buyToken}
+            disabled={!walletConnected || state.waiting}
+            aria-busy={state.waiting}
+          >
+            {state.waiting ? "Processing…" : `Buy ${formatUSD(state.usd)} worth of ${TOKEN_NAME}`}
           </button>
-          <button className="buy-button" onClick={() => buyBonk(5, true)}>
-            buy $5 of Bonk
-          </button>
-          <a href="/about?section=sell" className="sell-link">
-            How can I sell my bonk?
-          </a>
+
+          {/* <a href="/about?section=sell" className="sell-link">
+            How can I sell my {TOKEN_NAME}?
+          </a> */}
+
+          {state.status && (
+            <div className="notice" data-type={state.status.type} role="status" aria-live="polite">
+              {state.status.message}
+            </div>
+          )}
         </div>
       </div>
+
       <BackButton />
     </div>
   );
