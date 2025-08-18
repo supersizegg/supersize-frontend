@@ -57,6 +57,13 @@ export class SupersizeVaultClient {
     return accountInfo?.owner.equals(DELEGATION_PROGRAM_ID) ?? false;
   }
 
+  async isWalletDelegated(): Promise<boolean> {
+    if (!this.wallet) return false;
+    const gwPda = this.gameWalletPda(this.wallet);
+    const gwInfo = await this.mainChainConnection.getAccountInfo(gwPda);
+    return gwInfo?.owner.equals(DELEGATION_PROGRAM_ID) ?? false;
+  }
+
   async initializeVault(mint: PublicKey) {
     if (!this.wallet) throw new Error("Wallet not connected to initialize vault.");
 
@@ -148,6 +155,34 @@ export class SupersizeVaultClient {
       );
 
     await this.engine.processWalletTransaction("DelegateAccounts", tx);
+  }
+
+  async ensureDelegatedForJoin(mint: PublicKey): Promise<void> {
+    if (!this.wallet) throw new Error("Wallet not connected.");
+
+    //await this.setupUserAccounts(mint); 
+    // there should be a notification so the user knows whats happening 
+
+    const [walletDelegated, userDelegated] = await Promise.all([this.isWalletDelegated(), this.isDelegated(mint)]);
+    if (!walletDelegated || !userDelegated) {
+      const ephemIdentity = await this.engine.getConnectionEphem().getSlotLeader();
+      const validator = new PublicKey(ephemIdentity);
+
+      const tx = new Transaction();
+
+      if (!walletDelegated) {
+        tx.add(await this.program.methods.delegateWallet(validator).accounts({ payer: this.wallet }).instruction());
+
+      }
+      if (!userDelegated) {
+        tx.add(await this.program.methods.delegateUser(validator).accounts({ payer: this.wallet, mintOfToken: mint }).instruction())
+      }
+    
+      if (tx.instructions.length > 0) {
+        await this.engine.processWalletTransaction("DelegateAccounts", tx);
+      }
+      //await this.delegateAll(mint);
+    }
   }
 
   async gameTranfer(mint: PublicKey, uiAmount: number, mapComponentPda: PublicKey, deposit: boolean = true) {
@@ -289,7 +324,11 @@ export class SupersizeVaultClient {
         lamports: 0, 
       }),
     );
-    await this.engine.processSessionEphemTransaction("testTx", checkTx);
+    try {
+      await this.engine.processSessionEphemTransaction("testTx", checkTx);
+    } catch (err) {
+      console.log("Ephemeral syncBalTx failed:", err);
+    }
   }
 
   private async undelegateAll(mint: PublicKey) {
@@ -360,7 +399,11 @@ export class SupersizeVaultClient {
         lamports: 0, 
       }),
     );
-    await this.engine.processSessionEphemTransaction("testTx", checkTx);
+    try {
+      await this.engine.processSessionEphemTransaction("testTx", checkTx);
+    } catch (err) {
+      console.log("Ephemeral syncBalTx failed:", err);
+    }
   }
 
   async setupGameWallet(mapComponentPda: PublicKey, mint: PublicKey, validator: PublicKey) {

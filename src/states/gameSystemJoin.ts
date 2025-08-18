@@ -5,6 +5,7 @@ import { FindComponentPda } from "@magicblock-labs/bolt-sdk";
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
 import { COMPONENT_PLAYER_ID, COMPONENT_MAP_ID, SYSTEM_BUY_IN_ID, SUPERSIZE_VAULT_PROGRAM_ID } from "./gamePrograms";
 import { ActiveGame } from "@utils/types";
+import { SupersizeVaultClient } from "../engine/SupersizeVaultClient";
 
 export async function gameSystemJoin(
   preferredRegion: string,
@@ -14,17 +15,24 @@ export async function gameSystemJoin(
   mapEntityPda: PublicKey,
   playerName: string,
 ) {
-  const parentKey = (preferredRegion == undefined || preferredRegion == "" || !engine.getWalletConnected()) ? 
-  new PublicKey("DdGB1EpmshJvCq48W1LvB1csrDnC4uataLnQbUVhp6XB") : 
-  engine.getWalletPayer();
+  const isGuest = (preferredRegion == undefined || preferredRegion == "" || !engine.getWalletConnected());
+  const parentKey = isGuest ? new PublicKey("DdGB1EpmshJvCq48W1LvB1csrDnC4uataLnQbUVhp6XB") : engine.getWalletPayer();
 
-  if (!parentKey) {
+  /* if (!parentKey) {
     throw new Error("User wallet is not connected.");
+  } */
+
+  if (isGuest && !gameInfo.is_free) {
+    throw new Error("Guest players cannot join paid games.");
   }
 
   const sessionWallet = engine.getSessionPayer();
-
   const mintOfToken = gameInfo.tokenMint!;
+
+  if (!isGuest) {
+    const vault = new SupersizeVaultClient(engine);
+    await vault.ensureDelegatedForJoin(mintOfToken);
+  }
 
   const mapComponentPda = FindComponentPda({
     componentId: COMPONENT_MAP_ID,
@@ -55,55 +63,6 @@ export async function gameSystemJoin(
   console.log("gameWalletPda", gameWalletPda.toString());
   console.log("userBalancePda", userBalancePda.toString());
   console.log("gameBalancePda", gameBalancePda.toString());
-  /*
-  console.log([
-      {
-        pubkey: SUPERSIZE_VAULT_PROGRAM_ID,
-        isSigner: false,
-        isWritable: false,
-      },
-      {
-        pubkey: gameWalletPda,
-        isSigner: false,
-        isWritable: true,
-      },
-      {
-        pubkey: userBalancePda,
-        isSigner: false,
-        isWritable: true,
-      },
-      {
-        pubkey: gameBalancePda,
-        isSigner: false,
-        isWritable: true,
-      },
-      {
-        pubkey: newplayerEntityPda,
-        isSigner: false,
-        isWritable: false,
-      },
-      {
-        pubkey: mapComponentPda,
-        isSigner: false,
-        isWritable: false,
-      },
-      {
-        pubkey: mintOfToken,
-        isSigner: false,
-        isWritable: false,
-      },
-      {
-        pubkey: parentKey,
-        isSigner: false,
-        isWritable: false,
-      },
-      {
-        pubkey: sessionWallet,
-        isSigner: true,
-        isWritable: true,
-      },
-    ]);
-  */
 
   const applyJoinSystem = await ApplySystem({
     authority: sessionWallet,

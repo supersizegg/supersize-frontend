@@ -37,6 +37,30 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
     console.log(engine.getEndpointEphemRpc());
     if (engine && engine.getWalletConnected()) {
       setVaultClient(new SupersizeVaultClient(engine));
+
+      const savePlayerAddress = async () => {
+        const sessionWalletAddress = engine.getSessionPayer().toString();
+        const parentWalletAddress = engine.getWalletPayer().toString();
+
+        if (sessionWalletAddress && parentWalletAddress) {
+          try {
+            await fetch("https://supersize.miso.one/api/v1/blob-player", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                wallet: sessionWalletAddress,
+                parent_wallet: parentWalletAddress,
+              }),
+            });
+          } catch (error) {
+            console.error("Failed to save player address:", error);
+          }
+        }
+      };
+
+      savePlayerAddress();
     } else {
       setVaultClient(null);
       setStatus("loading");

@@ -35,6 +35,17 @@ interface LeaderboardApiResponse {
   players: LeaderboardEntry[];
 }
 
+interface BlobPlayersApiResponse {
+  wallet: string;
+  balance: number;
+}
+
+interface BlobPlayer {
+  wallet: string;
+  parent_wallet?: string;
+  balance: number;
+}
+
 interface Season {
   icon: string;
   name: string;
@@ -66,7 +77,7 @@ const Leaderboard: React.FC<LeaderboardProps>  = ({ randomFood, tokenBalance }) 
   });
   const [selectedEvent, setSelectedEvent] = useState<string>("bonk-preseason-2025");
 
-  const [leaderboardData, setLeaderboardData] = useState<Player[]>([]);
+  const [leaderboardData, setLeaderboardData] = useState<BlobPlayer[]>([]);
   const [totalRows, setTotalRows] = useState(0);
   const [userInfo, setUserInfo] = useState<UserInfo>({ position: 0, points: 0, address: "" });
   const { publicKey } = useWallet();
@@ -90,18 +101,13 @@ const Leaderboard: React.FC<LeaderboardProps>  = ({ randomFood, tokenBalance }) 
 
     const fetchStats = async () => {
       try {
-        let url = `${API_URL}/api/v1/leaderboard/${season.token}?limit=${limit}&page=${currentPage}`;
-        if (selectedEvent !== "all") {
-          url += `&event_id=${selectedEvent}`;
-        }
-        const response = await axios.get<LeaderboardApiResponse>(url);
-        const { players, total } = response.data;
-        const participants = players.map((entry: LeaderboardEntry) => ({
-          name: entry.player,
-          total: entry.score,
-        }));
+        let url = `${API_URL}/api/v1/blob-players`;
+        // if (selectedEvent !== "all") {
+        //   url += `&event_id=${selectedEvent}`;
+        // }
+        const response = await axios.get<BlobPlayersApiResponse[]>(url);
+        const participants = response.data;
         setLeaderboardData(participants);
-        setTotalRows(total);
       } catch (error) {
         console.error("Error fetching leaderboard data:", error);
       }
@@ -231,7 +237,7 @@ const Leaderboard: React.FC<LeaderboardProps>  = ({ randomFood, tokenBalance }) 
       <MenuBar tokenBalance={tokenBalance} />
 
       <div className="leaderboard-container" style={{ position: "relative", zIndex: 1 }}>
-        <div className="top-stats-row">
+        {/* <div className="top-stats-row">
           <div className="stat-box rank-box desktop-only">
             <p className="stat-label">Your Rank</p>
             <p className="stat-value">
@@ -253,9 +259,9 @@ const Leaderboard: React.FC<LeaderboardProps>  = ({ randomFood, tokenBalance }) 
             <p className="stat-label">Select Token</p>
             <LeaderboardDropdown season={season} setSeason={setSeason} />
           </div>
-        </div>
+        </div>  */}
 
-        {season.token === BONK_TOKEN && (
+        {/* season.token === BONK_TOKEN && (
           <div className="event-tabs">
             {availableEvents.map((evt) => (
               <button
@@ -267,7 +273,7 @@ const Leaderboard: React.FC<LeaderboardProps>  = ({ randomFood, tokenBalance }) 
               </button>
             ))}
           </div>
-        )}
+        ) */} 
 
         <div className="leaderboard-table">
           <table>
@@ -284,10 +290,10 @@ const Leaderboard: React.FC<LeaderboardProps>  = ({ randomFood, tokenBalance }) 
             <table>
               <tbody>
                 {leaderboardData.map((player, i) => (
-                  <tr key={i} className={player.name === userInfo.address ? "player-row-highlight" : ""}>
+                  <tr key={i} className={player.wallet === userInfo.address ? "player-row-highlight" : ""}>
                     <td>{(currentPage - 1) * limit + i + 1}</td>
-                    <td>{player.name}</td>
-                    <td className="text-right">{player.total.toLocaleString()}</td>
+                    <td>{player.parent_wallet ? player.parent_wallet : player.wallet}</td>
+                    <td className="text-right">{player.balance ? player.balance.toLocaleString() : "0"}</td>
                   </tr>
                 ))}
               </tbody>
