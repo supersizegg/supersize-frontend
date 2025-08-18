@@ -82,10 +82,10 @@ export class SupersizeVaultClient {
     console.log("Vault Ephem Endpoint", this.engine.getEndpointEphemRpc());
 
     const gwInfo = await this.mainChainConnection.getAccountInfo(gwPda);
-    if (!gwInfo) {
-      const ephemIdentity = await this.engine.getConnectionEphem().getSlotLeader();
-      const validator = new PublicKey(ephemIdentity);
 
+    const ephemIdentity = await this.engine.getConnectionEphem().getSlotLeader();
+    const validator = new PublicKey(ephemIdentity);
+    if (!gwInfo) {
       console.log("Creating GameWallet PDA...");
       setupTx.add(
         await this.program.methods
@@ -95,13 +95,13 @@ export class SupersizeVaultClient {
       );
       setupTx.add(await this.program.methods.delegateWallet(validator).accounts({ payer: this.wallet }).instruction());
     }
-
     const balInfo = await this.mainChainConnection.getAccountInfo(balPda);
     if (!balInfo) {
       console.log("Creating Balance PDA...");
       setupTx.add(
         await this.program.methods.newUserBalance().accounts({ user: this.wallet, mintOfToken: mint }).instruction(),
       );
+      setupTx.add(await this.program.methods.delegateUser(validator).accounts({ payer: this.wallet, mintOfToken: mint }).instruction());
     }
 
     if (setupTx.instructions.length > 0) {

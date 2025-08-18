@@ -93,6 +93,7 @@ export const activeGamesList: {
     },
   ],
   mainnet: [
+    /*
     {
       worldId: new anchor.BN(30),
       worldPda: new PublicKey("32wWEWeWibh1dGiHDgYFBHgJsFeJyL11euW52AopFKV9"),
@@ -108,6 +109,7 @@ export const activeGamesList: {
       worldPda: new PublicKey("DhdGf7YXxTDDcqW6FEt4MQwExgqFgZbxbDkPn6yErSvj"),
       endpoint: "https://supersize-mainnet-sin.magicblock.app",
     },
+    */
     {
       worldId: new anchor.BN(33),
       worldPda: new PublicKey("24McMCDi52oE4WLUPP9mNioswh2vn6h1fJvNASnfYnTi"),
@@ -243,13 +245,14 @@ export const cachedTokenMetadata: Record<
   string,
   { name: string; symbol: string; decimals?: number; image: string; network: string; raydium?: boolean }
 > = {
+  /*
   "7dnMwS2yE6NE1PX81B9Xpm7zUhFXmQABqUiHHzWXiEBn": {
     name: "Adventure Gold (Wormhole)",
     symbol: "AGLD",
     image: `${process.env.PUBLIC_URL}/agld.jpg`,
     network: "mainnet",
     raydium: true,
-  },
+  }, */
   EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v: {
     name: "USD Coin",
     symbol: "USDC",
@@ -262,13 +265,13 @@ export const cachedTokenMetadata: Record<
     decimals: 9,
     image: `${process.env.PUBLIC_URL}/fallback-token.webp`,
     network: "devnet",
-  },
+  }, /*
   DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263: {
     name: "Bonk",
     symbol: "BONK",
     image: "https://d23exngyjlavgo.cloudfront.net/solana_DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
     network: "mainnet",
-  },
+  }, */
 };
 
 export const API_BASE_URL = "http://localhost:3000/api";

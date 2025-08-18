@@ -135,9 +135,9 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
     if (!vaultClient) return;
     setStatus("loading");
     try {
-      let cMint = new PublicKey(Object.keys(cachedTokenMetadata)[1]);
+      let cMint = new PublicKey(Object.keys(cachedTokenMetadata)[0]);
       if (NETWORK !== "mainnet") {
-        cMint = new PublicKey(Object.keys(cachedTokenMetadata)[2]);
+        cMint = new PublicKey(Object.keys(cachedTokenMetadata)[1]);
       }
       await vaultClient.setupUserAccounts(cMint);
       await checkStatus();
