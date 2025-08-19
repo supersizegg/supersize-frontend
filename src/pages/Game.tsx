@@ -750,7 +750,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse, preferredRegion
                   Payout: {currentPlayer ? formatBuyIn(Math.round((currentPlayer.score / 10 ** gameInfo.decimals) * 1000) / 1000) : ""}
                 </b>
               </p>
-              <div className="flex items-center justify-center" style={{ flexDirection: "column" }}>
+              <div className="flex items-center justify-center" style={{ flexDirection: "column", display: "none" }}>
                 <pre style={{ margin: "20px 0" }}>
                   <>
                     ✅

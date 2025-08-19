@@ -8,6 +8,7 @@ import "./MenuSession.scss";
 import NotificationService from "@components/notification/NotificationService";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
 import { formatBuyIn, fetchWalletTokenBalance } from "../../utils/helper";
+const SESSION_LOCAL_STORAGE = "magicblock-session-key";
 
 type UserStatus = "loading" | "uninitialized" | "ready_to_delegate" | "delegated";
 
@@ -196,17 +197,17 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
           </>
       )}
       <div className="session-bottom">
-        {!engine.getWalletConnected() && <div className="loading-overlay">Sign in to play!</div>}
+        {!engine.getWalletConnected() && <div className="loading-overlay">Sign in and activate your vault to start stacking coins!</div>}
 
         {status === "loading" && engine.getWalletConnected() && <div className="loading-overlay">Loading...</div>}
         
         {status === "uninitialized" && engine.getWalletConnected() && (
           <div className="session-prompt">
             <p style={{ padding: "20px 0" }}>
-              To play, you need to enable the game wallet. This requires one-time approval.
+              Activate your vault. This requires one-time approval.
             </p>
             <button className="submit-button" onClick={handleEnableWallet}>
-              Enable Now
+              Activate Vault
             </button>
           </div>
         )}
@@ -354,8 +355,45 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
                     }}
                     title="export private key"
                   >
-                      Export Private Key
+                      Export
                   </button>
+                  </div>
+                  <div 
+                    style={{ 
+                      display: "inline-block",
+                      backgroundColor: "#4c9058",
+                      borderRadius: "5px",
+                      color: "#ffffff",
+                      border: "none",
+                      padding: "0px 5px",
+                      cursor: "pointer",
+                      marginLeft: "10px",
+                      fontSize: "12px",
+                    }}>
+                    <button
+                      className="copy-icon-button"
+                      onClick={async () => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = 'application/json';
+                        input.onchange = async (event) => {
+                          const target = event.target as HTMLInputElement;
+                          if (!target.files) return;
+                          const file = target.files[0];
+                          if (file) {
+                            const text = await file.text();
+                            const { base58Key } = JSON.parse(text);
+                            const secretKeyBuffer = bs58.decode(base58Key);
+                            const secretKeyArray = Array.from(secretKeyBuffer);
+                            localStorage.setItem(SESSION_LOCAL_STORAGE, JSON.stringify(secretKeyArray));
+                          }
+                        };
+                        input.click();
+                      }}
+                      title="import private key"
+                    >
+                        Import
+                    </button>
                   </div>
                   <p className="info-text" style={{ marginTop: "5px", textAlign: "center", width: "320px" }}>
                     Session wallet is not used to store funds

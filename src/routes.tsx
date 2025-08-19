@@ -139,7 +139,7 @@ const AppRoutes = () => {
           }
         />
       )}
-      <Route path="/leaderboard" element={<Leaderboard randomFood={randomFood} tokenBalance={tokenBalance} />} />
+      <Route path="/leaderboard" element={<Leaderboard engine={engine} randomFood={randomFood} tokenBalance={tokenBalance} />} />
       <Route path="/about" element={<HowToPlay tokenBalance={tokenBalance} />} />
       <Route path="/shop" element={<Shop tokenBalance={tokenBalance} />} />
       <Route path="/wishlist" element={<Wishlist tokenBalance={tokenBalance} />} />

@@ -338,7 +338,7 @@ export const waitSignatureConfirmation = async (
 };
 
 export async function fetchWalletTokenBalance(engine: MagicBlockEngine, isDevnet: boolean) : Promise<{ balance: number, tokenName: string }> {
-  const tokenMint = isDevnet ? new PublicKey(Object.keys(cachedTokenMetadata)[2]) : new PublicKey(Object.keys(cachedTokenMetadata)[1]);
+  const tokenMint = isDevnet ? new PublicKey(Object.keys(cachedTokenMetadata)[1]) : new PublicKey(Object.keys(cachedTokenMetadata)[0]);
   let connection = engine.getConnectionChain();
   let wallet = engine.getWalletPayer();
 

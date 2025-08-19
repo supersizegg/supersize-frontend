@@ -60,19 +60,22 @@ const HowToPlay: React.FC<HowToPlayProps> = ({ tokenBalance }) => {
           <details className="faq-item">
             <summary>Blob Battle</summary>
             <ul>
-              <li>Join a game: join a free game to start collecting slimecoins or pay slimecoins to enter a high stakes game.</li>
+              <li>Join a free game or pay coins to enter a high stakes game.</li>
               <li>
-                Eat mass: mass = slimecoins. Eat pieces of mass to grow in size and earn slimecoins. In high stakes games, mass is worth more slimecoins.
+                Eat mass to grow and earn coins. In high stakes games, mass is worth more coins.
               </li>
               <li>
-                Eat blobs: Bigger blobs can eat smaller blobs to gain their mass and slimecoins. 
+                Bigger blobs can eat smaller blobs to gain their mass and coins. 
               </li>
               <li>
-                Split:  Press space to split all you blobs greater than 50 mass into two, shooting the new blobs forward at high speed.
-                You can only have a maximum of 8 blobs at a time.
+                Press space to split all your blobs greater than 50 mass into two. Splitting shoots new blobs forward at high speed.
+                You can have a maximum of 8 blobs at a time.
               </li>
               <li>
-                Cash out: Exit the game anytime to cash out your slimecoins. There is a 5 second delay on exit.
+                Blobs merge every 15 seconds if you have more than 2 blobs. 
+              </li>
+              <li>
+                Exit the game anytime to cash out your coins. There is a 5 second delay on exit.
               </li>
             </ul>
           </details>
@@ -83,7 +86,7 @@ const HowToPlay: React.FC<HowToPlayProps> = ({ tokenBalance }) => {
                 If using an external wallet (phantom, backpack, solflare...) 
                 <ul>
                   <li>
-                    go to profile → deposit → enter amount → confirm deposit → sign transaction → tokens in your account
+                    Go to profile → deposit → enter amount → confirm deposit → sign transaction → tokens in your account
                   </li>
                 </ul>
               </li>
@@ -96,7 +99,7 @@ const HowToPlay: React.FC<HowToPlayProps> = ({ tokenBalance }) => {
             </ul>
           </details>
           <details className="faq-item" open={section === "buy"}>
-            <summary>How to buy slimecoins</summary>
+            <summary>How to buy slimecoin</summary>
             <ul>
               <li>
                 On the app
@@ -107,17 +110,17 @@ const HowToPlay: React.FC<HowToPlayProps> = ({ tokenBalance }) => {
                       <li>
                         If using an external wallet (phantom, backpack, solflare...) 
                         <ul>
-                          <li>go to market → buy → go to profile → deposit slimecoins to your account</li>
+                          <li>Go to market → buy → go to profile → deposit slimecoin to your account</li>
                         </ul>
                       </li>
                       <li>
                         If not using an external wallet 
                         <ul>
                           <li>
-                            your linked wallet must have enough SOL for the purchase. You can send SOL to your linked
+                            Your linked wallet must have enough SOL for the purchase. You can send SOL to your linked
                             wallet address.
                           </li>
-                          <li>go to market → buy → go to profile → deposit slimecoins to your account</li>
+                          <li>Go to market → buy → go to profile → deposit slimecoin to your account</li>
                         </ul>
                       </li>
                     </ul>
@@ -133,36 +136,35 @@ const HowToPlay: React.FC<HowToPlayProps> = ({ tokenBalance }) => {
               <li>
                 Externally
                 <ul>
-                  <li>Slimecoins can be bought or sold on exchanges like jup.ag</li>
+                  <li>Slimecoin can be bought or sold on exchanges like jup.ag</li>
                 </ul>
               </li>
             </ul>
           </details>
           <details className="faq-item" open={section === "sell"}>
-            <summary>How to sell slimecoins</summary>
+            <summary>How to sell slimecoin</summary>
             <ul>
               <li>
                 If using an external wallet (phantom, backpack, solflare...)
                 <ul>
                   <li>
-                    go to profile → withdraw → enter amount → confirm withdraw → sign transaction → tokens in your wallet
+                    Go to profile → withdraw → enter amount → confirm withdraw → sign transaction → tokens in your wallet
                   </li>
-                  <li>sell on jup.ag</li>
+                  <li>Sell on jup.ag</li>
                 </ul>
               </li>
               <li>
                 If not using an external wallet 
                 <ul>
-                  <li>If you don’t already have an external wallet create one with phantom.</li>
+                  <li>If you don’t already have an external wallet create one with phantom and fund it with SOL.</li>
                   <li>
-                    then you must buy at least 0.005 SOL and send it to your new wallet. Then go to jup.ag and purchase
-                    1 slimecoin. Then proceed with the withdrawal.
+                    Your external wallet must hold {">"} 0 slimecoin.
                   </li>
                   <li>
-                    go to profile → withdraw → paste address of wallet that will receive the tokens (wallet
-                    must be holding more than 0 slimecoins) → enter amount → confirm withdraw → tokens in your wallet
+                    Go to profile → withdraw → paste address of wallet that will receive the coins → 
+                    enter amount → confirm withdraw → tokens in your wallet
                   </li>
-                  <li>sell on jup.ag</li>
+                  <li>Sell on jup.ag</li>
                 </ul>
               </li>
             </ul>

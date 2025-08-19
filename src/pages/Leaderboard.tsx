@@ -9,6 +9,7 @@ import { Food } from "@utils/types";
 import GameComponent from "@components/Game/Game";
 import { BN } from "@coral-xyz/anchor";
 import BackButton from "@components/util/BackButton";
+import { MagicBlockEngine } from "../engine/MagicBlockEngine";
 
 interface Player {
   name: string;
@@ -38,6 +39,7 @@ interface LeaderboardApiResponse {
 interface BlobPlayersApiResponse {
   wallet: string;
   balance: number;
+  parent_wallet: string;
 }
 
 interface BlobPlayer {
@@ -65,11 +67,12 @@ const availableEvents: EventOption[] = [
 ];
 
 type LeaderboardProps = {
+  engine: MagicBlockEngine;
   randomFood: Food[];
   tokenBalance: number;
 };
 
-const Leaderboard: React.FC<LeaderboardProps> = ({ randomFood, tokenBalance }) => {
+const Leaderboard: React.FC<LeaderboardProps> = ({ engine, randomFood, tokenBalance }) => {
   const [season, setSeason] = useState<Season>({
     icon: `${process.env.PUBLIC_URL}/token.png`,
     name: "BONK",
@@ -80,7 +83,6 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ randomFood, tokenBalance }) =
   const [leaderboardData, setLeaderboardData] = useState<BlobPlayer[]>([]);
   const [totalRows, setTotalRows] = useState(0);
   const [userInfo, setUserInfo] = useState<UserInfo>({ position: 0, points: 0, address: "" });
-  const { publicKey } = useWallet();
 
   const limit = 25;
   const [currentPage, setCurrentPage] = useState(1);
@@ -107,6 +109,16 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ randomFood, tokenBalance }) =
         // }
         const response = await axios.get<BlobPlayersApiResponse[]>(url);
         const participants = response.data;
+        participants
+          .sort((a, b) => b.balance - a.balance)
+          .map((player, i) => {
+            if(engine.getWalletConnected()) {
+              if (player.parent_wallet === engine.getWalletPayer().toString()) {
+                setUserInfo({ position: i + 1, points: player.balance, address: player.wallet });
+              }
+            }
+          });
+        setTotalRows(participants.length);
         setLeaderboardData(participants);
       } catch (error) {
         console.error("Error fetching leaderboard data:", error);
@@ -114,14 +126,15 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ randomFood, tokenBalance }) =
     };
 
     fetchStats();
-  }, [publicKey, season, currentPage, selectedEvent]);
+  }, [engine, season, currentPage, selectedEvent]);
 
+  /*
   useEffect(() => {
     if (season.token === "") return;
 
     const fetchPlayerRank = async () => {
       try {
-        const walletAddress = publicKey ? publicKey.toString() : "11111111111111111111111111111111";
+        const walletAddress = engine.getWalletPayer() ? engine.getWalletPayer().toString() : "11111111111111111111111111111111";
         let url = `${API_URL}/api/v1/player-rank?address=${walletAddress}&token=${season.token}`;
         if (selectedEvent !== "all") {
           url += `&event_id=${selectedEvent}`;
@@ -138,8 +151,9 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ randomFood, tokenBalance }) =
       }
     };
 
-    fetchPlayerRank();
-  }, [season, publicKey, selectedEvent]);
+    //fetchPlayerRank();
+  }, [season, engine, selectedEvent]);
+  */
 
   const totalPages = Math.ceil(totalRows / limit);
 
@@ -237,7 +251,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ randomFood, tokenBalance }) =
       <MenuBar tokenBalance={tokenBalance} />
 
       <div className="leaderboard-container" style={{ position: "relative", zIndex: 1 }}>
-        {/* <div className="top-stats-row">
+        <div className="top-stats-row">
           <div className="stat-box rank-box desktop-only">
             <p className="stat-label">Your Rank</p>
             <p className="stat-value">
@@ -254,12 +268,12 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ randomFood, tokenBalance }) =
               })}
             </p>
           </div>
-
+          {/*
           <div className="dropdown-box">
             <p className="stat-label">Select Token</p>
             <LeaderboardDropdown season={season} setSeason={setSeason} />
-          </div>
-        </div>  */}
+          </div>*/}
+        </div>  
 
         {/* season.token === BONK_TOKEN && (
           <div className="event-tabs">

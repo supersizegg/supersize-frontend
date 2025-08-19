@@ -658,14 +658,14 @@ const Home = ({
                         !row.activeGame.isLoaded ||
                         row.activeGame.active_players < 0 ||
                         row.playerInfo.playerStatus == "error" ||
-                        row.playerInfo.playerStatus == "Game Full" ||
-                        engine.getWalletConnected() == false
+                        row.playerInfo.playerStatus == "Game Full" 
+                       // engine.getWalletConnected() == false
                       }
                       onClick={() => {
                         handlePlayButtonClick(row);
                       }}
                       data-tooltip-id={`connect-wallet-${idx}`}
-                      data-tooltip-content="Connect wallet to play"
+                      data-tooltip-content="Play as guest"
                     >
                       {{
                         new_player: "Play",

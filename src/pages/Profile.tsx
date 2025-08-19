@@ -122,7 +122,8 @@ export default function Profile({
           <button className={activeTab === "profile" ? "active" : ""} onClick={() => setActiveTab("profile")}>
             Profile
           </button>
-          <button className={activeTab === "admin" ? "active" : ""} onClick={() => setActiveTab("admin")}>
+          <button disabled={!engine.getWalletConnected()} className={activeTab === "admin" ? "active" : ""} onClick={() => setActiveTab("admin")}
+            style={{ cursor: !engine.getWalletConnected() ? "not-allowed" : "pointer" }}>
             Admin panel
           </button>
         </div>
