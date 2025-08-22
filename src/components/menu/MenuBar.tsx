@@ -1,7 +1,6 @@
 import * as React from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import "./MenuBar.scss";
-import "../../pages/Landing.scss";
 import { useMagicBlockEngine } from "../../engine/MagicBlockEngineProvider";
 import { useEffect } from "react";
 import { formatBuyIn } from "../../utils/helper";
@@ -12,24 +11,23 @@ type MenuBarProps = {
 
 export function MenuBar({ tokenBalance }: MenuBarProps) {
   const { engine } = useMagicBlockEngine();
-
   const stored = localStorage.getItem("user");
   const initialUser = stored ? JSON.parse(stored) : null;
 
   const [isMobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [username, setUsername] = React.useState<string>(initialUser?.name || "");
   const [avatar, setAvatar] = React.useState<string>(initialUser?.icon || "/slimey2.png");
-  const navigate = useNavigate();
+
   const toggleMobileMenu = () => setMobileMenuOpen(!isMobileMenuOpen);
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
   useEffect(() => {
     if (!engine.getWalletConnected()) return;
 
-    const stored = localStorage.getItem("user");
+    const storedData = localStorage.getItem("user");
     let name = engine.getWalletPayer().toString().slice(0, 7);
-    if (stored) {
-      const user = JSON.parse(stored);
+    if (storedData) {
+      const user = JSON.parse(storedData);
       if (user.name) name = user.name;
       setAvatar(user.icon || "/slimey2.png");
     }
@@ -52,104 +50,51 @@ export function MenuBar({ tokenBalance }: MenuBarProps) {
   }, [engine]);
 
   return (
-    <header className="menu-bar" style={{ zIndex: 2 }}>
+    <header className="menu-bar">
       <div className="menu-bar-left">
-        <div className="branding">
-          <NavLink to="/">
-            <div className="title-image-container">
-              <img src="/slimecoinio_nobg.png" alt="title image" className="title-image" />
-            </div>
-          </NavLink>
-        </div>
-
+        <NavLink to="/" className="branding">
+          <div className="title-image-container">
+            <img src="/slimecoinio_nobg.png" alt="Supersize Logo" className="title-image" />
+          </div>
+        </NavLink>
       </div>
 
       <div className="menu-bar-right">
         <nav className="nav-links">
-          <div className="nav-right">
+          <div className="coin-pill">
             <div className="coin-icon">
-              <img src="/slime.png" alt="game token" className="coin-image" />
+              <img src="/slime.png" alt="Game Token" />
             </div>
-
-            <div className="coin-pill flex text-center">
-              <div className="overlay-panel" style={{ borderRadius: "10px", border: "3px solid transparent" }} />
-              <span style={{ position: "absolute", zIndex: "1", transform: "translateX(calc(77px - 50%))" }}>
-                {engine.getWalletConnected() ? formatBuyIn(Math.round(tokenBalance * 10) / 10) : "0"}
-              </span>
-            </div>
-            <NavLink to="/profile">
-              <div
-                className="user-panel"
-                onMouseEnter={(e) => {
-                  const usernamePill = e.currentTarget.querySelector<HTMLElement>(".username-pill");
-                  if (usernamePill) {
-                    usernamePill.style.opacity = "0.8";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  const usernamePill = e.currentTarget.querySelector<HTMLElement>(".username-pill");
-                  if (usernamePill) {
-                    usernamePill.style.opacity = "1";
-                  }
-                }}
-              >
-                <div className="overlay-panel" style={{ borderRadius: "18px", border: "3px solid transparent" }} />
-                <img
-                  src={engine.getWalletConnected() ? avatar : "/slimey2.png"}
-                  alt="avatar"
-                  style={{ width: "48px", height: "48px", position: "absolute", zIndex: "1", marginLeft: "10px" }}
-                />
-                <div
-                  className="username-pill"
-                  style={{
-                    position: "absolute",
-                    zIndex: "1",
-                    transform: "translateX(65px)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    border: "none",
-                  }}
-                >
-                  <span style={{ fontSize: "24px", fontWeight: "bold", margin: "auto" }}>
-                    {(engine.getWalletConnected() && username) || "sign in"}
-                  </span>
-                </div>
-              </div>
-            </NavLink>
+            <span className="coin-balance">
+              {engine.getWalletConnected() ? formatBuyIn(Math.round(tokenBalance * 10) / 10) : "0"}
+            </span>
           </div>
+          <NavLink to="/profile" className="user-panel-link">
+            <div className="user-panel">
+              <img
+                src={engine.getWalletConnected() ? avatar : "/slimey2.png"}
+                alt="User Avatar"
+                className="user-avatar"
+              />
+              <div className="username-pill">
+                <span>{(engine.getWalletConnected() && username) || "Sign In"}</span>
+              </div>
+            </div>
+          </NavLink>
         </nav>
+
+        <div className="utility-column">
+          <NavLink to="/leaderboard" className="utility-btn">
+            <img src="/trophy.png" alt="Leaderboard" className="utility-image" />
+          </NavLink>
+          <NavLink to="/shop" className="utility-btn">
+            <img src="/shop.png" alt="Shop" className="utility-image" />
+          </NavLink>
+        </div>
 
         <button className="burger-menu" onClick={toggleMobileMenu} aria-label="Toggle navigation">
           <img src="/icons/bars-solid.svg" alt="Menu" />
         </button>
-
-        <div className="utility-column">
-          <NavLink to="/leaderboard">
-            <div className="utility-btn">
-              <img
-                src="/trophy.png"
-                alt="trophy"
-                className="utility-image"
-                style={{ transition: "transform 0.2s", cursor: "pointer" }}
-                onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05) rotate(5deg)")}
-                onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1) rotate(0deg)")}
-              />
-            </div>
-          </NavLink>
-          <NavLink to="/shop">
-            <div className="utility-btn">
-              <img
-                src="/shop.png"
-                alt="store"
-                className="utility-image"
-                style={{ transition: "transform 0.2s", cursor: "pointer" }}
-                onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05) rotate(5deg)")}
-                onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1) rotate(0deg)")}
-              />
-            </div>
-          </NavLink>
-        </div>
       </div>
 
       <div className={`mobile-nav-backdrop ${isMobileMenuOpen ? "open" : ""}`} onClick={closeMobileMenu}>
@@ -160,8 +105,8 @@ export function MenuBar({ tokenBalance }: MenuBarProps) {
           <NavLink to="/leaderboard" onClick={closeMobileMenu}>
             Leaderboard
           </NavLink>
-          <NavLink to="/profile" style={{ display: "none" }} onClick={closeMobileMenu}>
-            Profile
+          <NavLink to="/shop" onClick={closeMobileMenu}>
+            Shop
           </NavLink>
           <a href="https://x.com/SUPERSIZEgg" target="_blank" rel="noreferrer">
             ⎋ Follow on X

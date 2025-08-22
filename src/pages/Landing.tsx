@@ -1,5 +1,5 @@
 import React from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import "./Landing.scss";
 import { BN } from "@coral-xyz/anchor";
 import GameComponent from "@components/Game/Game";
@@ -19,18 +19,7 @@ const Landing = ({ preferredRegion, tokenBalance }: LandingProps) => {
 
   return (
     <div className="landing-page">
-      <div
-        className="game"
-        style={{
-          display: "block",
-          position: "absolute",
-          top: "0",
-          left: "0",
-          height: "100%",
-          width: "100%",
-          zIndex: "0",
-        }}
-      >
+      <div className="game-background">
         <GameComponent
           players={[]}
           visibleFood={[]}
@@ -55,38 +44,22 @@ const Landing = ({ preferredRegion, tokenBalance }: LandingProps) => {
         />
       </div>
       <MenuBar tokenBalance={tokenBalance} />
-      <div className="panels">
-        <div className="panel"
-          onMouseEnter={(e) => {
-            const goButton = e.currentTarget.querySelector<HTMLElement>(".inner-panel");
-            if (goButton) {
-              goButton.style.opacity = "0.85";
-            }
-          }}
-          onMouseLeave={(e) => {
-            const goButton = e.currentTarget.querySelector<HTMLElement>(".inner-panel");
-            if (goButton) {
-              goButton.style.opacity = "1";
-            }
-          }}>
-          <div className="inner-panel" onClick={() => navigate("/home")}>
-            <div className="overlay-panel"/>
-            <img
-              src="/blobgame.png"
-              alt="SUPER BLOB"
-              className="panel-image"
-              style={{ width: "100%", height: "100%", margin: "auto"}}
-            />
-          </div>
-          <div className="panel-subtitle">Play now!</div>
-        </div>
-        <div className="panel disabled" style={{ pointerEvents: "none" }}>
+      <div className="panels-container">
+        <div className="panel" onClick={() => navigate("/home")}>
           <div className="inner-panel">
-            <div className="overlay-panel" />
-            <img src="/snakegame.png" alt="SUPER SNAKE" className="panel-image" 
-            style={{ width: "85%", height: "85%", margin: "auto", marginTop: "-20px" }}/>
+            <img src="/blobgame.png" alt="SUPER BLOB" className="panel-image blob-game-image" />
+            <div className="panel-text-overlay">
+              <div className="panel-title">Play now!</div>
+            </div>
           </div>
-          <div className="panel-subtitle">Coming soon</div>
+        </div>
+        <div className="panel disabled">
+          <div className="inner-panel">
+            <img src="/snakegame.png" alt="SUPER SNAKE" className="panel-image snake-game-image" />
+            <div className="panel-text-overlay">
+              <div className="panel-title">Coming soon</div>
+            </div>
+          </div>
         </div>
       </div>
       {/*
@@ -102,7 +75,7 @@ const Landing = ({ preferredRegion, tokenBalance }: LandingProps) => {
       </div>
       */}
 
-      <Footer/>
+      <Footer />
       <SignUpBanner engine={engine} preferredRegion={preferredRegion} />
     </div>
   );

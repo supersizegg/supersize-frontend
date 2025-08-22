@@ -96,6 +96,7 @@ const Home = ({
             },
             body: JSON.stringify({
               wallet: sessionWalletAddress,
+              is_session: true,
             }),
           });
         } catch (error) {
@@ -360,15 +361,12 @@ const Home = ({
         playerStatus: updatedPlayerInfo.playerStatus,
         newplayerEntityPda: updatedPlayerInfo.newPlayerEntityPda,
       };
-      if (!game.activeGame.is_free){
-        const { tokenBalance, hasInsufficientTokenBalance } = await fetchTokenBalance(
-          engine,
-          game.activeGame,
-        );
+      if (!game.activeGame.is_free) {
+        const { tokenBalance, hasInsufficientTokenBalance } = await fetchTokenBalance(engine, game.activeGame);
         setTokenBalance(tokenBalance);
         setHasInsufficientTokenBalance(hasInsufficientTokenBalance);
       }
-      
+
       const result = await gameExecuteJoin(
         preferredRegion,
         engine,
@@ -543,7 +541,7 @@ const Home = ({
       </div>
       <MenuBar tokenBalance={tokenBalance} />
 
-      <div className="home-container" style={{ position: "relative", marginTop: "100px"}}>
+      <div className="home-container" style={{ position: "relative", marginTop: "100px" }}>
         <div className="mobile-only mobile-alert">For the best experience, use a desktop or laptop.</div>
         <div className="table-container">
           <div className="filters-header">
@@ -638,7 +636,11 @@ const Home = ({
                   </td>
                   <td style={{ color: "#898989" }}>
                     {row.activeGame.isLoaded ? (
-                      row.activeGame.is_free ? "Free" : formatBuyIn(row.activeGame.buy_in / 10 ** row.activeGame.decimals)
+                      row.activeGame.is_free ? (
+                        "Free"
+                      ) : (
+                        formatBuyIn(row.activeGame.buy_in / 10 ** row.activeGame.decimals)
+                      )
                     ) : (
                       <Spinner />
                     )}
@@ -658,8 +660,8 @@ const Home = ({
                         !row.activeGame.isLoaded ||
                         row.activeGame.active_players < 0 ||
                         row.playerInfo.playerStatus == "error" ||
-                        row.playerInfo.playerStatus == "Game Full" 
-                       // engine.getWalletConnected() == false
+                        row.playerInfo.playerStatus == "Game Full"
+                        // engine.getWalletConnected() == false
                       }
                       onClick={() => {
                         handlePlayButtonClick(row);
