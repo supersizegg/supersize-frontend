@@ -542,9 +542,9 @@ const Home = ({
       <MenuBar tokenBalance={tokenBalance} />
 
       <div className="home-container" style={{ position: "relative", marginTop: "100px" }}>
-        <div className="mobile-only mobile-alert">For the best experience, use a desktop or laptop.</div>
+        {/* <div className="mobile-only mobile-alert">For the best experience, use a desktop or laptop.</div> */}
         <div className="table-container">
-          <div className="filters-header">
+          <div className="filters-header desktop-only">
             <input
               type="text"
               className="search-game-input"
@@ -653,7 +653,7 @@ const Home = ({
                     )}
                   </td>
 
-                  <td className="desktop-only">
+                  <td className="">
                     <button
                       className="btn-play"
                       disabled={
@@ -717,8 +717,7 @@ const Home = ({
       )}
       <NotificationContainer />
 
-      <Footer />
-      <SignUpBanner engine={engine} preferredRegion={preferredRegion} />
+      <Footer engine={engine} preferredRegion={preferredRegion} />
     </div>
   );
 };

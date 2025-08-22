@@ -14,12 +14,8 @@ export function MenuBar({ tokenBalance }: MenuBarProps) {
   const stored = localStorage.getItem("user");
   const initialUser = stored ? JSON.parse(stored) : null;
 
-  const [isMobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [username, setUsername] = React.useState<string>(initialUser?.name || "");
   const [avatar, setAvatar] = React.useState<string>(initialUser?.icon || "/slimey2.png");
-
-  const toggleMobileMenu = () => setMobileMenuOpen(!isMobileMenuOpen);
-  const closeMobileMenu = () => setMobileMenuOpen(false);
 
   useEffect(() => {
     if (!engine.getWalletConnected()) return;
@@ -59,7 +55,7 @@ export function MenuBar({ tokenBalance }: MenuBarProps) {
         </NavLink>
       </div>
 
-      <div className="menu-bar-right">
+      <div className="menu-bar-right menu-desktop-only">
         <nav className="nav-links">
           <div className="coin-pill">
             <div className="coin-icon">
@@ -82,7 +78,6 @@ export function MenuBar({ tokenBalance }: MenuBarProps) {
             </div>
           </NavLink>
         </nav>
-
         <div className="utility-column">
           <NavLink to="/leaderboard" className="utility-btn">
             <img src="/trophy.png" alt="Leaderboard" className="utility-image" />
@@ -91,26 +86,19 @@ export function MenuBar({ tokenBalance }: MenuBarProps) {
             <img src="/shop.png" alt="Shop" className="utility-image" />
           </NavLink>
         </div>
-
-        <button className="burger-menu" onClick={toggleMobileMenu} aria-label="Toggle navigation">
-          <img src="/icons/bars-solid.svg" alt="Menu" />
-        </button>
       </div>
 
-      <div className={`mobile-nav-backdrop ${isMobileMenuOpen ? "open" : ""}`} onClick={closeMobileMenu}>
-        <nav className={`mobile-nav ${isMobileMenuOpen ? "open" : ""}`} onClick={(e) => e.stopPropagation()}>
-          <NavLink to="/about" onClick={closeMobileMenu}>
-            About Supersize
+      <div className="menu-bar-right mobile-only">
+        <nav className="mobile-action-bar">
+          <NavLink to="/leaderboard" className="mobile-action-btn" aria-label="Leaderboard">
+            <img src="/trophy.png" alt="Leaderboard" />
           </NavLink>
-          <NavLink to="/leaderboard" onClick={closeMobileMenu}>
-            Leaderboard
+          <NavLink to="/shop" className="mobile-action-btn" aria-label="Shop">
+            <img src="/shop.png" alt="Shop" />
           </NavLink>
-          <NavLink to="/shop" onClick={closeMobileMenu}>
-            Shop
+          <NavLink to="/profile" className="mobile-action-btn" aria-label="Profile">
+            <img src={engine.getWalletConnected() ? avatar : "/slimey2.png"} alt="Profile" />
           </NavLink>
-          <a href="https://x.com/SUPERSIZEgg" target="_blank" rel="noreferrer">
-            ⎋ Follow on X
-          </a>
         </nav>
       </div>
     </header>

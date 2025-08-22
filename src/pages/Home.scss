@@ -252,26 +252,26 @@ img.token-image {
 }
 
 .banner-text {
-  font-family: 'Poppins', 'Comic Sans MS', cursive, sans-serif;
-  color: #FFD93D;
+  font-family: "Poppins", "Comic Sans MS", cursive, sans-serif;
+  color: #ffd93d;
   font-weight: 800;
 }
 
 .banner-title {
   font-weight: bold;
-  font-family: 'Poppins', 'Comic Sans MS', cursive, sans-serif;
+  font-family: "Poppins", "Comic Sans MS", cursive, sans-serif;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 6rem;
   font-weight: 800;
-  color: #FFD93D; /* Bright Yellow */
-  text-shadow: 
-    -2px -2px 0 #FF9900, /* Top-left orange shadow */
-    2px -2px 0 #FF9900,  /* Top-right orange shadow */
-    -2px 2px 0 #FF9900,  /* Bottom-left orange shadow */
-    2px 2px 0 #FF9900,   /* Bottom-right orange shadow */
-    0 0 10px #FF9900;    /* Soft glow */
+  color: #ffd93d; /* Bright Yellow */
+  text-shadow:
+    -2px -2px 0 #ff9900,
+    /* Top-left orange shadow */ 2px -2px 0 #ff9900,
+    /* Top-right orange shadow */ -2px 2px 0 #ff9900,
+    /* Bottom-left orange shadow */ 2px 2px 0 #ff9900,
+    /* Bottom-right orange shadow */ 0 0 10px #ff9900; /* Soft glow */
 }
 
 .banner-description {
@@ -296,6 +296,11 @@ img.token-image {
 
 .mobile-only {
   display: none;
+}
+
+.mobile-alert {
+  font-size: 12px;
+  text-align: center;
 }
 
 @media (max-width: 768px) {

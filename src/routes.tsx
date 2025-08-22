@@ -7,7 +7,7 @@ import CreateGame from "@pages/CreateGame";
 import Game from "@pages/Game";
 import Leaderboard from "@pages/Leaderboard";
 import Profile from "@pages/Profile";
-import HowToPlay from "@pages/HowToPlay";
+import AboutPage from "@pages/AboutPage";
 import Shop from "@pages/Shop";
 import Wishlist from "@pages/Wishlist";
 import { ActiveGame, FetchedGame, Food } from "@utils/types";
@@ -65,7 +65,7 @@ const AppRoutes = () => {
       if (vaultClient) {
         if (preferredRegion == "") {
           await vaultClient.findMyEphemEndpoint(setEndpointEphemRpc, setPreferredRegion);
-        } 
+        }
       } else {
         const pingResults = await pingEndpoints();
         console.log("Vault is not initialized, fallback pinging endpoints", pingResults);
@@ -139,8 +139,11 @@ const AppRoutes = () => {
           }
         />
       )}
-      <Route path="/leaderboard" element={<Leaderboard engine={engine} randomFood={randomFood} tokenBalance={tokenBalance} />} />
-      <Route path="/about" element={<HowToPlay tokenBalance={tokenBalance} />} />
+      <Route
+        path="/leaderboard"
+        element={<Leaderboard engine={engine} randomFood={randomFood} tokenBalance={tokenBalance} />}
+      />
+      <Route path="/about" element={<AboutPage tokenBalance={tokenBalance} />} />
       <Route path="/shop" element={<Shop tokenBalance={tokenBalance} />} />
       <Route path="/wishlist" element={<Wishlist tokenBalance={tokenBalance} />} />
       <Route

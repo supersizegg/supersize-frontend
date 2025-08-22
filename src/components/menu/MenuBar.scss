@@ -36,7 +36,6 @@
 }
 
 .branding {
-  font-family: "Lexend", sans-serif;
   color: #fff;
   display: flex;
   align-items: center;
@@ -49,6 +48,9 @@
   height: 100px;
   display: flex;
   align-items: center;
+  transition:
+    width 0.3s ease,
+    height 0.3s ease;
 
   .title-image {
     width: 100%;
@@ -56,15 +58,16 @@
   }
 }
 
+.menu-desktop-only {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
 .nav-links {
   display: flex;
   align-items: center;
   gap: 1.5rem;
-
-  a {
-    text-decoration: none;
-    color: #fff;
-  }
 }
 
 .coin-pill {
@@ -84,7 +87,6 @@
     width: 60px;
     height: 60px;
     z-index: 1;
-
     img {
       width: 100%;
       height: 100%;
@@ -179,82 +181,61 @@
   }
 }
 
-.burger-menu {
+.mobile-only {
   display: none;
-  background: none;
-  border: none;
-  cursor: pointer;
-  z-index: 102;
+}
+
+.mobile-action-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.mobile-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  background-color: #2a2a2a;
+  border: 1px solid #454545;
+  border-radius: 50%;
+  transition: all 0.2s ease;
 
   img {
-    width: 28px;
-    height: 28px;
-  }
-}
-
-.mobile-nav-backdrop {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 100;
-
-  &.open {
-    display: block;
-  }
-}
-
-.mobile-nav {
-  position: fixed;
-  top: 0;
-  right: -280px;
-  width: 280px;
-  height: 100%;
-  background-color: #1e1e1e;
-  box-shadow: -4px 0 8px rgba(0, 0, 0, 0.2);
-  padding: 2rem 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  transition: right 0.3s ease-in-out;
-  z-index: 101;
-
-  &.open {
-    right: 0;
+    width: 22px;
+    height: 22px;
+    object-fit: cover;
+    border-radius: 50%;
   }
 
-  a {
-    text-decoration: none;
-    color: #fff;
-    font-size: 1.125rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid #333;
-
-    &:hover {
-      color: #ff4d50;
-    }
+  &.active {
+    background-color: #4fc124;
+    border-color: #6aff36;
+    box-shadow: 0 0 15px rgba(79, 193, 36, 0.5);
+    transform: scale(1.1);
   }
-}
 
-@media (max-width: 1024px) {
-  .utility-column {
-    display: none;
+  &:hover:not(.active) {
+    background-color: #3a3a3a;
+    transform: translateY(-2px);
   }
 }
 
 @media (max-width: 768px) {
-  .menu-bar {
-    padding: 0 18px;
-  }
-
-  .nav-links {
+  .menu-desktop-only {
     display: none;
   }
-
-  .burger-menu {
+  .mobile-only {
     display: flex;
+  }
+
+  .menu-bar {
+    padding: 0 1rem;
+  }
+
+  .title-image-container {
+    width: 100px;
+    height: 80px;
   }
 }

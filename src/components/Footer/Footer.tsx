@@ -1,33 +1,47 @@
 import React from "react";
-import "./Footer.css";
-import "../../pages/Landing.scss";
-import { useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
+import { MagicBlockEngine } from "../../engine/MagicBlockEngine";
+import "./Footer.scss";
 
-const Footer: React.FC = () => {
-  const navigate = useNavigate();
+interface FooterProps {
+  engine: MagicBlockEngine;
+  preferredRegion: string | undefined;
+}
 
-  const openX = () => {
+const Footer: React.FC<FooterProps> = ({ engine, preferredRegion }) => {
+  const shouldShowBanner = !preferredRegion || !engine.getWalletConnected();
+
+  const openX = (e: React.MouseEvent) => {
+    e.preventDefault();
     window.open("https://x.com/SUPERSIZEgg", "_blank");
   };
 
   return (
-    <footer className="footerContainer desktop-only">
-
-      <div className="footerIcons">
-            <button onClick={() => navigate("/about")} className="help-btn">
-              <span className="desktop-only">?</span>
-              <span className="mobile-only">?</span>
-            </button>
-            <button
-              onClick={openX}
-              className="follow-x-button"
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2b2d31")}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#1d1f23")}
-            >
-              <img src={`${process.env.PUBLIC_URL}/x-logo.png`} alt="X" style={{ width: "16px", height: "16px" }} />
-              Follow
-            </button>
+    <footer className="site-footer">
+      <div className="footer-links">
+        <NavLink to="/about" className="footer-btn help-btn" aria-label="About Page">
+          ?
+        </NavLink>
+        <a
+          href="https://x.com/SUPERSIZEgg"
+          onClick={openX}
+          className="footer-btn follow-x-btn"
+          aria-label="Follow on X"
+        >
+          <img src="/x-logo.png" alt="X Logo" />
+          <span>Follow</span>
+        </a>
       </div>
+
+      {shouldShowBanner && (
+        <NavLink to="/profile" className="cta-banner">
+          {/* <img src="/icons/vault.svg" alt="Vault" className="cta-icon" /> */}
+          <span className="cta-text">
+            {!engine.getWalletConnected() ? "Sign in and " : ""}
+            activate your vault!
+          </span>
+        </NavLink>
+      )}
     </footer>
   );
 };

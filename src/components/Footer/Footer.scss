@@ -1,0 +1,119 @@
+.site-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 1000;
+  box-sizing: border-box;
+  gap: 1.5rem;
+  background: linear-gradient(to top, rgba(10, 10, 10, 0.8), rgba(10, 10, 10, 0));
+}
+
+.footer-links {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.footer-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    transform 0.2s ease,
+    background-color 0.2s ease;
+  white-space: nowrap;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.help-btn {
+  background-color: rgba(69, 69, 69, 0.8);
+  border: 1px solid rgba(80, 80, 80, 1);
+  color: #fff;
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
+
+  &:hover {
+    background-color: rgba(80, 80, 80, 1);
+  }
+}
+
+.follow-x-btn {
+  background-color: #1d1f23;
+  color: #e7e9ea;
+  border: 1px solid #333;
+  padding: 8px 16px;
+  gap: 8px;
+
+  img {
+    width: 16px;
+    height: 16px;
+  }
+
+  &:hover {
+    background-color: #2b2d31;
+  }
+}
+
+.cta-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 24px;
+  text-decoration: none;
+  background: transparent;
+  border: 2px solid #6aff36;
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(79, 193, 36, 0.3);
+  transition: all 0.2s ease-in-out;
+
+  .cta-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .cta-text {
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  &:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 6px 25px rgba(79, 193, 36, 0.4);
+  }
+}
+
+@media (max-width: 768px) {
+  .site-footer {
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .footer-links {
+    order: 2;
+  }
+
+  .cta-banner {
+    order: 1;
+    width: 100%;
+    justify-content: center;
+    padding: 0.9rem 1rem;
+  }
+}

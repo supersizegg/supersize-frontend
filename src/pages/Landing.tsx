@@ -4,7 +4,6 @@ import "./Landing.scss";
 import { BN } from "@coral-xyz/anchor";
 import GameComponent from "@components/Game/Game";
 import { MenuBar } from "@components/menu/MenuBar";
-import SignUpBanner from "../components/util/SignUpBanner";
 import { useMagicBlockEngine } from "../engine/MagicBlockEngineProvider";
 import Footer from "../components/Footer/Footer";
 
@@ -49,7 +48,7 @@ const Landing = ({ preferredRegion, tokenBalance }: LandingProps) => {
           <div className="inner-panel">
             <img src="/blobgame.png" alt="SUPER BLOB" className="panel-image blob-game-image" />
             <div className="panel-text-overlay">
-              <div className="panel-title">Play now!</div>
+              <div className="panel-title desktop-only">Play now!</div>
             </div>
           </div>
         </div>
@@ -62,21 +61,8 @@ const Landing = ({ preferredRegion, tokenBalance }: LandingProps) => {
           </div>
         </div>
       </div>
-      {/*
-      <div className="promo-callout" onClick={() => navigate("/wishlist")}>
-        <div className="promo-icon">
-          <img src="/slimeicon.png" alt="slime icon" className="promo-image" />
-        </div>
 
-        <div className="promo-text">
-          Sign up for the <br />
-          app wishlist!
-        </div>
-      </div>
-      */}
-
-      <Footer />
-      <SignUpBanner engine={engine} preferredRegion={preferredRegion} />
+      <Footer engine={engine} preferredRegion={preferredRegion} />
     </div>
   );
 };

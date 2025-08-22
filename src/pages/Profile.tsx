@@ -47,7 +47,6 @@ import { getComponentMapOnChain, getComponentMapOnEphem } from "../states/gamePr
 import { NavLink, useNavigate } from "react-router-dom";
 import { fetchWalletTokenBalance } from "../utils/helper";
 
-
 type profileProps = {
   randomFood: Food[];
   username: string;
@@ -122,8 +121,12 @@ export default function Profile({
           <button className={activeTab === "profile" ? "active" : ""} onClick={() => setActiveTab("profile")}>
             Profile
           </button>
-          <button disabled={!engine.getWalletConnected()} className={activeTab === "admin" ? "active" : ""} onClick={() => setActiveTab("admin")}
-            style={{ cursor: !engine.getWalletConnected() ? "not-allowed" : "pointer" }}>
+          <button
+            disabled={!engine.getWalletConnected()}
+            className={activeTab === "admin" ? "active desktop-only" : "desktop-only"}
+            onClick={() => setActiveTab("admin")}
+            style={{ cursor: !engine.getWalletConnected() ? "not-allowed" : "pointer" }}
+          >
             Admin panel
           </button>
         </div>
@@ -199,19 +202,18 @@ function GeneralTab({
   setPreferredRegion,
   setTokenBalance,
 }: GeneralTabProps) {
-  
   return (
     <div className="general-tab">
       <MenuWallet setPreferredRegion={setPreferredRegion} />
       <MenuSession
         setTokenBalance={setTokenBalance}
-      //username={username}
-      //sessionWalletInUse={sessionWalletInUse}
-      //setSessionWalletInUse={setSessionWalletInUse}
-      //setIsDepositModalOpen={setIsDepositModalOpen}
-      //setIsWithdrawalModalOpen={setIsWithdrawalModalOpen}
-      //setSessionLamports={setSessionLamports}
-      //sessionLamports={sessionLamports}
+        //username={username}
+        //sessionWalletInUse={sessionWalletInUse}
+        //setSessionWalletInUse={setSessionWalletInUse}
+        //setIsDepositModalOpen={setIsDepositModalOpen}
+        //setIsWithdrawalModalOpen={setIsWithdrawalModalOpen}
+        //setSessionLamports={setSessionLamports}
+        //sessionLamports={sessionLamports}
       />
     </div>
   );
@@ -517,9 +519,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
       const updatedGameInfo = await processGameData(refreshedVaultClient);
       updatedGameInfo.endpoint = validEndpointResult;
       setMyGames((prevMyGames) =>
-        prevMyGames.map((game) =>
-          game.worldId === updatedGameInfo.worldId ? updatedGameInfo : game,
-        ),
+        prevMyGames.map((game) => (game.worldId === updatedGameInfo.worldId ? updatedGameInfo : game)),
       );
       await Promise.all([processFoodComponents(), processPlayers(), countMetrics()]);
     } catch (error) {
@@ -529,15 +529,19 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
 
   return (
     <div className="admin-tab">
-      <button
-        className="btn-create-game"
-        onClick={() => navigate("/create-game")}
-      >
+      <button className="btn-create-game" onClick={() => navigate("/create-game")}>
         <span>+ Create Game</span>
       </button>
-      <div className="row-inline input-group" style={{ 
-        display: engine.getWalletPayer().toString() == "Gqg46QwPF1QX5aquTLo6rjAikMhYS6nvZy6RVminma22" 
-        || engine.getWalletPayer().toString() == "DdGB1EpmshJvCq48W1LvB1csrDnC4uataLnQbUVhp6XB" ? "flex" : "none" }}>
+      <div
+        className="row-inline input-group"
+        style={{
+          display:
+            engine.getWalletPayer().toString() == "Gqg46QwPF1QX5aquTLo6rjAikMhYS6nvZy6RVminma22" ||
+            engine.getWalletPayer().toString() == "DdGB1EpmshJvCq48W1LvB1csrDnC4uataLnQbUVhp6XB"
+              ? "flex"
+              : "none",
+        }}
+      >
         <input
           className="input-field rounded-lg p-2 font-weight-500"
           style={{ color: "black" }}
@@ -651,9 +655,17 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                         componentId: COMPONENT_MAP_ID,
                         entity: mapEntityPda,
                       });
-                      gameTransfer(engine, vaultClient, parseFloat(depositValue), mapComponentPda, row.tokenMint, false);
+                      gameTransfer(
+                        engine,
+                        vaultClient,
+                        parseFloat(depositValue),
+                        mapComponentPda,
+                        row.tokenMint,
+                        false,
+                      );
                     }
-                  }}>
+                  }}
+                >
                   Withdraw{" "}
                 </button>
               </div>
@@ -687,12 +699,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                 }}
               >
                 <CollapsiblePanel title="User Metrics" defaultOpen={false}>
-                  {selectedMapComponentPda && (
-                  <Graph
-                    engine={engine}
-                    mapComponentPda={selectedMapComponentPda}
-                  />
-                  )}
+                  {selectedMapComponentPda && <Graph engine={engine} mapComponentPda={selectedMapComponentPda} />}
                 </CollapsiblePanel>
               </div>
 
@@ -868,118 +875,118 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                 </p>
               </div>
               <p
-                  style={{
-                    flex: "1 1 100%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    margin: "10px",
-                  }}
-                >
-                  {foodComponentCheck !== "success" ? (
-                    <>
-                      {foodComponentCheck !== "section not found" && foodComponentCheck !== "section incorrect" ? (
-                        <>
-                          Food components check
-                          <svg
-                            className="inline ml-[5px] mt-[2px] h-[20px] w-[20px] stroke-[white]"
-                            width="52"
-                            height="52"
-                            viewBox="0 0 38 38"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <g fill="none" fillRule="evenodd">
-                              <g transform="translate(1 1)" strokeWidth="2">
-                                <circle strokeOpacity=".5" cx="18" cy="18" r="18" />
-                                <path d="M36 18c0-9.94-8.06-18-18-18">
-                                  <animateTransform
-                                    attributeName="transform"
-                                    type="rotate"
-                                    from="0 18 18"
-                                    to="360 18 18"
-                                    dur="1s"
-                                    repeatCount="indefinite"
-                                  />
-                                </path>
-                              </g>
+                style={{
+                  flex: "1 1 100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  margin: "10px",
+                }}
+              >
+                {foodComponentCheck !== "success" ? (
+                  <>
+                    {foodComponentCheck !== "section not found" && foodComponentCheck !== "section incorrect" ? (
+                      <>
+                        Food components check
+                        <svg
+                          className="inline ml-[5px] mt-[2px] h-[20px] w-[20px] stroke-[white]"
+                          width="52"
+                          height="52"
+                          viewBox="0 0 38 38"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <g fill="none" fillRule="evenodd">
+                            <g transform="translate(1 1)" strokeWidth="2">
+                              <circle strokeOpacity=".5" cx="18" cy="18" r="18" />
+                              <path d="M36 18c0-9.94-8.06-18-18-18">
+                                <animateTransform
+                                  attributeName="transform"
+                                  type="rotate"
+                                  from="0 18 18"
+                                  to="360 18 18"
+                                  dur="1s"
+                                  repeatCount="indefinite"
+                                />
+                              </path>
                             </g>
-                          </svg>
-                        </>
-                      ) : (
-                        <div style={{ alignItems: "center", justifyContent: "center" }}>
-                          {incorrectFoodEntities.map((entityPda, idx) => (
-                            <>
-                              <div
-                                style={{
-                                  display: "flex",
-                                  flexDirection: "row",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                  marginBottom: "10px",
-                                }}
+                          </g>
+                        </svg>
+                      </>
+                    ) : (
+                      <div style={{ alignItems: "center", justifyContent: "center" }}>
+                        {incorrectFoodEntities.map((entityPda, idx) => (
+                          <>
+                            <div
+                              style={{
+                                display: "flex",
+                                flexDirection: "row",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                marginBottom: "10px",
+                              }}
+                            >
+                              <a
+                                href={`https://explorer.solana.com/address/${entityPda.foodComponentPda.toString()}?cluster=custom&customUrl=https%3A%2F%2F${row.endpoint.replace("https://", "")}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
                               >
-                                <a
-                                  href={`https://explorer.solana.com/address/${entityPda.foodComponentPda.toString()}?cluster=custom&customUrl=https%3A%2F%2F${row.endpoint.replace("https://", "")}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  Incorrect food section: {entityPda.foodComponentPda.toString().slice(0, 3)}...
-                                  {entityPda.foodComponentPda.toString().slice(-3)}
-                                </a>
-                                <button
-                                  key={idx}
-                                  className="btn-copy"
-                                  onClick={() =>
-                                    handleReinitializeClick(
-                                      engine,
-                                      row,
-                                      entityPda.foodEntityPda,
-                                      entityPda.foodComponentPda,
-                                      entityPda.x,
-                                      entityPda.y,
-                                      entityPda.seed,
-                                    )
-                                  }
-                                >
-                                  Reinitialize
-                                </button>
-                              </div>
-                            </>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      Food components check
-                      <svg
-                        className="w-5 h-5 rounded-full inline-block stroke-[2px] stroke-[#15bd12] stroke-miter-10 shadow-inner ml-[5px] mt-[2px]"
+                                Incorrect food section: {entityPda.foodComponentPda.toString().slice(0, 3)}...
+                                {entityPda.foodComponentPda.toString().slice(-3)}
+                              </a>
+                              <button
+                                key={idx}
+                                className="btn-copy"
+                                onClick={() =>
+                                  handleReinitializeClick(
+                                    engine,
+                                    row,
+                                    entityPda.foodEntityPda,
+                                    entityPda.foodComponentPda,
+                                    entityPda.x,
+                                    entityPda.y,
+                                    entityPda.seed,
+                                  )
+                                }
+                              >
+                                Reinitialize
+                              </button>
+                            </div>
+                          </>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    Food components check
+                    <svg
+                      className="w-5 h-5 rounded-full inline-block stroke-[2px] stroke-[#15bd12] stroke-miter-10 shadow-inner ml-[5px] mt-[2px]"
+                      style={{
+                        animation: "fill 0.4s ease-in-out 0.4s forwards, scale 0.3s ease-in-out 0.9s both;",
+                      }}
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 52 52"
+                    >
+                      <circle
+                        className="stroke-[2px] stroke-[#15bd12] stroke-miter-10 fill-[#15bd12]"
                         style={{
-                          animation: "fill 0.4s ease-in-out 0.4s forwards, scale 0.3s ease-in-out 0.9s both;",
+                          strokeDasharray:
+                            "166; stroke-dashoffset: 166; animation: stroke 0.6s cubic-bezier(0.650, 0.000, 0.450, 1.000) forwards;",
                         }}
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 52 52"
-                      >
-                        <circle
-                          className="stroke-[2px] stroke-[#15bd12] stroke-miter-10 fill-[#15bd12]"
-                          style={{
-                            strokeDasharray:
-                              "166; stroke-dashoffset: 166; animation: stroke 0.6s cubic-bezier(0.650, 0.000, 0.450, 1.000) forwards;",
-                          }}
-                          cx="26"
-                          cy="26"
-                          r="25"
-                          fill="none"
-                        />
-                        <path
-                          className="stroke-[white] stroke-dasharray-[48] stroke-dashoffset-[48] transform-origin-[50%_50%] animation-stroke"
-                          fill="none"
-                          d="M14.1 27.2l7.1 7.2 16.7-16.8"
-                        />
-                      </svg>
-                    </>
-                  )}
-                </p>
+                        cx="26"
+                        cy="26"
+                        r="25"
+                        fill="none"
+                      />
+                      <path
+                        className="stroke-[white] stroke-dasharray-[48] stroke-dashoffset-[48] transform-origin-[50%_50%] animation-stroke"
+                        fill="none"
+                        d="M14.1 27.2l7.1 7.2 16.7-16.8"
+                      />
+                    </svg>
+                  </>
+                )}
+              </p>
               <div
                 style={{
                   display: "flex",
