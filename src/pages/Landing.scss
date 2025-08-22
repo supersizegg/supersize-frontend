@@ -121,6 +121,10 @@
       backdrop-filter: none;
     }
 
+    .desktop-only {
+      display: none;
+    }
+
     .panel:not(.disabled):hover {
       transform: none;
       border-color: #2a2a2a;

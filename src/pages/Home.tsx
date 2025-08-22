@@ -503,19 +503,8 @@ const Home = ({
   }, [selectedEndpoint]);
 
   return (
-    <div className="main-container">
-      <div
-        className="game"
-        style={{
-          display: "block",
-          position: "absolute",
-          top: "0",
-          left: "0",
-          height: "100%",
-          width: "100%",
-          zIndex: "0",
-        }}
-      >
+    <div className="home-page">
+      <div className="game-background">
         <GameComponent
           players={[]}
           visibleFood={[]}
@@ -541,10 +530,10 @@ const Home = ({
       </div>
       <MenuBar tokenBalance={tokenBalance} />
 
-      <div className="home-container" style={{ position: "relative", marginTop: "100px" }}>
+      <div className="home-container">
         {/* <div className="mobile-only mobile-alert">For the best experience, use a desktop or laptop.</div> */}
         <div className="table-container">
-          <div className="filters-header desktop-only">
+          <div className="filters-header">
             <input
               type="text"
               className="search-game-input"
@@ -553,11 +542,9 @@ const Home = ({
               onChange={handleInputChange}
               onKeyDown={handleKeyPress}
             ></input>
-            <div className="flex flex-row desktop-only">
-              <span style={{ opacity: isSearchingGame.current ? "1" : "0", alignSelf: "center", marginRight: "10px" }}>
-                <Spinner />
-              </span>
-            </div>
+            {/* <div className="search-spinner-container">
+              {isSearchingGame.current && <Spinner />}
+            </div> */}
           </div>
           <table className="lobby-table">
             <thead>
@@ -610,31 +597,33 @@ const Home = ({
                 </tr>
               )}
               {activeGamesLoaded.map((row, idx) => (
-                <tr key={idx} style={{ display: !row.activeGame.isLoaded ? "none" : "table-row" }}>
-                  <td>{row.activeGame.worldId.toString()}</td>
-                  <td>
+                <tr key={idx} className={!row.activeGame.isLoaded ? "row-hidden" : ""}>
+                  <td data-label="Game ID">{row.activeGame.worldId.toString()}</td>
+                  <td data-label="Creator">
                     {row.activeGame.permissionless === true ? (
                       <span className="community-list">Community</span>
                     ) : (
                       <span className="strict-list">Supersize</span>
                     )}
                   </td>
-                  <td>
-                    {row.activeGame.isLoaded ? (
-                      <>
-                        <img
-                          src={row.activeGame.image}
-                          alt={row.activeGame.name}
-                          className="token-image"
-                          style={{ marginRight: "5px" }}
-                        />
-                        <span>{row.activeGame.token}</span>
-                      </>
-                    ) : (
-                      <Spinner />
-                    )}
+                  <td data-label="Token">
+                    <div className="token-cell-content">
+                      {row.activeGame.isLoaded ? (
+                        <>
+                          <img
+                            src={row.activeGame.image}
+                            alt={row.activeGame.name}
+                            className="token-image"
+                            style={{ marginRight: "5px", display: "inline" }}
+                          />
+                          <span>{row.activeGame.token}</span>
+                        </>
+                      ) : (
+                        <Spinner />
+                      )}
+                    </div>
                   </td>
-                  <td style={{ color: "#898989" }}>
+                  <td data-label="Buy In">
                     {row.activeGame.isLoaded ? (
                       row.activeGame.is_free ? (
                         "Free"
@@ -645,7 +634,7 @@ const Home = ({
                       <Spinner />
                     )}
                   </td>
-                  <td>
+                  <td data-label="Players">
                     {row.activeGame.isLoaded && row.activeGame.active_players >= 0 ? (
                       row.activeGame.active_players + "/" + row.activeGame.max_players
                     ) : (
@@ -705,7 +694,9 @@ const Home = ({
             </tbody>
           </table>
         </div>
-        <div className="mobile-alert">Playing Blob Battle | Connected to {selectedServer.current}</div>
+        <div className="desktop-only mobile-status-bar">
+          Playing Blob Battle | Connected to {selectedServer.current}
+        </div>
       </div>
       {selectedGame && hasInsufficientTokenBalance && (
         <BalanceWarning
