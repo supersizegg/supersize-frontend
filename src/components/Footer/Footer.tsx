@@ -34,11 +34,10 @@ const Footer: React.FC<FooterProps> = ({ engine, preferredRegion }) => {
       </div>
 
       {shouldShowBanner && (
-        <NavLink to="/profile" className="cta-banner">
+        <NavLink to="/profile" className="cta-banner desktop-only">
           {/* <img src="/icons/vault.svg" alt="Vault" className="cta-icon" /> */}
           <span className="cta-text">
-            {!engine.getWalletConnected() ? "Sign in and " : ""}
-            activate your vault!
+            {!engine.getWalletConnected() ? "Sign in and activate your vault" : "Activate your vault"}
           </span>
         </NavLink>
       )}
