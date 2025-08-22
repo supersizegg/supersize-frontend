@@ -1,130 +1,277 @@
-.exitButton {
-  font-family: "Open Sans", "Roboto", sans-serif;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
+.game-screen {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
   position: relative;
-  box-sizing: border-box;
-  font-size: 14px;
-  cursor: pointer;
-  color: black;
-  text-decoration: none;
-  float: right;
-  border-radius: 100px;
-  padding: 6px 10px;
-  transition:
-    background 0.3s ease 0s,
-    color 0.3s ease 0s;
+}
+
+.game-hud {
+  position: fixed;
   z-index: 999;
-}
-.exitButton:active,
-.exitButton:hover {
-  outline: none;
-  -webkit-box-shadow: none;
-  box-shadow: none;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.15), rgba(108, 108, 108, 0.05));
+  backdrop-filter: blur(15px);
+  box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2);
+
+  &.top-center {
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    background: none;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+  &.top-right {
+    top: 1rem;
+    right: 1rem;
+    border-radius: 20px;
+    padding: 0.75rem;
+  }
+  &.bottom-center {
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 700px;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    padding: 0.75rem 1rem;
+  }
 }
 
-.checkmark {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  display: block;
-  stroke-width: 2;
-  stroke: #15bd12;
-  stroke-miterlimit: 10;
-  box-shadow: inset 0px 0px 0px #15bd12;
-  fill: none;
-  animation:
-    fill 0.4s ease-in-out 0.4s forwards,
-    scale 0.3s ease-in-out 0.9s both;
-}
-
-.checkmark__circle {
-  stroke-dasharray: 166;
-  stroke-dashoffset: 166;
-  stroke-width: 2;
-  stroke-miterlimit: 10;
-  stroke: #15bd12;
-  fill: none;
-  animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
-}
-
-.checkmark__check {
-  stroke: white;
-  transform-origin: 50% 50%;
-  stroke-dasharray: 48;
-  stroke-dashoffset: 48;
-  animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
-}
-
-#returnButton {
-  font-family: "Open Sans", "Roboto", sans-serif;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
+.cash-out-panel {
   position: relative;
-  box-sizing: border-box;
-  font-size: 14px;
+  width: 290px;
+  height: 85px;
+  border-radius: 20px;
   cursor: pointer;
-  color: black;
-  text-decoration: none;
-  background: white;
-  float: right;
-  border: 1px solid white;
+  transition: box-shadow 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 0 20px 10px rgba(79, 207, 90, 0.4);
+  }
+
+  .cash-out-border {
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    border: 6px solid #4fcf5a;
+  }
+
+  .cash-out-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, #03aa12 0%, #055f0d 100%);
+    border-radius: 14px;
+    color: #fff;
+    font-family: "Inter", sans-serif;
+  }
+
+  .cash-out-label {
+    font-size: 1rem;
+    font-weight: 500;
+  }
+
+  .cash-out-value {
+    font-size: 2rem;
+    font-weight: 700;
+  }
+}
+
+.game-alerts {
+  .alert-text {
+    font-family: "Terminus", monospace;
+    font-size: 1.25rem;
+    text-shadow: 0 0 5px #000;
+
+    &.is-disconnecting {
+      color: #f07171;
+    }
+    &.is-warning {
+      color: #ffa500;
+      font-weight: bold;
+      animation: pulse 1.5s infinite;
+    }
+  }
+}
+
+.profit-tracker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+
+  .profit-pill {
+    display: flex;
+    align-items: center;
+    position: relative;
+    background: #2a2a2a;
+    border-radius: 21px;
+    height: 42px;
+    width: 135px;
+    color: #fff;
+    border: 1px solid #454545;
+
+    .coin-icon {
+      position: absolute;
+      left: -15px;
+      width: 60px;
+      height: 60px;
+      img {
+        width: 100%;
+        height: 100%;
+      }
+    }
+
+    .profit-value {
+      font-size: 1.25rem;
+      font-weight: bold;
+      margin: 0 auto;
+      transform: translateX(10px);
+    }
+  }
+
+  .mass-to-token-ratio {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.75rem;
+  }
+}
+
+.game-stats {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1.5rem;
+  font-family: "Terminus", monospace;
+  font-size: 1.25rem;
+  color: rgba(255, 255, 255, 0.8);
+
+  span {
+    white-space: nowrap;
+  }
+}
+
+.game-canvas-container {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.game-over-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+}
+
+.game-over-panel {
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.15), rgba(108, 108, 108, 0.05));
+  backdrop-filter: blur(15px);
+  box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2);
+  border-radius: 20px;
+  padding: 2rem 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: #fff;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+
+  .panel-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .panel-subtitle {
+    font-size: 1.25rem;
+    color: rgba(255, 255, 255, 0.8);
+    margin-top: -0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .panel-label {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+  }
+
+  .payout-amount {
+    font-size: 3.5rem;
+    color: #4fc124;
+    text-shadow: 0 0 15px rgba(79, 193, 36, 0.5);
+  }
+
+  .panel-info {
+    font-size: 0.9rem;
+    color: #aaa;
+    max-width: 300px;
+    margin-bottom: 1.5rem;
+  }
+}
+
+.btn-return-home {
+  font-family: "Inter", sans-serif;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  color: #000;
+  background: #fff;
+  border: 2px solid #fff;
   border-radius: 100px;
-  padding: 10px 15px;
-  margin: 10px;
-  transition:
-    background 0.3s ease 0s,
-    color 0.3s ease 0s;
-}
-#returnButton:active,
-#returnButton:hover {
-  background: black;
-  color: white;
-  outline: none;
-  -webkit-box-shadow: none;
-  box-shadow: none;
+  padding: 0.75rem 2rem;
+  margin-top: 1rem;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: transparent;
+    color: #fff;
+  }
 }
 
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
+@media (max-width: 768px) {
+  .game-hud.top-right {
+    display: none;
   }
-  100% {
-    transform: rotate(360deg);
+  .game-hud.bottom-center {
+    width: auto;
+    left: 0.5rem;
+    right: 0.5rem;
+    bottom: 0;
+    transform: translateX(0);
+    padding: 0.5rem;
+  }
+
+  .game-stats {
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: space-around;
+  }
+
+  .game-over-panel {
+    padding: 1.5rem;
+    width: calc(100% - 2rem);
   }
 }
-@keyframes bounce {
+
+@keyframes pulse {
   0%,
   100% {
-    transform: translateY(0);
+    opacity: 1;
   }
   50% {
-    transform: translateY(5px);
-  }
-}
-
-@keyframes stroke {
-  100% {
-    stroke-dashoffset: 0;
-  }
-}
-
-@keyframes scale {
-  0%,
-  100% {
-    transform: none;
-  }
-  50% {
-    transform: scale3d(1.1, 1.1, 1);
-  }
-}
-
-@keyframes fill {
-  100% {
-    box-shadow: inset 0px 0px 0px 30px #15bd12;
+    opacity: 0.7;
   }
 }

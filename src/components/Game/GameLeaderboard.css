@@ -36,3 +36,9 @@
 .game-leaderboard li.me {
   color: #67b11a;
 }
+
+@media screen and (max-width: 768px) {
+  .desktop-only {
+    display: none;
+  }
+}

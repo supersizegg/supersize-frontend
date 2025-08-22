@@ -31,9 +31,19 @@ const getDisplayName = (item: LeaderboardItem): string => {
 
 const GameLeaderboard: React.FC<LeaderboardProps> = ({ leaderboard, currentPlayer, gameInfo }) => {
   return (
-    <div className="game-leaderboard">
-      <div className="overlay-panel" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", borderRadius: "5px",
-         border: "3px solid transparent" }} />
+    <div className="game-leaderboard desktop-only">
+      <div
+        className="overlay-panel"
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          borderRadius: "5px",
+          border: "3px solid transparent",
+        }}
+      />
       <div className="title">Leaderboard</div>
       <ul>
         {leaderboard.map((item, index) => {
@@ -49,7 +59,7 @@ const GameLeaderboard: React.FC<LeaderboardProps> = ({ leaderboard, currentPlaye
               className={isCurrentPlayer ? "me" : ""}
               style={{ color: "#4FCF5A" }}
             >
-              <b>{displayName}</b> <span>{(item.score / 10 ** gameInfo.decimals).toFixed(2)}</span> 
+              <b>{displayName}</b> <span>{(item.score / 10 ** gameInfo.decimals).toFixed(2)}</span>
             </li>
           );
         })}

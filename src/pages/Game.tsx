@@ -55,7 +55,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse, preferredRegion
   const [currentGameSize, setCurrentGameSize] = useState(gameInfo.size);
   const [cashoutTx, setCashoutTx] = useState<string | null>(null);
   const [isFree, setIsFree] = useState(false);
-  
+
   const [leaderboard, setLeaderboard] = useState<Blob[]>([]);
   const [allplayers, setAllPlayers] = useState<Blob[]>([]);
   const [allFood, setAllFood] = useState<Food[][]>([]);
@@ -128,14 +128,16 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse, preferredRegion
     });
 
     try {
-      gameSystemExit(preferredRegion, engine, gameInfo, currentPlayerEntity.current, entityMatch.current).then(async () => {
-        if (currentPlayerEntity.current && currentPlayer) {
-          const playerData = await playerFetchOnEphem(engine, myplayerComponent);
-          if (playerData) {
-            updateMyPlayer(playerData, currentPlayer, setCurrentPlayer, setGameEnded);
+      gameSystemExit(preferredRegion, engine, gameInfo, currentPlayerEntity.current, entityMatch.current).then(
+        async () => {
+          if (currentPlayerEntity.current && currentPlayer) {
+            const playerData = await playerFetchOnEphem(engine, myplayerComponent);
+            if (playerData) {
+              updateMyPlayer(playerData, currentPlayer, setCurrentPlayer, setGameEnded);
+            }
           }
-        }
-      });
+        },
+      );
     } catch (error) {
       console.log("error", error);
     }
@@ -165,9 +167,11 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse, preferredRegion
             }
             console.log("5 seconds have passed");
             try {
-              gameSystemExit(preferredRegion, engine, gameInfo, currentPlayerEntity.current, entityMatch.current).then((exitTx) => {
-                setCashoutTx(exitTx);
-              });
+              gameSystemExit(preferredRegion, engine, gameInfo, currentPlayerEntity.current, entityMatch.current).then(
+                (exitTx) => {
+                  setCashoutTx(exitTx);
+                },
+              );
             } catch (error) {
               console.log("error", error);
             }
@@ -309,7 +313,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse, preferredRegion
     const mapData = mapFetchOnEphem(engine, mapComponent).then((mapData) => {
       if (mapData) {
         setCurrentGameSize(mapData.size);
-        if(mapData.name.startsWith("f-")) {
+        if (mapData.name.startsWith("f-")) {
           setIsFree(true);
         }
       }
@@ -448,7 +452,9 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse, preferredRegion
         (player) => player.authority !== null && player.circles.length > 0,
       );
       const sortedPlayers = playersWithAuthority.sort((a, b) => b.score - a.score);
-      setCurrentRank(sortedPlayers.findIndex((player) => player.authority?.toString() === currentPlayer.authority?.toString()) + 1);
+      setCurrentRank(
+        sortedPlayers.findIndex((player) => player.authority?.toString() === currentPlayer.authority?.toString()) + 1,
+      );
       updateLeaderboard(playersWithAuthority, setLeaderboard);
       const newVisiblePlayers: Blob[] = playersWithAuthority.reduce((accumulator: Blob[], playerx) => {
         if (currentPlayer && playerx.authority && currentPlayer.authority) {
@@ -499,7 +505,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse, preferredRegion
         foodEntities.current &&
         playerEntities.current &&
         allplayersRef.current &&
-        foodListLen && 
+        foodListLen &&
         !gameEndedRef.current
       ) {
         gameSystemMove(
@@ -542,166 +548,93 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse, preferredRegion
   }, []);
 
   return (
-    <div className="gameWrapper w-screen h-screen overflow-hidden">
+    <div className="game-screen">
       <GameLeaderboard gameInfo={gameInfo} leaderboard={leaderboard} currentPlayer={currentPlayer} />
-      <div
-        className="flex flex-col items-center fixed top-0 -translate-x-1/2 left-[50%] m-2.5 z-[9999] gap-2"
-      >        
-      {/*
-          <button
-            onClick={() => setSoundEnabled((prev) => !prev)}
+
+      <div className="game-hud top-center">
+        {gameEnded === 0 && (
+          <div
+            className="cash-out-panel"
+            onClick={handleExitClick}
             onMouseEnter={() => {
               exitHovered.current = true;
             }}
             onMouseLeave={() => {
               exitHovered.current = false;
             }}
-            className="soundToggleButton flex items-center justify-center mr-2"
-            style={{
-              border: "1px solid #fff",
-              background: "rgba(255, 255, 255, 0.25)",
-              color: "#fff",
-              borderRadius: "8px",
-              padding: "6px 10px",
-            }}
           >
-            {soundEnabled ? (
-              <span role="img" aria-label="Sound On">
-                🔊
+            <div className="cash-out-border" />
+            <div className="cash-out-content">
+              <span className="cash-out-label">Cash out {gameInfo.token}</span>
+              <span className="cash-out-value">
+                {currentPlayer
+                  ? formatBuyIn(Math.round((currentPlayer.score / 10 ** gameInfo.decimals) * 100) / 100)
+                  : "--"}
               </span>
-            ) : (
-              <span role="img" aria-label="Sound Off">
-                🔇
-              </span>
-            )}
-          </button>
-          */}
-        <div
-          className="exitgame-panel relative flex items-center justify-center cursor-pointer"
-          style={{ width: "290px", height: "85px", borderRadius: "20px",
-            display: gameEnded !== 0 ? "none" : "flex",
-           }}
-          onClick={handleExitClick}
-          onMouseEnter={(e) => {
-            exitHovered.current = true;
-            e.currentTarget.style.boxShadow = "0px 0px 10px 10px #4FCF5A80";
-          }}
-          onMouseLeave={(e) => {
-            exitHovered.current = false;
-            e.currentTarget.style.boxShadow = "none";
-          }}
-        >
-          <div
-            className="overlay-panel"
-            style={{ position: "absolute", borderRadius: "20px", width: "100%", height: "100%",
-              border: "6px solid #4FCF5A", zIndex: "9999" }}
-          />
-          <div
-            className="exitButton relative flex flex-col items-center justify-center gap-1 px-4"
-            style={{
-              width: "100%",
-              height: "100%",
-              background: "linear-gradient(180deg, #03AA12 0%, #055F0D 100%)",
-              borderRadius: "20px",
-              border: "none",
-            }}
-          >
-            <span
-              style={{
-                fontFamily: "'Inter', sans-serif",
-                fontSize: "16px",
-                lineHeight: "20px",
-                fontWeight: 500,
-                letterSpacing: "0.25px",
-                color: "#FFFFFF",
-              }}
-            >
-              Cash out {gameInfo.token}
-            </span>
-
-            <span
-              style={{
-                fontFamily: "'Inter', sans-serif",
-                fontSize: "32px",
-                lineHeight: "40px",
-                fontWeight: 700,
-                letterSpacing: "0",
-                color: "#FFFFFF",
-              }}
-            >
-              {currentPlayer
-                ? formatBuyIn(Math.round((currentPlayer.score / 10 ** gameInfo.decimals) *  100) / 100)
-                //(currentPlayer.score / 10 ** gameInfo.decimals).toFixed(2)
-                : "--"}{" "}
-            </span>
+            </div>
           </div>
-        </div>
-
-        <div className="game-popup flex items-center">
+        )}
+        <div className="game-alerts">
           {playerExiting && countdown.current > 0 && (
-            <div className="text-[#f07171] font-[Terminus] text-xl text-right ml-2.5">
+            <div className="alert-text is-disconnecting">
               Disconnecting in {(countdown.current / 100).toFixed(2)} seconds
             </div>
           )}
-          {currentPlayer &&
-            (currentPlayer.score * 2500) / gameInfo.buy_in > 240000 && (
-              <div className="text-[#ffa500] font-[Terminus] text-xl text-right ml-2.5 font-bold animate-pulse animate-glow">
-                Approaching max size!!
-              </div>
-            )}
-        </div>
-      </div>
-      
-      <div style={{ position: "fixed", top: "1rem", right: "1rem", display: "flex", width: "200px",
-        alignItems: "center", zIndex: "9999", flexDirection: "column", background: "linear-gradient(to bottom, #ffffff40, #6c6c6c10)",
-        borderRadius: "20px", padding: "10px", backdropFilter: "blur(20px)", boxShadow: "0px 1px 24px -1px rgba(0, 0, 0, 0.1)" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "18px", transform: "translateX(-20px)" }}>
-      <div className="coin-icon">
-          <img src="/slime.png" alt="game token" className="coin-image" />
-      </div>
-      <div className="coin-pill flex text-center" style={{position: "relative" }}>
-        <div className="overlay-panel" style={{ borderRadius: "10px", border: "3px solid transparent", position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }} />
-        <span style={{ position: "absolute", zIndex: "1", transform: "translateX(calc(77px - 50%))" }}>
-        {currentPlayer
-                  ? formatBuyIn(Math.round(((currentPlayer.score - (isFree ? 0 : gameInfo.buy_in)) / 10 ** gameInfo.decimals) *  1000) / 1000)
-                : "--"}{" "}
-        </span>
-      </div>
-      </div>
-      <div style={{ color:"#FFFFFF80", fontSize: "12px", marginTop: "5px" }}>1 mass = {(gameInfo.buy_in / 2500) / 10 ** gameInfo.decimals} {gameInfo.token}</div>
-      </div>
-
-      <div className={`fixed bottom-0 left-[50%] -translate-x-1/2 z-[9999] text-white text-base font-[terminus] flex flex-col text-xl`}
-      style={{
-        opacity: "0.9",
-        borderTopLeftRadius: "20px",
-        borderTopRightRadius: "20px",
-        padding: "10px",
-        width: "700px",
-        textAlign: "center",
-        background: "linear-gradient(to bottom, #ffffff40, #6c6c6c10)",
-        backdropFilter: "blur(20px)", boxShadow: "0px 1px 24px -1px rgba(0, 0, 0, 0.1)",
-      }}>
-        <div>
-          <span className="opacity-70">rank: {currentRank} | </span>
-          <span className="opacity-70">players: {currentActivePlayers}  | </span>
-          { currentPlayer && gameEndedRef.current ?
-          (<span className="opacity-70">duration: {currentPlayer && currentPlayer.join && currentPlayer.removal ? ((currentPlayer.removal.toNumber() - currentPlayer.join.toNumber() + 5).toFixed(0)) : "0"} seconds | </span>
-          ) : 
-          (<span className="opacity-70">duration: {currentPlayer && currentPlayer.join ? ((Date.now() / 1000) - currentPlayer.join.toNumber()).toFixed(0) : "0"}s | </span>
+          {currentPlayer && (currentPlayer.score * 2500) / gameInfo.buy_in > 240000 && (
+            <div className="alert-text is-warning">Approaching max size!</div>
           )}
-          <span className="opacity-70">mass eaten: {currentPlayer ? ((currentPlayer.score - (isFree ? 0 : gameInfo.buy_in)) / (gameInfo.buy_in / 2500)).toFixed(0) : "0"}</span>
         </div>
       </div>
 
-      <div
-        className="game"
-        style={{
-          display: "block",
-          height: "100%",
-          width: "100%",
-        }}
-      >
+      <div className="game-hud top-right">
+        <div className="profit-tracker">
+          <div className="profit-pill">
+            <div className="coin-icon">
+              <img src="/slime.png" alt="game token" />
+            </div>
+            <span className="profit-value">
+              {currentPlayer
+                ? formatBuyIn(
+                    Math.round(
+                      ((currentPlayer.score - (isFree ? 0 : gameInfo.buy_in)) / 10 ** gameInfo.decimals) * 1000,
+                    ) / 1000,
+                  )
+                : "--"}
+            </span>
+          </div>
+          <div className="mass-to-token-ratio">
+            1 mass = {gameInfo.buy_in / 2500 / 10 ** gameInfo.decimals} {gameInfo.token}
+          </div>
+        </div>
+      </div>
+
+      <div className="game-hud bottom-center">
+        <div className="game-stats">
+          <span>Rank: {currentRank}</span>
+          <span>Players: {currentActivePlayers}</span>
+          {gameEndedRef.current ? (
+            <span>
+              Duration:{" "}
+              {currentPlayer?.join && currentPlayer.removal
+                ? (currentPlayer.removal.toNumber() - currentPlayer.join.toNumber() + 5).toFixed(0)
+                : "0"}
+              s
+            </span>
+          ) : (
+            <span>
+              Duration: {currentPlayer?.join ? (Date.now() / 1000 - currentPlayer.join.toNumber()).toFixed(0) : "0"}s
+            </span>
+          )}
+          <span>
+            Mass Eaten:{" "}
+            {currentPlayer
+              ? ((currentPlayer.score - (isFree ? 0 : gameInfo.buy_in)) / (gameInfo.buy_in / 2500)).toFixed(0)
+              : "0"}
+          </span>
+        </div>
+      </div>
+
+      <div className="game-canvas-container">
         <GameComponent
           players={playersRef.current}
           visibleFood={visibleFood.flat()}
@@ -714,86 +647,44 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse, preferredRegion
         />
       </div>
 
-      <div className={`block w-screen h-screen`}>
-        {gameEnded === 1 && (
-          <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-[#00000080] z-[9999]">
-            <div className="bg-black flex flex-col items-center justify-center"
-              style={{
-                background: "linear-gradient(to bottom, #ffffff40, #6c6c6c10)",
-                borderRadius: "20px",
-                padding: "20px",
-                backdropFilter: "blur(20px)",
-                boxShadow: "0px 1px 24px -1px rgba(0, 0, 0, 0.1)",
-              }}>
-              <p className=" p-0 m-1 text-center text-white text-xl inline">
-                <b>Game over.</b> You got eaten!
-              </p>
-              <button id="returnButton" onClick={() => (window.location.href = "/home")}>
-                Return home
+      {gameEnded !== 0 && (
+        <div className="game-over-backdrop">
+          {gameEnded === 1 && (
+            <div className="game-over-panel is-loss">
+              <h2 className="panel-title">Game Over</h2>
+              <p className="panel-subtitle">You got eaten!</p>
+              <button className="btn-return-home" onClick={() => (window.location.href = "/home")}>
+                Return Home
               </button>
             </div>
-          </div>
-        )}
+          )}
 
-        {gameEnded === 2 && (
-          <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-[#00000080] z-[9999]">
-            <div className="flex flex-col items-center justify-center select-text"
-            style={{
-              background: "linear-gradient(to bottom, #ffffff40, #6c6c6c10)",
-              borderRadius: "20px",
-              padding: "20px",
-              backdropFilter: "blur(20px)",
-              boxShadow: "0px 1px 24px -1px rgba(0, 0, 0, 0.1)",
-            }}>
-              <p className=" p-0 m-1 text-center text-white inline">
-                <b className="text-[50px]">
-                  Payout: {currentPlayer ? formatBuyIn(Math.round((currentPlayer.score / 10 ** gameInfo.decimals) * 1000) / 1000) : ""}
-                </b>
-              </p>
-              <div className="flex items-center justify-center" style={{ flexDirection: "column", display: "none" }}>
-                <pre style={{ margin: "20px 0" }}>
-                  <>
-                    ✅
-                    <a
-                      className=" p-0 m-1 text-center text-white text-xl inline"
-                      href={`https://explorer.solana.com/tx/${cashoutTx}?cluster=custom&customUrl=${gameInfo.endpoint}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ textDecoration: "underline" }}
-                    >
-                      Cashout transaction
-                    </a>
-                  </>
-                </pre>
-              </div>
-              <button id="returnButton" onClick={() => (window.location.href = "/home")}>
-                Return home
+          {gameEnded === 2 && (
+            <div className="game-over-panel is-win">
+              <span className="panel-label">Payout</span>
+              <h2 className="panel-title payout-amount">
+                {currentPlayer
+                  ? formatBuyIn(Math.round((currentPlayer.score / 10 ** gameInfo.decimals) * 1000) / 1000)
+                  : ""}
+              </h2>
+              <button className="btn-return-home" onClick={() => (window.location.href = "/home")}>
+                Return Home
               </button>
             </div>
+          )}
 
-            <SignUpBanner engine={engine} preferredRegion={preferredRegion} />
-          </div>
-        )}
-
-        {gameEnded === 3 && (
-          <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center bg-transparent z-[9999]">
-            <div className="bg-black flex flex-col items-center justify-center select-text">
-              <p className="font-[Terminus] text-red-600 text-center text-sm m-0 p-0">
-                Error encountered during payout
-              </p>
-              <p className="font-[Terminus] text-white text-center text-sm m-0 p-[10px]">
-                <>If no transaction is received after a few minutes, contact @cheapnumbers on X</>
-                <br />
-                <br />
-                Txn Receipt:
-              </p>
-              <button id="returnButton" onClick={() => navigate("/home")}>
-                Return home
+          {gameEnded === 3 && (
+            <div className="game-over-panel is-error">
+              <h2 className="panel-title">Error</h2>
+              <p className="panel-subtitle">Error encountered during payout.</p>
+              <p className="panel-info">If no transaction is received after a few minutes, contact support.</p>
+              <button className="btn-return-home" onClick={() => navigate("/home")}>
+                Return Home
               </button>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

@@ -62,7 +62,7 @@ const Landing = ({ preferredRegion, tokenBalance }: LandingProps) => {
         </div>
       </div>
 
-      <Footer engine={engine} preferredRegion={preferredRegion} />
+      {/* <Footer engine={engine} preferredRegion={preferredRegion} /> */}
     </div>
   );
 };
