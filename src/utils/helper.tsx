@@ -1,15 +1,25 @@
 import React from "react";
-import { API_BASE_URL, cachedTokenMetadata, endpoints, NETWORK, OPPONENT_COLORS, options, RPC_CONNECTION } from "@utils/constants";
+import {
+  API_BASE_URL,
+  cachedTokenMetadata,
+  endpoints,
+  NETWORK,
+  OPPONENT_COLORS,
+  options,
+  RPC_CONNECTION,
+} from "@utils/constants";
 import { ActiveGame, Blob } from "@utils/types";
 import { PublicKey, Keypair, LAMPORTS_PER_SOL, Connection } from "@solana/web3.js";
 import * as crypto from "crypto-js";
 import * as anchor from "@coral-xyz/anchor";
 import { MagicBlockEngine } from "@engine/MagicBlockEngine";
-import { playerFetchOnChain, 
-  playerFetchOnSpecificEphem, 
+import {
+  playerFetchOnChain,
+  playerFetchOnSpecificEphem,
   playerFetchOnSpecificChain,
-  mapFetchOnSpecificEphem, 
-  mapFetchOnChain } from "@states/gameFetch";
+  mapFetchOnSpecificEphem,
+  mapFetchOnChain,
+} from "@states/gameFetch";
 import { playerFetchOnEphem } from "@states/gameFetch";
 import { FindEntityPda, FindWorldPda } from "@magicblock-labs/bolt-sdk";
 import { COMPONENT_MAP_ID, COMPONENT_PLAYER_ID } from "@states/gamePrograms";
@@ -31,11 +41,8 @@ export function getCustomErrorCode(error: any): number | undefined {
     }
   }
 
-  const instructionError =
-    parsed?.InstructionError ||
-    parsed?.err?.InstructionError ||
-    error?.InstructionError;
-  
+  const instructionError = parsed?.InstructionError || parsed?.err?.InstructionError || error?.InstructionError;
+
   if (Array.isArray(instructionError)) {
     return instructionError[1]?.Custom;
   }
@@ -159,16 +166,20 @@ export const getMaxPlayers = (size: number): number => {
   if (size === 4000) return 10;
   if (size === 10000) return 100;
   return 0;
-}
+};
 
-export function calculateWindowSize(score: number, baseWidth: number, baseHeight: number): { width: number; height: number } {
+export function calculateWindowSize(
+  score: number,
+  baseWidth: number,
+  baseHeight: number,
+): { width: number; height: number } {
   const maxSize = 5000;
   const minSize = 100;
   const t = (score - minSize) / (maxSize - minSize);
   const clamped = Math.min(Math.max(t, 0), 1);
   const scale = 1 + clamped * (2 - 1);
   return {
-    width:  baseWidth  * scale,
+    width: baseWidth * scale,
     height: baseHeight * scale,
   };
 }
@@ -214,7 +225,7 @@ export const getTopLeftCorner = (index: number, mapSize: number): { x: number; y
 
 export function getPingColor(ping: number) {
   if (ping < 0) return "red";
-  if (ping <= 100) return "#00d37d"; // green
+  if (ping <= 100) return "green";
   if (ping <= 800) return "yellow";
   return "red";
 }
@@ -234,11 +245,7 @@ export const pingEndpoint = async (url: string): Promise<number> => {
 export const pingEndpoints = async () => {
   const pingResults = await Promise.all(
     endpoints[NETWORK].map(async (endpoint) => {
-      const pingTimes = await Promise.all([
-        pingEndpoint(endpoint),
-        pingEndpoint(endpoint),
-        pingEndpoint(endpoint),
-      ]);
+      const pingTimes = await Promise.all([pingEndpoint(endpoint), pingEndpoint(endpoint), pingEndpoint(endpoint)]);
       const bestPingTime = Math.min(...pingTimes);
       return {
         endpoint: endpoint,
@@ -247,9 +254,7 @@ export const pingEndpoints = async () => {
       };
     }),
   );
-  const lowestPingEndpoint = pingResults.reduce((a, b) =>
-    a.pingTime < b.pingTime ? a : b,
-  );
+  const lowestPingEndpoint = pingResults.reduce((a, b) => (a.pingTime < b.pingTime ? a : b));
   return { pingResults: pingResults, lowestPingEndpoint: lowestPingEndpoint };
 };
 
@@ -257,11 +262,7 @@ export const pingEndpointsStream = async (
   onResult: (result: { endpoint: string; pingTime: number; region: string }) => void,
 ) => {
   const promises = endpoints[NETWORK].map(async (endpoint) => {
-    const pingTimes = await Promise.all([
-      pingEndpoint(endpoint),
-      pingEndpoint(endpoint),
-      pingEndpoint(endpoint),
-    ]);
+    const pingTimes = await Promise.all([pingEndpoint(endpoint), pingEndpoint(endpoint), pingEndpoint(endpoint)]);
     const bestPingTime = Math.min(...pingTimes);
     const res = {
       endpoint,
@@ -273,9 +274,7 @@ export const pingEndpointsStream = async (
   });
 
   const pingResults = await Promise.all(promises);
-  const lowestPingEndpoint = pingResults.reduce((a, b) =>
-    a.pingTime < b.pingTime ? a : b,
-  );
+  const lowestPingEndpoint = pingResults.reduce((a, b) => (a.pingTime < b.pingTime ? a : b));
   return { pingResults, lowestPingEndpoint };
 };
 
@@ -288,12 +287,12 @@ export const pingSpecificEndpoint = async (endpoint: string) => {
 export const getValidEndpoint = async (engine: MagicBlockEngine, mapComponentPda: PublicKey) => {
   return Promise.any(
     endpoints[NETWORK].map(async (endpoint) => {
-        const mapParsedData = await mapFetchOnSpecificEphem(engine, mapComponentPda, endpoint);
-        if (!mapParsedData) {
-          throw new Error("Invalid mapParsedData");
-        }
-        return endpoint;
-    })
+      const mapParsedData = await mapFetchOnSpecificEphem(engine, mapComponentPda, endpoint);
+      if (!mapParsedData) {
+        throw new Error("Invalid mapParsedData");
+      }
+      return endpoint;
+    }),
   );
 };
 
@@ -337,12 +336,17 @@ export const waitSignatureConfirmation = async (
   });
 };
 
-export async function fetchWalletTokenBalance(engine: MagicBlockEngine, isDevnet: boolean) : Promise<{ balance: number, tokenName: string }> {
-  const tokenMint = isDevnet ? new PublicKey(Object.keys(cachedTokenMetadata)[1]) : new PublicKey(Object.keys(cachedTokenMetadata)[0]);
+export async function fetchWalletTokenBalance(
+  engine: MagicBlockEngine,
+  isDevnet: boolean,
+): Promise<{ balance: number; tokenName: string }> {
+  const tokenMint = isDevnet
+    ? new PublicKey(Object.keys(cachedTokenMetadata)[1])
+    : new PublicKey(Object.keys(cachedTokenMetadata)[0]);
   let connection = engine.getConnectionChain();
   let wallet = engine.getWalletPayer();
 
-  if (isDevnet){
+  if (isDevnet) {
     connection = engine.getConnectionChainDevnet();
     wallet = engine.getSessionPayer();
   }
@@ -369,25 +373,26 @@ export async function fetchWalletTokenBalance(engine: MagicBlockEngine, isDevnet
     }
 
     return { balance: balance / denominator, tokenName: cachedTokenMetadata[tokenMint.toString()].symbol };
-
   } catch (error) {
     console.log("Error fetching token balance:", error);
     return { balance: 0, tokenName: "" };
   }
 }
 
-export async function fetchTokenBalance(engine: MagicBlockEngine, activeGame: ActiveGame) : Promise<{
-  tokenBalance: number,
-  hasInsufficientTokenBalance: boolean,
+export async function fetchTokenBalance(
+  engine: MagicBlockEngine,
+  activeGame: ActiveGame,
+): Promise<{
+  tokenBalance: number;
+  hasInsufficientTokenBalance: boolean;
 }> {
-
   let vaultClient: SupersizeVaultClient | null = null;
   if (engine && engine.getWalletConnected()) {
     vaultClient = new SupersizeVaultClient(engine);
-  }else{
+  } else {
     return { tokenBalance: 0, hasInsufficientTokenBalance: true };
   }
-  
+
   if (!activeGame || !activeGame.tokenMint) return { tokenBalance: 0, hasInsufficientTokenBalance: true };
   try {
     if (!activeGame.tokenMint) return { tokenBalance: 0, hasInsufficientTokenBalance: true };
@@ -427,9 +432,9 @@ export async function fetchTokenMetadata(tokenAddress: string, network: string) 
       },
       body: JSON.stringify({
         jsonrpc: "2.0",
-        id: 1, 
+        id: 1,
         method: "getAsset",
-        params: [tokenAddress], 
+        params: [tokenAddress],
       }),
     });
 
@@ -499,7 +504,7 @@ export const getSectionIndex = (x: number, y: number, mapSize: number, duplicate
 export function averageCircleCoordinates(circles: Circle[]): { avgX: number; avgY: number } {
   const n = circles.length;
   if (n === 0) {
-    return {avgX: 0, avgY: 0}; 
+    return { avgX: 0, avgY: 0 };
   }
 
   let sumX = 0;
@@ -540,12 +545,10 @@ export const getClampedFoodPosition = (
   return { food_x: clamped_food_x, food_y: clamped_food_y };
 };
 
-export const checkPlayerDistances = (
-  visiblePlayers: Blob[],
-  currentPlayer: Circle[],
-) => {
+export const checkPlayerDistances = (visiblePlayers: Blob[], currentPlayer: Circle[]) => {
   for (const player of currentPlayer) {
-    if (player?.radius) { // && player?.authority
+    if (player?.radius) {
+      // && player?.authority
       const left = player.x - player.radius * 2;
       const right = player.x + player.radius * 2;
       const top = player.y - player.radius * 2;
@@ -576,9 +579,9 @@ export const decodeFood = (data: Uint8Array) => {
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
   const packed = view.getUint32(0, true); // Little-endian
 
-  const x = packed & 0x3FFF;
-  const y = (packed >>> 14) & 0x3FFF;
-  const food_value = (packed >>> 28) & 0x0F;
+  const x = packed & 0x3fff;
+  const y = (packed >>> 14) & 0x3fff;
+  const food_value = (packed >>> 28) & 0x0f;
 
   return { x, y, food_value };
 };
@@ -597,7 +600,7 @@ export function isPlayerStatus(
 
 export const getNetwork = (thisEndpoint: string): string => {
   let network = NETWORK;
-  if(network !== "mainnet")return "devnet";
+  if (network !== "mainnet") return "devnet";
   let serverIndex = endpoints["devnet"].indexOf(thisEndpoint);
   return serverIndex >= 0 ? "devnet" : "mainnet";
 };
@@ -611,18 +614,12 @@ export const updatePlayerInfo = async (
   activeplayers: number,
   thisEndpoint: string,
 ): Promise<{
-  activeplayers: number,
-  newPlayerEntityPda: PublicKey,
-  playerStatus: string,
+  activeplayers: number;
+  newPlayerEntityPda: PublicKey;
+  playerStatus: string;
 }> => {
-  let network = getNetwork(thisEndpoint)
-  const result = await getMyPlayerStatus(
-    engine,
-    worldId,
-    max_players,
-    thisEndpoint,
-    network
-  );
+  let network = getNetwork(thisEndpoint);
+  const result = await getMyPlayerStatus(engine, worldId, max_players, thisEndpoint, network);
   if (isPlayerStatus(result)) {
     if (result.playerStatus == "error") {
       console.log("Error fetching player status");
@@ -644,15 +641,15 @@ export const updatePlayerInfo = async (
     playerStatus: playerStatus,
     activeplayers: activeplayers,
     newPlayerEntityPda: newPlayerEntityPda,
-  }
-}
+  };
+};
 
 export const getGameData = async (
   engine: MagicBlockEngine,
   worldId: BN,
   thisEndpoint: string,
   gameInfo: ActiveGame,
-): Promise<{gameInfo: ActiveGame}> => {
+): Promise<{ gameInfo: ActiveGame }> => {
   const mapEntityPda = FindEntityPda({
     worldId: worldId,
     entityId: new anchor.BN(0),
@@ -662,15 +659,17 @@ export const getGameData = async (
     componentId: COMPONENT_MAP_ID,
     entity: mapEntityPda,
   });
-  let network = getNetwork(thisEndpoint)
+  let network = getNetwork(thisEndpoint);
 
   let mapParsedDataPromise = mapFetchOnChain(engine, mapComponentPda);
-  if(thisEndpoint !== ""){
+  if (thisEndpoint !== "") {
     mapParsedDataPromise = mapFetchOnSpecificEphem(engine, mapComponentPda, thisEndpoint);
   }
   const mapParsedData = await mapFetchOnChain(engine, mapComponentPda);
 
-  if (! mapParsedData) { return {gameInfo}; }
+  if (!mapParsedData) {
+    return { gameInfo };
+  }
   gameInfo.endpoint = thisEndpoint;
   gameInfo.name = mapParsedData.name;
   gameInfo.max_players = 100;
@@ -701,9 +700,9 @@ export const getGameData = async (
   } else {
     console.warn("Token mint is null; skipping token-related setup");
   }
-  
-  return {gameInfo};
-}
+
+  return { gameInfo };
+};
 
 export const getMyPlayerStatus = async (
   engine: MagicBlockEngine,
@@ -724,12 +723,14 @@ export const getMyPlayerStatus = async (
   let playerStatus = "new_player";
   let activeplayers = 0;
   let max_players = maxplayer;
-  const fetchPromises: Array<Promise<{
-    playersComponentPda: PublicKey;
-    playersacc: any;
-    playersParsedDataER: any;
-    playerEntityPda: PublicKey;
-  }>> = [];
+  const fetchPromises: Array<
+    Promise<{
+      playersComponentPda: PublicKey;
+      playersacc: any;
+      playersParsedDataER: any;
+      playerEntityPda: PublicKey;
+    }>
+  > = [];
   for (let i = 1; i < maxplayer + 1; i++) {
     const playerentityseed = "player" + i.toString();
     const playerEntityPda = FindEntityPda({
@@ -765,18 +766,20 @@ export const getMyPlayerStatus = async (
     }
 
     if (playersacc.owner.toString() === "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh") {
-      if ( playersParsedDataER) {
-        if(
-          playersParsedDataER.score > 0
-        ){
+      if (playersParsedDataER) {
+        if (playersParsedDataER.score > 0) {
           activeplayers += 1;
         }
       }
-      if(playersParsedDataER && playersParsedDataER.authority && (playersParsedDataER.authority.toString() == engine.getSessionPayer().toString())){
+      if (
+        playersParsedDataER &&
+        playersParsedDataER.authority &&
+        playersParsedDataER.authority.toString() == engine.getSessionPayer().toString()
+      ) {
         newplayerEntityPda = playerEntityPda;
         playerStatus = "in_game";
-      }else{
-        if(playersParsedDataER && playersParsedDataER.score == 0 && newplayerEntityPda == null){
+      } else {
+        if (playersParsedDataER && playersParsedDataER.score == 0 && newplayerEntityPda == null) {
           newplayerEntityPda = playerEntityPda;
           playerStatus = "new_player";
         }
@@ -798,7 +801,6 @@ export const getMyPlayerStatus = async (
     playerStatus: playerStatus,
   };
 };
-
 
 export const fetchPlayers = async (engine: MagicBlockEngine, gameInfo: ActiveGame) => {
   const playersArr: {
@@ -829,7 +831,7 @@ export const fetchPlayers = async (engine: MagicBlockEngine, gameInfo: ActiveGam
       let delegated = false;
       if (accountInfo.owner.toString() === "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh") {
         delegated = true;
-      } 
+      }
       const playersParsedDataEphem = await playerFetchOnEphem(engine, playersComponentPda);
       const parsedData = await playerFetchOnChain(engine, playersComponentPda);
       let playerWallet = "TODO";
@@ -843,14 +845,14 @@ export const fetchPlayers = async (engine: MagicBlockEngine, gameInfo: ActiveGam
         playersParsedDataEphem,
         delegated,
         playerWallet,
-        playerWalletEphem
+        playerWalletEphem,
       };
     }
     return null;
   });
 
   const resolvedPlayers = await Promise.all(playerPromises);
-  playersArr.push(...resolvedPlayers.filter(player => player !== null));
+  playersArr.push(...resolvedPlayers.filter((player) => player !== null));
   return playersArr;
 };
 
@@ -864,41 +866,40 @@ export const fetchGames = async (engine: MagicBlockEngine, myGames: ActiveGame[]
       try {
         const worldId = { worldId: new anchor.BN(i) };
         const worldPda = await FindWorldPda(worldId);
-        
+
         const mapEntityPda = FindEntityPda({
           worldId: worldId.worldId,
           entityId: new anchor.BN(0),
           seed: stringToUint8Array("origin"),
         });
-        
+
         const mapComponentPda = FindComponentPda({
           componentId: COMPONENT_MAP_ID,
           entity: mapEntityPda,
         });
-        
-        const mapParsedData = await mapFetchOnChain(engine, mapComponentPda);
-        if (mapParsedData?.authority && 
-            mapParsedData.authority.toString() === engine.getSessionPayer().toString()) {
-            const newGameInfo: ActiveGame = {
-              worldId: worldId.worldId,
-              worldPda,
-              name: mapParsedData.name,
-              active_players: mapParsedData.activePlayers,
-              max_players: 100,
-              size: mapParsedData.size,
-              image: "",
-              token: "",
-              buy_in: mapParsedData.buyIn.toNumber(),
-              is_free: mapParsedData.name.startsWith("f-"),
-              decimals: 0,
-              endpoint: "",
-              isLoaded: true,
-              permissionless: false,
-            };
 
-            newGames = newGames.some((game) => game.worldId === newGameInfo.worldId)
-          ? [...newGames] 
-          : [newGameInfo, ...newGames];          
+        const mapParsedData = await mapFetchOnChain(engine, mapComponentPda);
+        if (mapParsedData?.authority && mapParsedData.authority.toString() === engine.getSessionPayer().toString()) {
+          const newGameInfo: ActiveGame = {
+            worldId: worldId.worldId,
+            worldPda,
+            name: mapParsedData.name,
+            active_players: mapParsedData.activePlayers,
+            max_players: 100,
+            size: mapParsedData.size,
+            image: "",
+            token: "",
+            buy_in: mapParsedData.buyIn.toNumber(),
+            is_free: mapParsedData.name.startsWith("f-"),
+            decimals: 0,
+            endpoint: "",
+            isLoaded: true,
+            permissionless: false,
+          };
+
+          newGames = newGames.some((game) => game.worldId === newGameInfo.worldId)
+            ? [...newGames]
+            : [newGameInfo, ...newGames];
         }
       } catch (error) {
         console.log("error", error);
@@ -907,5 +908,5 @@ export const fetchGames = async (engine: MagicBlockEngine, myGames: ActiveGame[]
   });
 
   await Promise.allSettled(gamePromises);
-  return [...newGames].sort((a, b) => b.worldId.cmp(a.worldId));;
+  return [...newGames].sort((a, b) => b.worldId.cmp(a.worldId));
 };

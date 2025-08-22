@@ -90,7 +90,6 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
   }, [vaultClient]);
 
   const checkStatus = useCallback(async () => {
-
     if (!vaultClient) return;
 
     setStatus("loading");
@@ -125,7 +124,6 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
     if (!engine.getWalletConnected()) return;
     const { balance, tokenName } = await fetchWalletTokenBalance(engine, NETWORK !== "mainnet");
     setWalletBalance(balance);
-
   }, [vaultClient, engine, refreshVaultBalances]);
 
   useEffect(() => {
@@ -187,26 +185,23 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
 
   return (
     <div className="menu-session">
-        {engine.getWalletConnected() && (status === "ready_to_delegate" || status === "delegated") && (
-          <>
-            <div className="flex justify-center items-center m-0 p-0 background-transparent"
-              style={{ display: walletBalance > 0 ? "flex" : "none" }}
-            > 
-              {walletBalance.toFixed(2)} USDC available to deposit
-            </div>
-          </>
-      )}
-      <div className="session-bottom">
-        {!engine.getWalletConnected() && <div className="loading-overlay">Sign in and activate your vault to start stacking coins!</div>}
+      {engine.getWalletConnected() &&
+        (status === "ready_to_delegate" || status === "delegated") &&
+        walletBalance > 0 && (
+          <div className="wallet-balance-banner">{walletBalance.toFixed(2)} USDC available to deposit</div>
+        )}
+
+      <div className="session-content">
+        {!engine.getWalletConnected() && (
+          <div className="loading-overlay">Sign in and activate your vault to start stacking coins!</div>
+        )}
 
         {status === "loading" && engine.getWalletConnected() && <div className="loading-overlay">Loading...</div>}
-        
+
         {status === "uninitialized" && engine.getWalletConnected() && (
           <div className="session-prompt">
-            <p style={{ padding: "20px 0" }}>
-              Activate your vault. This requires one-time approval.
-            </p>
-            <button className="submit-button" onClick={handleEnableWallet}>
+            <p>Activate your vault. This requires one-time approval.</p>
+            <button className="btn-primary" onClick={handleEnableWallet}>
               Activate Vault
             </button>
           </div>
@@ -214,15 +209,9 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
 
         {engine.getWalletConnected() && (status === "ready_to_delegate" || status === "delegated") && (
           <>
-            <div
-              style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}
-            >
-              <h3 style={{ margin: 0 }}>Vault</h3>
-              <button
-                className="table-btn outline"
-                onClick={checkStatus}
-                style={{ fontSize: "12px", borderRadius: "5px", padding: "5px" }}
-              >
+            <div className="vault-header">
+              {/* <h3>Vault</h3> */}
+              <button className="btn-subtle" onClick={checkStatus}>
                 Refresh
               </button>
             </div>
@@ -232,7 +221,7 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
                 <tr>
                   <th>Token</th>
                   <th style={{ textAlign: "right" }}>Balance</th>
-                  <th colSpan={2} style={{ width: "160px" }} />
+                  <th colSpan={2} style={{ width: "160px" }} className="desktop-only" />
                 </tr>
               </thead>
               <tbody>
@@ -249,16 +238,11 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
                           {symbol}
                         </td>
                         <td className="balance-cell">
-                          {uiAmount == -1
-                            ? "Wrong Server"
-                            : formatBuyIn(Math.round(uiAmount * 1000) / 1000) 
-                            //uiAmount.toLocaleString(undefined, { maximumFractionDigits: 4 })
-                          }
+                          {uiAmount === -1 ? "Wrong Server" : formatBuyIn(Math.round(uiAmount * 1000) / 1000)}
                         </td>
-                        <td>
+                        <td className="desktop-only">
                           <button
                             className="table-btn"
-                            /* style={{ opacity: engine?.getWalletType() === "embedded" ? "0" : "1" }} */
                             onClick={() =>
                               setDialog({
                                 type: "deposit",
@@ -269,7 +253,7 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
                             Deposit
                           </button>
                         </td>
-                        <td>
+                        <td className="desktop-only">
                           <button
                             className="table-btn outline"
                             disabled={uiAmount === 0}
@@ -289,123 +273,80 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
               </tbody>
             </table>
 
-            <div className="session-top row-inline">
-              <div className="network-switch" style={{ display: "flex", alignItems: "center" }}>
-                <span className="session-label" style={{ marginRight: "10px", display: "inline" }}>
-                  Session wallet
-                  {status === "delegated" && !resetGameWallet && (
-                    <p style={{ display: "inline", color: "#4c9058", marginLeft: "10px" }}>[active]</p>
-                  )}
-                  <div 
-                    style={{ 
-                      display: "inline-block",
-                      backgroundColor: "#4c9058",
-                      borderRadius: "5px",
-                      color: "#ffffff",
-                      border: "none",
-                      padding: "0px 5px",
-                      cursor: "pointer",
-                      marginLeft: "10px",
-                      fontSize: "12px",
-                    }}>
-                  <button
-                    className="copy-icon-button"
-                    onClick={(e) => {
-                      navigator.clipboard.writeText(engine.getSessionPayer().toString());
-                      const button = e.currentTarget;
-                      button.style.transform = "translateY(0px)";
-                      button.textContent = "Copied";
-                      setTimeout(() => {
-                          button.innerHTML = '<img src="/copy.png" alt="Copy" width="15" height="15"/>';
-                          button.style.transform = "translateY(3px)";
-                      }, 600);
-                    }}
-                    title="Copy to clipboard"
-                  >
-                      <img src="/copy.png" alt="Copy" width={15} height={15} style={{ transform: "translateY(3px)" }} />
-                  </button>
-                  </div>
-                  <div 
-                    style={{ 
-                      display: "inline-block",
-                      backgroundColor: "#4c9058",
-                      borderRadius: "5px",
-                      color: "#ffffff",
-                      border: "none",
-                      padding: "0px 5px",
-                      cursor: "pointer",
-                      marginLeft: "10px",
-                      fontSize: "12px",
-                    }}>
-                  <button
-                    className="copy-icon-button"
-                    onClick={() => {
-                      const privateKey = engine.getSessionKey();
-                      const secretKeyArray = Object.values(privateKey.secretKey);
-                      const secretKeyBuffer = Buffer.from(secretKeyArray);
-                      const base58Key = bs58.encode(secretKeyBuffer);
-                      const json = JSON.stringify({ base58Key });
-                      const blob = new Blob([json], { type: "application/json" });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement("a");
-                      a.href = url;
-                      a.download = "session-wallet-key.json";
-                      a.click();
-                      URL.revokeObjectURL(url);
-                    }}
-                    title="export private key"
-                  >
-                      Export
-                  </button>
-                  </div>
-                  <div 
-                    style={{ 
-                      display: "inline-block",
-                      backgroundColor: "#4c9058",
-                      borderRadius: "5px",
-                      color: "#ffffff",
-                      border: "none",
-                      padding: "0px 5px",
-                      cursor: "pointer",
-                      marginLeft: "10px",
-                      fontSize: "12px",
-                    }}>
-                    <button
-                      className="copy-icon-button"
-                      onClick={async () => {
-                        const input = document.createElement('input');
-                        input.type = 'file';
-                        input.accept = 'application/json';
-                        input.onchange = async (event) => {
-                          const target = event.target as HTMLInputElement;
-                          if (!target.files) return;
-                          const file = target.files[0];
-                          if (file) {
-                            const text = await file.text();
-                            const { base58Key } = JSON.parse(text);
-                            const secretKeyBuffer = bs58.decode(base58Key);
-                            const secretKeyArray = Array.from(secretKeyBuffer);
-                            localStorage.setItem(SESSION_LOCAL_STORAGE, JSON.stringify(secretKeyArray));
-                          }
-                        };
-                        input.click();
-                      }}
-                      title="import private key"
-                    >
-                        Import
-                    </button>
-                  </div>
-                  <p className="info-text" style={{ marginTop: "5px", textAlign: "center", width: "320px" }}>
-                    Session wallet is not used to store funds
-                  </p>
-                </span>
-              </div>               
+            <div className="session-wallet-info">
+              <div className="session-wallet-header">
+                <span className="session-label">Session Wallet</span>
+                {status === "delegated" && !resetGameWallet && <span className="status-tag">[active]</span>}
+              </div>
+              <div className="session-wallet-actions">
+                <button
+                  className="icon-button"
+                  onClick={(e) => {
+                    navigator.clipboard.writeText(engine.getSessionPayer().toString());
+                    const button = e.currentTarget;
+                    const originalContent = button.innerHTML;
+                    button.textContent = "Copied";
+                    setTimeout(() => {
+                      button.innerHTML = originalContent;
+                    }, 1000);
+                  }}
+                  aria-label="Copy session wallet address"
+                >
+                  <img src="/copy.png" alt="Copy" />
+                </button>
+                <button
+                  className="icon-button"
+                  onClick={() => {
+                    const privateKey = engine.getSessionKey();
+                    const secretKeyArray = Object.values(privateKey.secretKey);
+                    const secretKeyBuffer = Buffer.from(secretKeyArray);
+                    const base58Key = bs58.encode(secretKeyBuffer);
+                    const json = JSON.stringify({ base58Key });
+                    const blob = new Blob([json], { type: "application/json" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "session-wallet-key.json";
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  aria-label="Export session key"
+                >
+                  Export
+                </button>
+                <button
+                  className="icon-button"
+                  onClick={async () => {
+                    const input = document.createElement("input");
+                    input.type = "file";
+                    input.accept = "application/json";
+                    input.onchange = async (event) => {
+                      const target = event.target as HTMLInputElement;
+                      if (!target.files) return;
+                      const file = target.files[0];
+                      if (file) {
+                        const text = await file.text();
+                        const { base58Key } = JSON.parse(text);
+                        const secretKeyBuffer = bs58.decode(base58Key);
+                        const secretKeyArray = Array.from(secretKeyBuffer);
+                        localStorage.setItem(SESSION_LOCAL_STORAGE, JSON.stringify(secretKeyArray));
+                      }
+                    };
+                    input.click();
+                  }}
+                  aria-label="Import session key"
+                >
+                  Import
+                </button>
+              </div>
             </div>
+            <p className="info-text-small">Session wallets are temporary and do not store funds.</p>
 
             {(resetGameWallet || status === "ready_to_delegate") && (
-              <div className="session-buttons">
+              <div className="session-prompt">
+                <p>Your session wallet needs to be reset.</p>
                 <button
-                  className="btn-fund"
+                  className="btn-primary"
                   onClick={async () => {
                     const alertId = NotificationService.addAlert({
                       type: "success",
@@ -430,9 +371,9 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
                     }
                   }}
                 >
-                  Need to reset session wallet
+                  Reset Session Wallet
                 </button>
-                <div className="flex" style={{ fontSize: "12px", color: "#FFF" }}>*this will not affect your vault balance</div>
+                <p className="info-text small">*This will not affect your vault balance.</p>
               </div>
             )}
           </>
@@ -461,7 +402,7 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
               }, 3000);
               await checkStatus();
             } else {
-              //
+              // withdraw is handled by handleWithdraw
             }
           }}
           handleWithdraw={handleWithdraw}

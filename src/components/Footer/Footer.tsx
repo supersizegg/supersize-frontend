@@ -13,7 +13,7 @@ const Footer: React.FC<FooterProps> = ({ engine, preferredRegion }) => {
 
   const openX = (e: React.MouseEvent) => {
     e.preventDefault();
-    window.open("https://x.com/SUPERSIZEgg", "_blank");
+    window.open("https://x.com/slimecoinio", "_blank");
   };
 
   return (
@@ -23,7 +23,7 @@ const Footer: React.FC<FooterProps> = ({ engine, preferredRegion }) => {
           ?
         </NavLink>
         <a
-          href="https://x.com/SUPERSIZEgg"
+          href="https://x.com/slimecoinio"
           onClick={openX}
           className="footer-btn follow-x-btn"
           aria-label="Follow on X"

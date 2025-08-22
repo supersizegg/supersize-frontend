@@ -2,7 +2,6 @@ import * as React from "react";
 import { useMagicBlockEngine } from "../../engine/MagicBlockEngineProvider";
 
 import { Button } from "../util/Button";
-import { Text } from "../util/Text";
 import { usePrivy } from "@privy-io/react-auth";
 import "./MenuWallet.scss";
 
@@ -27,47 +26,44 @@ function MenuWalletConnected({ setPreferredRegion }: { setPreferredRegion: (regi
   const addressBase58 = publicKey.toBase58();
 
   return (
-    <div className="flex justify-center items-center m-0 p-0">
-    <div className="wallet-connected desktop-only">
+    <div className="wallet-widget">
       <div className="wallet-info">
-        <Text value={truncateAddress(addressBase58)} />
+        <span>{truncateAddress(addressBase58)}</span>
+        <button
+          className="copy-button"
+          data-text="Copy"
+          onClick={(e) => {
+            navigator.clipboard.writeText(addressBase58);
+            const button = e.currentTarget;
+            button.classList.add("copied");
+            setTimeout(() => {
+              button.classList.remove("copied");
+            }, 1000);
+          }}
+          title="Copy to clipboard"
+        >
+          <img src="/copy.png" alt="Copy" />
+        </button>
       </div>
       <button
-        className="wallet-disconnect-button"
+        className="disconnect-button"
         onClick={() => {
           setPreferredRegion("");
           engine.selectWalletAdapter(null);
         }}
+        aria-label="Disconnect Wallet"
       >
-        <img src="/icons/logout.svg" className="logout-icon" alt="Disconnect" />
+        <img src="/icons/logout.svg" alt="Disconnect" />
       </button>
-    </div>
-    <div className="copy-wallet-address ml-2">
-      <button
-        className="copy-icon-button"
-        onClick={(e) => {
-          navigator.clipboard.writeText(addressBase58);
-          const button = e.currentTarget;
-          button.textContent = "Copied";
-          setTimeout(() => {
-              button.innerHTML = '<img src="/copy.png" alt="Copy" width="20" height="20" style="margin-top: 5px;"/>';
-          }, 600);
-        }}
-        title="Copy to clipboard"
-      >
-          <img src="/copy.png" alt="Copy" width={20} height={20} style={{ marginTop: "5px" }}/>
-      </button>
-    </div>
     </div>
   );
 }
 
 function MenuWalletDisconnected() {
   const { login } = usePrivy();
-
   return (
-    <div className="wallet-disconnected desktop-only">
-      <Button text="Sign in" className="connect-wallet-button" onClick={login} />
+    <div className="wallet-disconnected">
+      <Button text="Sign In" className="sign-in-button" onClick={login} />
     </div>
   );
 }

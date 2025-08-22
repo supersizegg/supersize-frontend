@@ -76,19 +76,8 @@ export default function Profile({
   const [isWithdrawalModalOpen, setIsWithdrawalModalOpen] = useState(false);
   const [sessionLamports, setSessionLamports] = useState<number | undefined>(0);
   return (
-    <div className="profile-page main-container">
-      <div
-        className="game"
-        style={{
-          display: "block",
-          position: "absolute",
-          top: "0",
-          left: "0",
-          height: "100%",
-          width: "100%",
-          zIndex: "0",
-        }}
-      >
+    <div className="profile-page">
+      <div className="game-background">
         <GameComponent
           players={[]}
           visibleFood={[]}
@@ -113,7 +102,7 @@ export default function Profile({
         />
       </div>
       <MenuBar tokenBalance={tokenBalance} />
-      <div className="profile-container" style={{ position: "relative", zIndex: 1 }}>
+      <div className="profile-container">
         <div className="profile-tabs">
           <button className={activeTab === "wallet" ? "active" : ""} onClick={() => setActiveTab("wallet")}>
             Wallet
@@ -125,7 +114,6 @@ export default function Profile({
             disabled={!engine.getWalletConnected()}
             className={activeTab === "admin" ? "active desktop-only" : "desktop-only"}
             onClick={() => setActiveTab("admin")}
-            style={{ cursor: !engine.getWalletConnected() ? "not-allowed" : "pointer" }}
           >
             Admin panel
           </button>
@@ -297,7 +285,7 @@ function ProfileTab({
           />
         ))}
       </div>
-      <div style={{ marginTop: "1rem" }}>
+      <div>
         <RegionSelector preferredRegion={preferredRegion} setPreferredRegion={setPreferredRegion} engine={engine} />
       </div>
     </div>

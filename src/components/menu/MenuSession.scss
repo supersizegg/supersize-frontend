@@ -1,174 +1,54 @@
 .menu-session {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  color: #fff;
-
-  .session-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: #2a2a2a;
-    border-radius: 4px;
-
-    .session-label {
-      font-weight: 600;
-      font-size: 1rem;
-    }
-
-    .session-balance {
-      font-weight: 500;
-    }
-  }
-
-  .session-bottom {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    background-color: #2a2a2a;
-    border-radius: 4px;
-    padding: 1rem;
-
-    .session-address {
-      background-color: #1b1b1b;
-      border: 1px solid #444;
-      border-radius: 4px;
-      color: #fff;
-      padding: 0.5rem 1rem;
-      width: 100%;
-      margin-bottom: 0.5rem;
-    }
-
-    .session-buttons {
-      display: flex;
-      gap: 1rem;
-
-      button {
-        background-color: #0055ff;
-        border: none;
-        border-radius: 4px;
-        color: #fff;
-        padding: 0.5rem 1rem;
-        font-weight: 500;
-        cursor: pointer;
-        transition: background-color 0.2s;
-
-        &:hover {
-          background-color: #0040cc;
-        }
-      }
-
-      .btn-fund {
-      }
-
-      .btn-withdraw {
-        background: transparent;
-        border: 1px solid #fff;
-
-        &:hover {
-          background-color: #ffffff2b;
-        }
-      }
-    }
-  }
+  gap: 1.5rem;
 }
 
-
-.info-text {
-  background-color: #fef3c7;
-  border: 1px solid #facc15;
-  border-radius: 8px;
-  padding: 0.75rem;
-  color: #000;
-  font-size: 0.9rem;
-  text-align: left;
-}
-
-/* The switch container */
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 30px;
-  height: 17px;
-}
-
-/* Hide the default HTML checkbox */
-.switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-/* The slider */
-.slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #ccc;
-  transition: 0.4s;
-}
-
-/* The knob */
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 13px;
-  width: 13px;
-  left: 2px;
-  bottom: 2px;
-  background-color: white;
-  transition: 0.4s;
-}
-
-/* When checked, change background color */
-input:checked + .slider {
-  background-color: #2196f3;
-}
-
-/* Move the knob when checked */
-input:checked + .slider:before {
-  transform: translateX(13px);
-}
-
-/* Rounded slider */
-.slider.round {
-  border-radius: 17px;
-}
-
-.slider.round:before {
-  border-radius: 50%;
-}
-
-.token-balances {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-left: auto;
-}
-
-.token-pill {
-  display: flex;
-  align-items: center;
-  background: #1e1e1e;
+.wallet-balance-banner {
+  background: linear-gradient(90deg, rgba(0, 119, 255, 0.2), rgba(0, 94, 199, 0.2));
+  border: 1px solid #0077ff;
   border-radius: 12px;
-  padding: 4px 8px;
-  font-size: 14px;
-  line-height: 1;
+  padding: 0.75rem;
+  text-align: center;
+  font-weight: 500;
+  font-size: 0.9rem;
 }
 
-.token-icon {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  margin-right: 6px;
+.session-content {
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
-.no-tokens {
-  opacity: 0.6;
-  font-style: italic;
+.vault-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  h3 {
+    margin: 0;
+    font-size: 1.5rem;
+  }
+}
+
+.btn-subtle {
+  background: none;
+  border: 1px solid #555;
+  color: #aaa;
+  border-radius: 8px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: #333;
+    color: #fff;
+  }
 }
 
 .token-table {
@@ -250,5 +130,102 @@ input:checked + .slider:before {
   }
 }
 
+.session-wallet-info {
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
 
+.session-wallet-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 
+  .session-label {
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .status-tag {
+    color: #4fc124;
+    font-size: 0.8rem;
+    font-weight: bold;
+  }
+}
+
+.session-wallet-actions {
+  display: flex;
+  gap: 0.5rem;
+
+  .icon-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #3a3a3a;
+    border: 1px solid #555;
+    border-radius: 8px;
+    color: #fff;
+    padding: 0.5rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+
+    img {
+      width: 16px;
+      height: 16px;
+    }
+
+    &:hover {
+      background-color: #4a4a4a;
+    }
+  }
+}
+
+.menu-session .info-text-small {
+  font-size: 0.85rem;
+  color: #aaa;
+  text-align: left;
+  line-height: 1.5;
+  margin: 0;
+
+  &.small {
+    font-size: 0.75rem;
+    text-align: center;
+  }
+}
+
+.session-prompt {
+  text-align: center;
+
+  p {
+    margin: 0 0 1rem 0;
+  }
+
+  .btn-primary {
+    width: 100%;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    background: linear-gradient(90deg, #4fc124, #2b8c00);
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 15px rgba(79, 193, 36, 0.2);
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(79, 193, 36, 0.4);
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .desktop-only {
+    display: none;
+  }
+}

@@ -603,7 +603,7 @@ const Home = ({
                     {row.activeGame.permissionless === true ? (
                       <span className="community-list">Community</span>
                     ) : (
-                      <span className="strict-list">Supersize</span>
+                      <span className="strict-list">Slimecoin</span>
                     )}
                   </td>
                   <td data-label="Token">
