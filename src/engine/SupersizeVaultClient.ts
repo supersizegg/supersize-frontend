@@ -121,7 +121,7 @@ export class SupersizeVaultClient {
         SystemProgram.transfer({
           fromPubkey: this.engine.getSessionPayer(),
           toPubkey: gwPda,
-          lamports: 0, // 1 SOL
+          lamports: 0,
         }),
       );
     }
@@ -130,7 +130,7 @@ export class SupersizeVaultClient {
         SystemProgram.transfer({
           fromPubkey: this.engine.getSessionPayer(),
           toPubkey: balPda,
-          lamports: 0, // 1 SOL
+          lamports: 0,
         }),
       );
     }

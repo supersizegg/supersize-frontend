@@ -93,13 +93,13 @@ export async function gameExecuteNewGame(
   const currentEndpoint = context.engine.getConnectionEphem();
   let validator = new PublicKey(await currentEndpoint.getSlotLeader());
   if (currentEndpoint.rpcEndpoint === endpoints[NETWORK][0]) {
-    validator = new PublicKey("EUhi4xecUqEUmGgBCoGomeEiUprwu2D2oM2QmwMjzM75");
+    validator = new PublicKey("MEUGGrYPxKk17hCr7wpT6s8dtNokZj5U2L57vjYMS8e");
   }
   if (currentEndpoint.rpcEndpoint === endpoints[NETWORK][1]) {
-    validator = new PublicKey("USQT2zbsRiK7dZqVzCktauygDXVAdAgWZbnHJyQo4TV");
+    validator = new PublicKey("MUS3hc9TCw4cGC12vHNoYcCGzJG1txjgQLZWVoeNHNd");
   }
   if (currentEndpoint.rpcEndpoint === endpoints[NETWORK][2]) {
-    validator = new PublicKey("ASLxD38WUHStVbUGm4BW7WZNSThwzZYTr6Qz4eohf3Xp");
+    validator = new PublicKey("MAS1Dt9qreoRMQ14YQuhg8UTZMMzDdKhmkZMECCzk57");
   }
   console.log("validator", validator.toString());
   console.log("ephem rpc", context.engine.getEndpointEphemRpc());
