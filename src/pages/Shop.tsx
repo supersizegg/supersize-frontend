@@ -7,6 +7,7 @@ import { BN } from "@coral-xyz/anchor";
 import { VersionedTransaction } from "@solana/web3.js";
 import { useMagicBlockEngine } from "@engine/MagicBlockEngineProvider";
 import "./Shop.scss";
+import AnimatedBackground from "../components/util/AnimatedBackground";
 
 const TOKEN_NAME = "PYUSD";
 const OUTPUT_MINT = "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo";
@@ -291,33 +292,7 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
 
   return (
     <div className="shop-page">
-      <div className="game-bg" aria-hidden>
-        <GameComponent
-          players={[]}
-          visibleFood={[]}
-          currentPlayer={{
-            name: "",
-            authority: null,
-            score: 0,
-            circles: [{ x: 5000, y: 5000, radius: 0, size: 0, speed: 0 }],
-            removal: new BN(0),
-            join: new BN(0),
-            x: 5000,
-            y: 5000,
-            target_x: 5000,
-            target_y: 5000,
-            timestamp: 0,
-          }}
-          screenSize={{
-            width: typeof window !== "undefined" ? window.innerWidth : 0,
-            height: typeof window !== "undefined" ? window.innerHeight : 0,
-          }}
-          newTarget={{ x: 0, y: 0 }}
-          gameSize={10000}
-          buyIn={0}
-          gameEnded={0}
-        />
-      </div>
+      <AnimatedBackground />
 
       <MenuBar tokenBalance={tokenBalance} />
 

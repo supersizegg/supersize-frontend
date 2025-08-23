@@ -2,7 +2,6 @@
   position: relative;
   width: 100vw;
   height: 100vh;
-  background: #191919;
   color: #fff;
   overflow: hidden;
 
@@ -26,9 +25,9 @@
   z-index: 1;
 
   .panel {
-    border: 4.5px solid #2a2a2a;
+    border: 2px solid #2a2a2a;
     border-radius: 50px;
-    background: #000;
+    background: #00000057;
     cursor: pointer;
     overflow: hidden;
     transition: transform 0.3s ease;

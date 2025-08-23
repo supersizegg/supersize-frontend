@@ -6,6 +6,7 @@ import GameComponent from "@components/Game/Game";
 import { MenuBar } from "@components/menu/MenuBar";
 import { useMagicBlockEngine } from "../engine/MagicBlockEngineProvider";
 import Footer from "../components/Footer/Footer";
+import AnimatedBackground from "../components/util/AnimatedBackground";
 
 type LandingProps = {
   preferredRegion: string;
@@ -18,30 +19,7 @@ const Landing = ({ preferredRegion, tokenBalance }: LandingProps) => {
 
   return (
     <div className="landing-page">
-      <div className="game-background">
-        <GameComponent
-          players={[]}
-          visibleFood={[]}
-          currentPlayer={{
-            name: "",
-            authority: null,
-            score: 0,
-            circles: [{ x: 5000, y: 5000, radius: 0, size: 0, speed: 0 }],
-            removal: new BN(0),
-            join: new BN(0),
-            x: 5000,
-            y: 5000,
-            target_x: 5000,
-            target_y: 5000,
-            timestamp: 0,
-          }}
-          screenSize={{ width: window.innerWidth, height: window.innerHeight }}
-          newTarget={{ x: 0, y: 0 }}
-          gameSize={10000}
-          buyIn={0}
-          gameEnded={0}
-        />
-      </div>
+      <AnimatedBackground />
       <MenuBar tokenBalance={tokenBalance} />
       <div className="panels-container">
         <div className="panel" onClick={() => navigate("/home")}>

@@ -10,6 +10,7 @@ import GameComponent from "@components/Game/Game";
 import { BN } from "@coral-xyz/anchor";
 import BackButton from "@components/util/BackButton";
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
+import AnimatedBackground from "../components/util/AnimatedBackground";
 
 interface Player {
   name: string;
@@ -112,7 +113,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ engine, randomFood, tokenBala
         participants
           .sort((a, b) => b.balance - a.balance)
           .map((player, i) => {
-            if(engine.getWalletConnected()) {
+            if (engine.getWalletConnected()) {
               if (player.parent_wallet === engine.getWalletPayer().toString()) {
                 setUserInfo({ position: i + 1, points: player.balance, address: player.wallet });
               }
@@ -213,41 +214,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ engine, randomFood, tokenBala
 
   return (
     <div className="main-container">
-      <div
-        className="game"
-        style={{
-          display: "block",
-          position: "absolute",
-          top: "0",
-          left: "0",
-          height: "100%",
-          width: "100%",
-          zIndex: "0",
-        }}
-      >
-        <GameComponent
-          players={[]}
-          visibleFood={[]}
-          currentPlayer={{
-            name: "",
-            authority: null,
-            score: 0,
-            circles: [{ x: 5000, y: 5000, radius: 0, size: 0, speed: 0 }],
-            removal: new BN(0),
-            join: new BN(0),
-            x: 5000,
-            y: 5000,
-            target_x: 5000,
-            target_y: 5000,
-            timestamp: 0,
-          }}
-          screenSize={{ width: window.innerWidth, height: window.innerHeight }}
-          newTarget={{ x: 0, y: 0 }}
-          gameSize={10000}
-          buyIn={0}
-          gameEnded={0}
-        />
-      </div>
+      <AnimatedBackground />
       <MenuBar tokenBalance={tokenBalance} />
 
       <div className="leaderboard-container" style={{ position: "relative", zIndex: 1 }}>
@@ -273,7 +240,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ engine, randomFood, tokenBala
             <p className="stat-label">Select Token</p>
             <LeaderboardDropdown season={season} setSeason={setSeason} />
           </div>*/}
-        </div>  
+        </div>
 
         {/* season.token === BONK_TOKEN && (
           <div className="event-tabs">
@@ -287,7 +254,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ engine, randomFood, tokenBala
               </button>
             ))}
           </div>
-        ) */} 
+        ) */}
 
         <div className="leaderboard-table">
           <table>

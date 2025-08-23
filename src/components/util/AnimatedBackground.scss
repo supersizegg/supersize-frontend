@@ -1,0 +1,38 @@
+.animated-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  background-color: #100e14;
+  overflow: hidden;
+}
+
+.bubble {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, rgba(79, 193, 36, 0.4) 0%, rgba(79, 193, 36, 0) 70%);
+  filter: blur(5px);
+  animation-name: moveBubble;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes moveBubble {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(20vw, -30vh) scale(0.8);
+  }
+  50% {
+    transform: translate(-40vw, -10vh) scale(1.2);
+  }
+  75% {
+    transform: translate(30vw, 40vh) scale(0.7);
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+}

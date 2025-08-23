@@ -37,6 +37,7 @@ import NotificationService from "@components/notification/NotificationService";
 import BalanceWarning from "@components/notification/BalanceWarning";
 import SignUpBanner from "../components/util/SignUpBanner";
 import Footer from "../components/Footer/Footer";
+import AnimatedBackground from "../components/util/AnimatedBackground";
 
 type homeProps = {
   selectedGame: ActiveGame | null;
@@ -504,30 +505,8 @@ const Home = ({
 
   return (
     <div className="home-page">
-      <div className="game-background">
-        <GameComponent
-          players={[]}
-          visibleFood={[]}
-          currentPlayer={{
-            name: "",
-            authority: null,
-            score: 0,
-            circles: [{ x: 5000, y: 5000, radius: 0, size: 0, speed: 0 }],
-            removal: new BN(0),
-            join: new BN(0),
-            x: 5000,
-            y: 5000,
-            target_x: 5000,
-            target_y: 5000,
-            timestamp: 0,
-          }}
-          screenSize={{ width: window.innerWidth, height: window.innerHeight }}
-          newTarget={{ x: 0, y: 0 }}
-          gameSize={10000}
-          buyIn={0}
-          gameEnded={0}
-        />
-      </div>
+      {/* <div className="static-background"></div> */}
+      <AnimatedBackground />
       <MenuBar tokenBalance={tokenBalance} />
 
       <div className="home-container">
