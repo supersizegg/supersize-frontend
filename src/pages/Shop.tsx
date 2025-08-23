@@ -304,23 +304,6 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
             <div className="ticker-section">
               <span className="price">{state.tokenPrice != null ? formatUSD(state.tokenPrice) : "–"}</span>
               <img src="/usdc.png" className="asset-icon" alt="USD" />
-              {state.token24hChange != null && (
-                <div
-                  className="change"
-                  data-direction={state.token24hChange >= 0 ? "up" : "down"}
-                  aria-label={`24 hour change ${state.token24hChange.toFixed(2)} percent`}
-                >
-                  <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden>
-                    {state.token24hChange >= 0 ? <path d="M6 2l4 8H2l4-8z" /> : <path d="M6 10L2 2h8L6 10z" />}
-                  </svg>
-                  <span>
-                    {state.token24hChange >= 0
-                      ? `+${state.token24hChange.toFixed(2)}`
-                      : state.token24hChange.toFixed(2)}
-                    %
-                  </span>
-                </div>
-              )}
             </div>
           </div>
 
