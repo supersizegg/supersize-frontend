@@ -1,9 +1,7 @@
 import React, { useEffect, useMemo, useReducer, useRef } from "react";
 import { MenuBar } from "@components/menu/MenuBar";
 import BackButton from "@components/util/BackButton";
-import GameComponent from "@components/Game/Game";
 import TradingViewWidget from "@components/util/TradingViewWidget";
-import { BN } from "@coral-xyz/anchor";
 import { VersionedTransaction } from "@solana/web3.js";
 import { useMagicBlockEngine } from "@engine/MagicBlockEngineProvider";
 import "./Shop.scss";
@@ -293,18 +291,17 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
   return (
     <div className="shop-page">
       <AnimatedBackground />
-
       <MenuBar tokenBalance={tokenBalance} />
 
-      <div className="shop-content">
-        <div className="left-col">
+      <main className="shop-container">
+        <div className="chart-column">
           <div className="ticker" role="group" aria-label={`${TOKEN_NAME} price and 24 hour change`}>
-            <div className="ticker-left">
-              <span className="ticker-amount">1</span>
+            <div className="ticker-section">
               <img src="/slime.png" className="asset-icon" alt={TOKEN_NAME} />
-              <img src="/transaction.png" className="arrow-icon" alt="to" />
+              <span className="ticker-amount">1 {TOKEN_NAME}</span>
             </div>
-            <div className="ticker-right">
+            <img src="/transaction.png" className="arrow-icon" alt="is worth" />
+            <div className="ticker-section">
               <span className="price">{state.tokenPrice != null ? formatUSD(state.tokenPrice) : "–"}</span>
               <img src="/usdc.png" className="asset-icon" alt="USD" />
               {state.token24hChange != null && (
@@ -332,8 +329,10 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
           </div>
         </div>
 
-        <div className="right-col">
-          <div className="slider-row">
+        <div className="trade-column">
+          <h1 className="trade-title">Buy {TOKEN_NAME}</h1>
+
+          <div className="input-group">
             <input
               id="usd"
               type="number"
@@ -360,7 +359,7 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
             aria-label="Dollars slider"
             value={state.usd}
             onChange={(e) => dispatch({ type: "SET_USD", usd: Number(e.target.value) })}
-            className="shop-range"
+            className="shop-slider"
           />
 
           <div className="estimate-box" aria-live="polite">
@@ -368,7 +367,7 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
               <span>You will buy</span>
               <strong>{state.estOut ?? "–"}</strong>
             </div>
-            <div className="estimate-line-muted">
+            <div className="estimate-line muted">
               <span>With</span>
               <strong>{formatUSD(state.usd)}</strong>
             </div>
@@ -380,12 +379,8 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
             disabled={!walletConnected || state.waiting}
             aria-busy={state.waiting}
           >
-            {state.waiting ? "Processing…" : `Buy ${formatUSD(state.usd)} worth of ${TOKEN_NAME}`}
+            {state.waiting ? "Processing…" : `Buy ${TOKEN_NAME}`}
           </button>
-
-          {/* <a href="/about?section=sell" className="sell-link">
-            How can I sell my {TOKEN_NAME}?
-          </a> */}
 
           {state.status && (
             <div className="notice" data-type={state.status.type} role="status" aria-live="polite">
@@ -393,7 +388,7 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
             </div>
           )}
         </div>
-      </div>
+      </main>
 
       <BackButton />
     </div>
