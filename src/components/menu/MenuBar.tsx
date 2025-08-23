@@ -65,6 +65,14 @@ export function MenuBar({ tokenBalance }: MenuBarProps) {
               {engine.getWalletConnected() ? formatBuyIn(Math.round(tokenBalance * 10) / 10) : "0"}
             </span>
           </div>
+          <div className="utility-column">
+            <NavLink to="/leaderboard" className="utility-btn">
+              <img src="/trophy.png" alt="Leaderboard" className="utility-image" />
+            </NavLink>
+            <NavLink to="/shop" className="utility-btn">
+              <img src="/shop.png" alt="Shop" className="utility-image" />
+            </NavLink>
+          </div>
           <NavLink to="/profile" className="user-panel-link">
             <div className="user-panel">
               <img
@@ -78,14 +86,6 @@ export function MenuBar({ tokenBalance }: MenuBarProps) {
             </div>
           </NavLink>
         </nav>
-        <div className="utility-column">
-          <NavLink to="/leaderboard" className="utility-btn">
-            <img src="/trophy.png" alt="Leaderboard" className="utility-image" />
-          </NavLink>
-          <NavLink to="/shop" className="utility-btn">
-            <img src="/shop.png" alt="Shop" className="utility-image" />
-          </NavLink>
-        </div>
       </div>
 
       <div className="menu-bar-right mobile-only">

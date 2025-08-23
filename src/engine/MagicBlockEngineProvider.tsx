@@ -42,7 +42,7 @@ function MagicBlockEngineProviderInner({ children }: { children: React.ReactNode
     [user],
   );
 
-  const [endpointEphemRpc, setEndpointEphemRpc] = React.useState<string>(endpoints[NETWORK][2]);
+  const [endpointEphemRpc, setEndpointEphemRpc] = React.useState<string>(endpoints[NETWORK][0]);
 
   const walletContext = React.useMemo(() => {
     if (wallets && wallets[0]) {

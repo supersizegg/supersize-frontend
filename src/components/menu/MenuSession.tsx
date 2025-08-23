@@ -339,12 +339,13 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
                   Import
                 </button>
               </div>
+              <p className="info-text-small">Session wallets are temporary and do not store funds.</p>
             </div>
-            <p className="info-text-small">Session wallets are temporary and do not store funds.</p>
+            
 
             {(resetGameWallet || status === "ready_to_delegate") && (
               <div className="session-prompt">
-                <p>Your session wallet needs to be reset.</p>
+                <p>Your session wallet needs to be reset. This will not affect your vault balance.</p>
                 <button
                   className="btn-primary"
                   onClick={async () => {
@@ -373,7 +374,6 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
                 >
                   Reset Session Wallet
                 </button>
-                <p className="info-text small">*This will not affect your vault balance.</p>
               </div>
             )}
           </>
