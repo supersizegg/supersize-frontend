@@ -84,6 +84,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ engine, randomFood, tokenBala
   const [leaderboardData, setLeaderboardData] = useState<BlobPlayer[]>([]);
   const [totalRows, setTotalRows] = useState(0);
   const [userInfo, setUserInfo] = useState<UserInfo>({ position: 0, points: 0, address: "" });
+  const [leaderboardType, setLeaderboardType] = useState<"casual" | "ranked">("casual");
 
   const limit = 25;
   const [currentPage, setCurrentPage] = useState(1);
@@ -213,77 +214,82 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ engine, randomFood, tokenBala
   };
 
   return (
-    <div className="main-container">
+    <div className="leaderboard-page">
       <AnimatedBackground />
       <MenuBar tokenBalance={tokenBalance} />
 
-      <div className="leaderboard-container" style={{ position: "relative", zIndex: 1 }}>
-        <div className="top-stats-row">
-          <div className="stat-box rank-box desktop-only">
-            <p className="stat-label">Your Rank</p>
-            <p className="stat-value">
-              {userInfo.position} / {totalRows}
-            </p>
-          </div>
-
-          <div className="stat-box winnings-box desktop-only">
-            <p className="stat-label">Your Winnings</p>
-            <p className="stat-value">
-              {userInfo.points.toLocaleString("en-US", {
-                minimumFractionDigits: 3,
-                maximumFractionDigits: 3,
-              })}
-            </p>
-          </div>
+      <main className="leaderboard-container">
+        <header className="leaderboard-header">
           {/*
-          <div className="dropdown-box">
-            <p className="stat-label">Select Token</p>
+          <h1 className="leaderboard-title">Leaderboard</h1>
+          <div className="token-selector">
             <LeaderboardDropdown season={season} setSeason={setSeason} />
-          </div>*/}
-        </div>
-
-        {/* season.token === BONK_TOKEN && (
-          <div className="event-tabs">
-            {availableEvents.map((evt) => (
-              <button
-                key={evt.id}
-                className={`event-tab ${selectedEvent === evt.id ? "active" : ""}`}
-                onClick={() => setSelectedEvent(evt.id)}
-              >
-                {evt.name}
-              </button>
-            ))}
           </div>
-        ) */}
+          */}
 
-        <div className="leaderboard-table">
-          <table>
+          <div className="leaderboard-tabs">
+            <button
+              className={`tab-button ${leaderboardType === "casual" ? "active" : ""}`}
+              onClick={() => setLeaderboardType("casual")}
+            >
+              Casual
+            </button>
+            <button
+              className={`tab-button ${leaderboardType === "ranked" ? "active" : ""}`}
+              onClick={() => setLeaderboardType("ranked")}
+            >
+              Ranked
+            </button>
+          </div>
+        </header>
+
+        {engine.getWalletConnected() && (
+          <div className="your-rank-banner">
+            <div className="rank-stat">
+              <span className="stat-label">Your Rank</span>
+              <span className="stat-value">
+                {userInfo.position} / {totalRows}
+              </span>
+            </div>
+            <div className="rank-stat">
+              <span className="stat-label">Your Winnings</span>
+              <span className="stat-value">
+                {userInfo.points.toLocaleString("en-US", {
+                  minimumFractionDigits: 3,
+                  maximumFractionDigits: 3,
+                })}
+              </span>
+            </div>
+          </div>
+        )}
+
+        <div className="leaderboard-table-container">
+          <table className="leaderboard-table">
             <thead>
               <tr>
                 <th>Rank</th>
                 <th>Player</th>
-                <th className="text-right">Total</th>
+                <th className="align-right">Total</th>
               </tr>
             </thead>
+            <tbody>
+              {leaderboardData.map((player, i) => (
+                <tr key={i} className={player.wallet === userInfo.address ? "is-player-highlight" : ""}>
+                  <td data-label="Rank">{(currentPage - 1) * limit + i + 1}</td>
+                  <td data-label="Player">{player.parent_wallet ? player.parent_wallet : player.wallet}</td>
+                  <td data-label="Total" className="align-right">
+                    {player.balance ? player.balance.toLocaleString() : "0"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
           </table>
-
-          <div className="table-scroll">
-            <table>
-              <tbody>
-                {leaderboardData.map((player, i) => (
-                  <tr key={i} className={player.wallet === userInfo.address ? "player-row-highlight" : ""}>
-                    <td>{(currentPage - 1) * limit + i + 1}</td>
-                    <td>{player.parent_wallet ? player.parent_wallet : player.wallet}</td>
-                    <td className="text-right">{player.balance ? player.balance.toLocaleString() : "0"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </div>
-        {totalRows > limit && <div className="pagination">{renderPagination()}</div>}
-        <BackButton />
-      </div>
+
+        {totalRows > limit && <div className="pagination-controls">{renderPagination()}</div>}
+      </main>
+
+      <BackButton />
     </div>
   );
 };
