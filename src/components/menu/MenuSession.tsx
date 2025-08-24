@@ -44,13 +44,12 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
 
         if (sessionWalletAddress && parentWalletAddress) {
           try {
-            await fetch("https://supersize.miso.one/api/v1/blob-player", {
+            await fetch("https://supersize.miso.one/api/v1/players", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({
-                wallet: sessionWalletAddress,
                 parent_wallet: parentWalletAddress,
               }),
             });
@@ -341,7 +340,6 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
               </div>
               <p className="info-text-small">Session wallets are temporary and do not store funds.</p>
             </div>
-            
 
             {(resetGameWallet || status === "ready_to_delegate") && (
               <div className="session-prompt">
