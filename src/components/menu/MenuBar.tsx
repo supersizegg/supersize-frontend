@@ -1,9 +1,17 @@
-import * as React from "react";
+import React, { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
+import axios from "axios";
 import "./MenuBar.scss";
 import { useMagicBlockEngine } from "../../engine/MagicBlockEngineProvider";
-import { useEffect } from "react";
 import { formatBuyIn } from "../../utils/helper";
+import { API_URL } from "@utils/constants";
+
+interface PlayerStats {
+  balances: {
+    f2p_earnings: number;
+    p2p_vault_balance: number;
+  };
+}
 
 type MenuBarProps = {
   tokenBalance: number;
@@ -14,11 +22,53 @@ export function MenuBar({ tokenBalance }: MenuBarProps) {
   const stored = localStorage.getItem("user");
   const initialUser = stored ? JSON.parse(stored) : null;
 
-  const [username, setUsername] = React.useState<string>(initialUser?.name || "");
-  const [avatar, setAvatar] = React.useState<string>(initialUser?.icon || "/slimey2.png");
+  const [username, setUsername] = useState<string>(initialUser?.name || "");
+  const [avatar, setAvatar] = useState<string>(initialUser?.icon || "/slimey2.png");
+  const [displayBalance, setDisplayBalance] = useState<number>(0);
 
   useEffect(() => {
-    if (!engine.getWalletConnected()) return;
+    const walletConnected = engine.getWalletConnected();
+    const sessionWallet = engine.getSessionPayer()?.toString();
+    const parentWallet = walletConnected ? engine.getWalletPayer().toString() : null;
+
+    const walletToQuery = parentWallet || sessionWallet;
+
+    if (!walletToQuery) {
+      setDisplayBalance(0);
+      return;
+    }
+
+    const fetchPlayerBalance = async () => {
+      try {
+        const response = await axios.get<PlayerStats>(`${API_URL}/api/v1/players/stats?wallet=${walletToQuery}`);
+        const stats = response.data;
+
+        let newBalance = 0;
+        if (parentWallet) {
+          newBalance = Number(stats.balances.p2p_vault_balance) + Number(stats.balances.f2p_earnings);
+        } else {
+          newBalance = Number(stats.balances.f2p_earnings);
+        }
+        setDisplayBalance(newBalance);
+      } catch (error) {
+        console.error("Failed to fetch player balance:", error);
+        setDisplayBalance(0);
+      }
+    };
+
+    fetchPlayerBalance();
+
+    // const intervalId = setInterval(fetchPlayerBalance, 30000);
+
+    // return () => clearInterval(intervalId);
+  }, [engine, engine.getWalletConnected()]);
+
+  useEffect(() => {
+    if (!engine.getWalletConnected()) {
+      setUsername("");
+      setAvatar("/slimey2.png");
+      return;
+    }
 
     const storedData = localStorage.getItem("user");
     let name = engine.getWalletPayer().toString().slice(0, 7);
@@ -43,7 +93,7 @@ export function MenuBar({ tokenBalance }: MenuBarProps) {
 
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, [engine]);
+  }, [engine, engine.getWalletConnected()]);
 
   return (
     <header className="menu-bar">
@@ -61,9 +111,7 @@ export function MenuBar({ tokenBalance }: MenuBarProps) {
             <div className="coin-icon">
               <img src="/slime.png" alt="Game Token" />
             </div>
-            <span className="coin-balance">
-              {engine.getWalletConnected() ? formatBuyIn(Math.round(tokenBalance * 10) / 10) : "0"}
-            </span>
+            <span className="coin-balance">{formatBuyIn(displayBalance)}</span>
           </div>
           <div className="utility-column">
             <NavLink to="/leaderboard" className="utility-btn">

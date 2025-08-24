@@ -224,6 +224,59 @@
   }
 }
 
+.unclaimed-balance-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: linear-gradient(90deg, rgba(79, 193, 36, 0.2), rgba(43, 140, 0, 0.2));
+  border: 1px solid #4fc124;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+
+  .banner-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+
+    span {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #aaa;
+    }
+
+    strong {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #fff;
+    }
+  }
+}
+
+.btn-claim {
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: bold;
+  font-size: 0.9rem;
+  cursor: pointer;
+  background: #4fc124;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    background: #5fdc3a;
+    transform: scale(1.05);
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+}
+
 @media (max-width: 768px) {
   .desktop-only {
     display: none;

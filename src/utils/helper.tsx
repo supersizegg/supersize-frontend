@@ -105,7 +105,7 @@ export const stringToUint8Array = (str: string): Uint8Array => {
 
 export const formatBuyIn = (amount: number): string => {
   if (amount < 1000) {
-    return amount.toString();
+    return amount.toFixed(2);
   } else if (amount < 1000000) {
     return (amount / 1000).toFixed(2) + "K";
   } else if (amount < 1000000000) {

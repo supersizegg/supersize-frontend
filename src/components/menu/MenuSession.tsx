@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
+import axios from "axios";
 import { PublicKey } from "@solana/web3.js";
 import { useMagicBlockEngine } from "../../engine/MagicBlockEngineProvider";
 import { SupersizeVaultClient } from "../../engine/SupersizeVaultClient";
-import { cachedTokenMetadata, NETWORK } from "../../utils/constants";
+import { cachedTokenMetadata, NETWORK, API_URL } from "../../utils/constants";
 import TokenTransferModal from "../TokenTransferModal/TokenTransferModal";
 import "./MenuSession.scss";
 import NotificationService from "@components/notification/NotificationService";
@@ -17,6 +18,13 @@ export interface TokenBalance {
   uiAmount: number;
 }
 
+interface PlayerStats {
+  balances: {
+    f2p_earnings: number;
+    p2p_vault_balance: number;
+  };
+}
+
 type MenuSessionProps = {
   setTokenBalance: (tokenBalance: number) => void;
 };
@@ -29,6 +37,7 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
   const [resetGameWallet, setResetGameWallet] = useState(false);
   const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
   const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [unclaimedBalance, setUnclaimedBalance] = useState<number>(0);
   const [dialog, setDialog] = useState<null | {
     type: "deposit" | "withdraw";
     token: TokenBalance & { symbol: string; decimals: number };
@@ -89,6 +98,9 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
   }, [vaultClient]);
 
   const checkStatus = useCallback(async () => {
+    // fetch session wallet balance
+    await fetchUnclaimedBalance();
+
     if (!vaultClient) return;
 
     setStatus("loading");
@@ -168,6 +180,17 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
     }
   };
 
+  const fetchUnclaimedBalance = useCallback(async () => {
+    const sessionWallet = engine.getSessionPayer()?.toString();
+    if (!sessionWallet) return;
+    try {
+      const response = await axios.get<PlayerStats>(`${API_URL}/api/v1/players/stats?wallet=${sessionWallet}`);
+      setUnclaimedBalance(Number(response.data.balances.f2p_earnings));
+    } catch (error) {
+      console.error("Failed to fetch unclaimed balance:", error);
+    }
+  }, [engine]);
+
   const fetchUserWalletUiAmount = useCallback(
     async (mint: string) => {
       if (!engine) return 0;
@@ -184,11 +207,17 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
 
   return (
     <div className="menu-session">
-      {engine.getWalletConnected() &&
-        (status === "ready_to_delegate" || status === "delegated") &&
-        walletBalance > 0 && (
-          <div className="wallet-balance-banner">{walletBalance.toFixed(2)} USDC available to deposit</div>
-        )}
+      {unclaimedBalance > 0 && (
+        <div className="unclaimed-balance-banner">
+          <div className="banner-text">
+            <span>Unclaimed F2P earnings</span>
+            <strong>{formatBuyIn(unclaimedBalance)}</strong>
+          </div>
+          <button className="btn-claim" disabled>
+            Claim
+          </button>
+        </div>
+      )}
 
       <div className="session-content">
         {!engine.getWalletConnected() && (
