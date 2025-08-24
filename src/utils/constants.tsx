@@ -77,6 +77,23 @@ export const endpoints = {
   ],
 };
 
+export const VALIDATOR_MAP = {
+  mainnet: {
+    MEUGGrYPxKk17hCr7wpT6s8dtNokZj5U2L57vjYMS8e: "https://supersize-mainnet.magicblock.app",
+    MUS3hc9TCw4cGC12vHNoYcCGzJG1txjgQLZWVoeNHNd: "https://supersize-mainnet-bos.magicblock.app",
+    MAS1Dt9qreoRMQ14YQuhg8UTZMMzDdKhmkZMECCzk57: "https://supersize-mainnet-sin.magicblock.app",
+    // old node
+    supEJ87jL3Psb5dK41ZLWtp7xRkurfWrRYJxv6C4o61: "https://supersize-mainnet-bos.magicblock.app",
+  },
+  devnet: {
+    MEUGGrYPxKk17hCr7wpT6s8dtNokZj5U2L57vjYMS8e: "https://supersize-fra.magicblock.app",
+    MUS3hc9TCw4cGC12vHNoYcCGzJG1txjgQLZWVoeNHNd: "https://supersize.magicblock.app",
+    MAS1Dt9qreoRMQ14YQuhg8UTZMMzDdKhmkZMECCzk57: "https://supersize-sin.magicblock.app",
+    // old node
+    supEJ87jL3Psb5dK41ZLWtp7xRkurfWrRYJxv6C4o61: "https://supersize.magicblock.app",
+  },
+};
+
 export const activeGamesList: {
   [key: string]: { worldId: anchor.BN; worldPda: PublicKey; endpoint: string; permissionless?: boolean }[];
 } = {
@@ -270,13 +287,13 @@ export const cachedTokenMetadata: Record<
     decimals: 9,
     image: `${process.env.PUBLIC_URL}/fallback-token.webp`,
     network: "devnet",
-  }, /*
+  } /*
   DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263: {
     name: "Bonk",
     symbol: "BONK",
     image: "https://d23exngyjlavgo.cloudfront.net/solana_DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
     network: "mainnet",
-  }, */
+  }, */,
 };
 
 export const API_BASE_URL = "http://localhost:3000/api";

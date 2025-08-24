@@ -1,13 +1,37 @@
 import { BN, Idl, Program } from "@coral-xyz/anchor";
-import { Connection, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction, TransactionInstruction } from "@solana/web3.js";
+import axios from "axios";
+import {
+  Connection,
+  LAMPORTS_PER_SOL,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+  TransactionInstruction,
+} from "@solana/web3.js";
 import { getAssociatedTokenAddressSync, getMint } from "@solana/spl-token";
 
 import supersizeVaultIdl from "../backend/target/idl/supersize_vault.json";
 import { SupersizeVault } from "../backend/target/types/supersize_vault";
-import { endpoints, NETWORK } from "../utils/constants";
+import { VALIDATOR_MAP, NETWORK } from "../utils/constants";
 import { getRegion } from "../utils/helper";
 
 const DELEGATION_PROGRAM_ID = new PublicKey("DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh");
+
+interface DelegationStatusResult {
+  isDelegated: boolean;
+  delegationRecord?: {
+    authority: string;
+    owner: string;
+    delegationSlot: number;
+    lamports: number;
+  };
+}
+
+interface RouterResponse {
+  jsonrpc: "2.0";
+  id: number;
+  result: DelegationStatusResult;
+}
 
 export class SupersizeVaultClient {
   private readonly engine: any;
@@ -16,6 +40,7 @@ export class SupersizeVaultClient {
   private readonly wallet: PublicKey | null;
   private readonly mainChainConnection: Connection;
   private readonly ephemConnection: Connection;
+  private readonly routerUrl: string;
 
   constructor(engine: any) {
     this.engine = engine;
@@ -24,6 +49,7 @@ export class SupersizeVaultClient {
     this.wallet = engine.getWalletPayer();
     this.mainChainConnection = engine.getConnectionChain();
     this.ephemConnection = engine.getConnectionEphem();
+    this.routerUrl = NETWORK === "devnet" ? "https://devnet-router.magicblock.app" : "https://router.magicblock.app";
   }
 
   gameWalletPda(user = this.wallet) {
@@ -68,10 +94,12 @@ export class SupersizeVaultClient {
     if (!this.wallet) throw new Error("Wallet not connected to initialize vault.");
 
     const initializeTx = new Transaction();
-    initializeTx.add(await this.program.methods.initialize().accounts({ mintOfToken: mint, signer: this.wallet }).instruction());
+    initializeTx.add(
+      await this.program.methods.initialize().accounts({ mintOfToken: mint, signer: this.wallet }).instruction(),
+    );
     await this.engine.processWalletTransaction("InitializeVault", initializeTx);
   }
-  
+
   async setupUserAccounts(mint: PublicKey) {
     if (!this.wallet) throw new Error("Wallet not connected to set up accounts.");
 
@@ -101,7 +129,12 @@ export class SupersizeVaultClient {
       setupTx.add(
         await this.program.methods.newUserBalance().accounts({ user: this.wallet, mintOfToken: mint }).instruction(),
       );
-      setupTx.add(await this.program.methods.delegateUser(validator).accounts({ payer: this.wallet, mintOfToken: mint }).instruction());
+      setupTx.add(
+        await this.program.methods
+          .delegateUser(validator)
+          .accounts({ payer: this.wallet, mintOfToken: mint })
+          .instruction(),
+      );
     }
 
     if (setupTx.instructions.length > 0) {
@@ -160,8 +193,8 @@ export class SupersizeVaultClient {
   async ensureDelegatedForJoin(mint: PublicKey): Promise<void> {
     if (!this.wallet) throw new Error("Wallet not connected.");
 
-    //await this.setupUserAccounts(mint); 
-    // there should be a notification so the user knows whats happening 
+    //await this.setupUserAccounts(mint);
+    // there should be a notification so the user knows whats happening
 
     const [walletDelegated, userDelegated] = await Promise.all([this.isWalletDelegated(), this.isDelegated(mint)]);
     if (!walletDelegated || !userDelegated) {
@@ -172,12 +205,16 @@ export class SupersizeVaultClient {
 
       if (!walletDelegated) {
         tx.add(await this.program.methods.delegateWallet(validator).accounts({ payer: this.wallet }).instruction());
-
       }
       if (!userDelegated) {
-        tx.add(await this.program.methods.delegateUser(validator).accounts({ payer: this.wallet, mintOfToken: mint }).instruction())
+        tx.add(
+          await this.program.methods
+            .delegateUser(validator)
+            .accounts({ payer: this.wallet, mintOfToken: mint })
+            .instruction(),
+        );
       }
-    
+
       if (tx.instructions.length > 0) {
         await this.engine.processWalletTransaction("DelegateAccounts", tx);
       }
@@ -193,7 +230,7 @@ export class SupersizeVaultClient {
     const tokens = new BN(Math.round(uiAmount * 10 ** decimals));
     const userAta = getAssociatedTokenAddressSync(mint, this.wallet);
     console.log(uiAmount, tokens, decimals);
-    let transferIx : TransactionInstruction | null = null;
+    let transferIx: TransactionInstruction | null = null;
     if (deposit) {
       transferIx = await this.program.methods
         .depositToGame(tokens)
@@ -206,14 +243,14 @@ export class SupersizeVaultClient {
         .instruction();
     } else {
       transferIx = await this.program.methods
-      .withdrawFromGame(tokens)
-      .accounts({
-        mintOfToken: mint,
-        senderTokenAccount: userAta,
-        map: mapComponentPda,
-        payer: this.wallet,
-      })
-      .instruction();
+        .withdrawFromGame(tokens)
+        .accounts({
+          mintOfToken: mint,
+          senderTokenAccount: userAta,
+          map: mapComponentPda,
+          payer: this.wallet,
+        })
+        .instruction();
     }
 
     if (!transferIx) {
@@ -321,7 +358,7 @@ export class SupersizeVaultClient {
       SystemProgram.transfer({
         fromPubkey: this.engine.getSessionPayer(),
         toPubkey: checkBalancePda,
-        lamports: 0, 
+        lamports: 0,
       }),
     );
     try {
@@ -353,7 +390,7 @@ export class SupersizeVaultClient {
 
     let userAta = getAssociatedTokenAddressSync(mint, this.wallet);
     if (payoutWallet) {
-       userAta = getAssociatedTokenAddressSync(mint, payoutWallet);
+      userAta = getAssociatedTokenAddressSync(mint, payoutWallet);
     }
 
     const currentlyDelegated = await this.isDelegated(mint);
@@ -397,7 +434,7 @@ export class SupersizeVaultClient {
       SystemProgram.transfer({
         fromPubkey: this.engine.getSessionPayer(),
         toPubkey: checkBalancePda,
-        lamports: 0, 
+        lamports: 0,
       }),
     );
     try {
@@ -491,22 +528,19 @@ export class SupersizeVaultClient {
     if (!this.wallet) return 0;
 
     const balPda = this.userBalancePda(this.wallet, mint);
-    console.log("Fetching balance for PDA:", balPda.toBase58());
-    console.log("ephem endpoint", this.engine.getEndpointEphemRpc());
     const currentProgramEphem = this.engine.getProgramOnSpecificEphem(
       supersizeVaultIdl as Idl,
       this.engine.getEndpointEphemRpc(),
     );
-    const acc = await this.program.account.balance.fetchNullable(balPda);
-    if (!acc) return 0;
+
     const balanceAcc = await currentProgramEphem.account.balance.fetchNullable(balPda);
-    console.log("balanceAcc", balanceAcc);
-    if (!balanceAcc) return "wrong_server";
+    if (!balanceAcc) {
+      return "wrong_server";
+    }
+
     const conn = this.program.provider.connection;
     const { decimals } = await getMint(conn, mint);
-    let finalnum = Number(balanceAcc.balance) / 10 ** decimals;
-    console.log("finalnum", mint.toString(), finalnum);
-    return finalnum; //Number(acc.balance) / 10 ** decimals;
+    return Number(balanceAcc.balance) / 10 ** decimals;
   }
 
   async getGameWallet(): Promise<PublicKey | undefined> {
@@ -515,31 +549,47 @@ export class SupersizeVaultClient {
     return walletAcc?.wallet;
   }
 
-  async getGameWalletEphem(endpoint: any): Promise<PublicKey | undefined> {
-    const walletPda = this.gameWalletPda();
-    const programSpecificEphem = this.engine.getProgramOnSpecificEphem(supersizeVaultIdl as Idl, endpoint);
-    const walletAcc = await programSpecificEphem.account.gameWallet.fetchNullable(walletPda);
-    return walletAcc?.wallet;
-  }
-
   async findMyEphemEndpoint(
     setEndpointEphemRpc: (endpoint: string) => void,
     setPreferredRegion: (region: string) => void,
-  ) {
-    await Promise.all(
-      endpoints[NETWORK].map(async (endpoint) => {
-        try {
-          const gwPdaCheck = await this.getGameWalletEphem(endpoint);
-          if (gwPdaCheck) {
-            console.log("gwPdaCheck", gwPdaCheck.toString(), endpoint, getRegion(endpoint));
-            setPreferredRegion(getRegion(endpoint));
-            setEndpointEphemRpc(endpoint);
-          }
-        } catch (error) {
-          console.error("Error in findMyEphemEndpoint:", error);
+  ): Promise<void> {
+    if (!this.wallet) {
+      console.log("Wallet not connected, cannot find ephemeral endpoint");
+      return;
+    }
+
+    const gwPda = this.gameWalletPda();
+    console.log(`Querying router for delegation status of: ${gwPda.toBase58()}`);
+
+    try {
+      const response = await axios.post<RouterResponse>(this.routerUrl, {
+        jsonrpc: "2.0",
+        id: 1,
+        method: "getDelegationStatus",
+        params: [gwPda.toBase58()],
+      });
+
+      const { result } = response.data;
+
+      if (result.isDelegated && result.delegationRecord) {
+        const validatorAuthority = result.delegationRecord.authority;
+        // @ts-ignore
+        const correctEndpoint = VALIDATOR_MAP[NETWORK][validatorAuthority];
+
+        if (correctEndpoint) {
+          console.log(`Found delegation to validator ${validatorAuthority}. Correct endpoint is ${correctEndpoint}`);
+          const region = getRegion(correctEndpoint);
+          setPreferredRegion(region);
+          setEndpointEphemRpc(correctEndpoint);
+        } else {
+          console.warn(`Account is delegated to an unknown validator: ${validatorAuthority}`);
         }
-      }),
-    );
+      } else {
+        console.log("Account is not delegated to any rollup");
+      }
+    } catch (error) {
+      console.error("Failed to query Magic Block Router for delegation status:", error);
+    }
   }
 
   async newGameWallet() {
