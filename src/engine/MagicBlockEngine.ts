@@ -1,8 +1,7 @@
-import { Idl, Program, AnchorProvider } from "@coral-xyz/anchor";
+import { Idl, Program, AnchorProvider, Wallet } from "@coral-xyz/anchor";
 import { WalletContextState } from "@solana/wallet-adapter-react";
 import { AccountInfo, Commitment, Connection, Keypair, PublicKey, Transaction } from "@solana/web3.js";
 import { WalletName } from "@solana/wallet-adapter-base";
-import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
 import * as anchor from "@coral-xyz/anchor";
 import { NETWORK, RPC_CONNECTION } from "@utils/constants";
 import { log, warn } from "../utils/logger";
@@ -12,6 +11,22 @@ import {
   getAssociatedTokenAddressSync,
   getMint,
 } from "@solana/spl-token";
+
+function keypairWallet(keypair: Keypair): Wallet {
+  return {
+    publicKey: keypair.publicKey,
+    signTransaction: async (tx: Transaction) => {
+      tx.partialSign(keypair);
+      return tx;
+    },
+    signAllTransactions: async (txs: Transaction[]) => {
+      return txs.map((tx) => {
+        tx.partialSign(keypair);
+        return tx;
+      });
+    },
+  } as Wallet;
+}
 
 const ENDPOINT_CHAIN_RPC = RPC_CONNECTION[NETWORK];
 const ENDPOINT_CHAIN_WS = ENDPOINT_CHAIN_RPC.replace("http", "ws");
@@ -60,15 +75,23 @@ export class MagicBlockEngine {
     this.connectionEphem = new Connection(this.endpointEphemRpc, {
       wsEndpoint: this.endpointEphemRpc.replace("http", "ws"),
     });
-    this.provider = new AnchorProvider(connectionChain, new NodeWallet(this.sessionKey), {
-      preflightCommitment: "processed",
-    });
+    this.provider = new AnchorProvider(
+      connectionChain,
+      this.walletContext as unknown as Wallet,
+      {
+        preflightCommitment: "processed",
+      },
+    );
 
     anchor.setProvider(this.provider);
 
-    this.providerEphemeralRollup = new AnchorProvider(this.connectionEphem, new NodeWallet(this.sessionKey), {
-      preflightCommitment: "processed",
-    });
+    this.providerEphemeralRollup = new AnchorProvider(
+      this.connectionEphem,
+      keypairWallet(this.sessionKey),
+      {
+        preflightCommitment: "processed",
+      },
+    );
   }
 
   public setChain(network: string): void {
@@ -79,9 +102,13 @@ export class MagicBlockEngine {
     const newConnectionChain = new Connection(NEW_ENDPOINT_CHAIN_RPC, {
       wsEndpoint: NEW_ENDPOINT_CHAIN_RPC.replace("http", "ws"),
     });
-    this.provider = new AnchorProvider(newConnectionChain, new NodeWallet(this.sessionKey), {
-      preflightCommitment: "processed",
-    });
+    this.provider = new AnchorProvider(
+      newConnectionChain,
+      this.walletContext as unknown as Wallet,
+      {
+        preflightCommitment: "processed",
+      },
+    );
   }
 
   public setTempEndpointEphemRpc(endpoint: string): void {
@@ -90,9 +117,13 @@ export class MagicBlockEngine {
     this.connectionEphem = new Connection(endpoint, {
       wsEndpoint: endpoint.replace("http", "ws"),
     });
-    this.providerEphemeralRollup = new AnchorProvider(this.connectionEphem, new NodeWallet(this.sessionKey), {
-      preflightCommitment: "processed",
-    });
+    this.providerEphemeralRollup = new AnchorProvider(
+      this.connectionEphem,
+      keypairWallet(this.sessionKey),
+      {
+        preflightCommitment: "processed",
+      },
+    );
   }
 
   public getEndpointEphemRpc(): string {
@@ -110,9 +141,13 @@ export class MagicBlockEngine {
     const thisConnection = new Connection(NEW_ENDPOINT_CHAIN_RPC, {
       wsEndpoint: NEW_ENDPOINT_CHAIN_RPC.replace("http", "ws"),
     });
-    const thisProvider = new AnchorProvider(thisConnection, new NodeWallet(this.sessionKey), {
-      preflightCommitment: "processed",
-    });
+    const thisProvider = new AnchorProvider(
+      thisConnection,
+      keypairWallet(this.sessionKey),
+      {
+        preflightCommitment: "processed",
+      },
+    );
     return new Program<T>(idl as T, thisProvider);
   }
   getProgramOnEphem<T extends Idl>(idl: object): Program<T> {
@@ -127,9 +162,13 @@ export class MagicBlockEngine {
     } catch (error) {
       console.error("Error getting program on specific ephem", error);
     }
-    const thisProvider = new AnchorProvider(thisConnection, new NodeWallet(this.sessionKey), {
-      preflightCommitment: "processed",
-    });
+    const thisProvider = new AnchorProvider(
+      thisConnection,
+      keypairWallet(this.sessionKey),
+      {
+        preflightCommitment: "processed",
+      },
+    );
     return new Program<T>(idl as T, thisProvider);
   }
 
