@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { MenuBar } from "@components/menu/MenuBar";
-import { API_URL } from "@utils/constants";
+import { API_URL, NETWORK, cachedTokenMetadata } from "@utils/constants";
 import "./Leaderboard.scss";
 import BackButton from "@components/util/BackButton";
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
 import AnimatedBackground from "../components/util/AnimatedBackground";
 
-const TOKEN_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+const TOKEN_MINT = Object.keys(cachedTokenMetadata).filter((mint) => cachedTokenMetadata[mint].network === NETWORK)[0];
 
 interface LeaderboardPlayer {
   wallet: string;

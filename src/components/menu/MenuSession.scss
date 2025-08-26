@@ -139,6 +139,37 @@
   gap: 0.75rem;
 }
 
+.debug-toggle {
+  font-size: 0.8rem;
+  color: #aaa;
+  text-decoration: underline;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: #fff;
+  }
+}
+
+.debug-info {
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: monospace;
+    font-size: 0.8rem;
+    color: #ccc;
+    margin: 0;
+    line-height: 1.5;
+  }
+}
+
 .session-wallet-header {
   display: flex;
   align-items: center;

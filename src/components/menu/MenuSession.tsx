@@ -3,12 +3,12 @@ import axios from "axios";
 import { PublicKey } from "@solana/web3.js";
 import { useMagicBlockEngine } from "../../engine/MagicBlockEngineProvider";
 import { SupersizeVaultClient } from "../../engine/SupersizeVaultClient";
-import { cachedTokenMetadata, NETWORK, API_URL } from "../../utils/constants";
+import { cachedTokenMetadata, NETWORK, API_URL, VALIDATOR_MAP } from "../../utils/constants";
 import TokenTransferModal from "../TokenTransferModal/TokenTransferModal";
 import "./MenuSession.scss";
 import NotificationService from "@components/notification/NotificationService";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
-import { formatBuyIn, fetchWalletTokenBalance, getValidatorKeyForEndpoint } from "../../utils/helper";
+import { formatBuyIn, fetchWalletTokenBalance, getValidatorKeyForEndpoint, getRegion } from "../../utils/helper";
 import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 const SESSION_LOCAL_STORAGE = "magicblock-session-key";
 
@@ -30,6 +30,22 @@ type MenuSessionProps = {
   setTokenBalance: (tokenBalance: number) => void;
 };
 
+interface DelegationStatusResult {
+  isDelegated: boolean;
+  delegationRecord?: {
+    authority: string;
+    owner: string;
+    delegationSlot: number;
+    lamports: number;
+  };
+}
+
+interface RouterResponse {
+  jsonrpc: "2.0";
+  id: number;
+  result: DelegationStatusResult;
+}
+
 export function MenuSession({ setTokenBalance }: MenuSessionProps) {
   const { engine } = useMagicBlockEngine();
 
@@ -43,6 +59,8 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
     type: "deposit" | "withdraw";
     token: TokenBalance & { symbol: string; decimals: number };
   }>(null);
+  const [debugInfo, setDebugInfo] = useState<string>("");
+  const [showDebugInfo, setShowDebugInfo] = useState<boolean>(false);
 
   useEffect(() => {
     if (engine && engine.getWalletConnected()) {
@@ -96,7 +114,102 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
     }
 
     setTokenBalances(balances);
-  }, [vaultClient]);
+  }, [vaultClient, setTokenBalance]);
+
+  const getDelegationInfo = useCallback(
+    async (pda: PublicKey): Promise<string> => {
+      if (!engine || !vaultClient) return "Client not initialized.";
+      const routerUrl =
+        NETWORK === "mainnet" ? "https://router.magicblock.app" : "https://devnet-router.magicblock.app";
+      try {
+        const response = await axios.post<RouterResponse>(routerUrl, {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "getDelegationStatus",
+          params: [pda.toBase58()],
+        });
+
+        const { result } = response.data;
+
+        if (result.isDelegated && result.delegationRecord) {
+          const validatorAuthority = result.delegationRecord.authority;
+          // @ts-ignore
+          const correctEndpoint = VALIDATOR_MAP[NETWORK][validatorAuthority];
+          if (correctEndpoint) {
+            return `Delegated to ${getRegion(correctEndpoint)} server`;
+          } else {
+            return `Delegated to unknown validator: ${validatorAuthority}`;
+          }
+        } else {
+          const accountInfo = await engine.getConnectionChain().getAccountInfo(pda);
+          if (!accountInfo) {
+            return "❌ Does not exist.";
+          }
+          // @ts-ignore
+          if (accountInfo.owner.equals(vaultClient.program.programId)) {
+            return "On mainnet (not delegated).";
+          }
+          return "Exists, but not delegated.";
+        }
+      } catch (error) {
+        const accountInfo = await engine.getConnectionChain().getAccountInfo(pda);
+        if (!accountInfo) {
+          return "❌ Does not exist (router query failed).";
+        }
+        return "On mainnet (router query failed).";
+      }
+    },
+    [engine, vaultClient],
+  );
+
+  const fetchDebugInfo = useCallback(async () => {
+    if (!vaultClient || !engine || !engine.getWalletConnected()) return;
+
+    let debugString = "";
+
+    const supportedMints = Object.keys(cachedTokenMetadata).filter(
+      (mint) => cachedTokenMetadata[mint].network === NETWORK,
+    );
+    if (supportedMints.length > 0) {
+      const mint = new PublicKey(supportedMints[0]);
+      const balancePda = vaultClient.userBalancePda(engine.getWalletPayer(), mint);
+      debugString += `Balance PDA (${mint.toBase58().slice(0, 4)}...):\n`;
+      debugString += `  - Status: ${await getDelegationInfo(balancePda)}\n`;
+      debugString += `  - PDA: ${balancePda}\n`;
+    } else {
+      debugString += `Balance PDA:\n  - Status: No supported mints found for this network.\n`;
+    }
+
+    const walletPda = vaultClient.gameWalletPda();
+    debugString += `\nWallet PDA:\n`;
+    debugString += `  - Status: ${await getDelegationInfo(walletPda)}\n`;
+    debugString += `  - PDA: ${walletPda}\n`;
+
+    const sessionPayer = engine.getSessionPayer().toString();
+    const storedKey = (await vaultClient.getGameWallet())?.toString();
+    debugString += `\nSession Payer Sync:\n`;
+    debugString += `  - Session Key: ${sessionPayer.slice(0, 10)}...\n`;
+    debugString += `  - Stored Key:  ${storedKey ? storedKey.slice(0, 10) + "..." : "Not Found"}\n`;
+    debugString += `  - Match: ${sessionPayer === storedKey ? "✅ Synchronized" : "❌ Mismatch"}\n`;
+
+    debugString += `\nSystem Status:\n`;
+    debugString += `  - Network: ${NETWORK}\n`;
+    debugString += `  - Main Wallet: ${engine.getWalletPayer().toString().slice(0, 10)}...\n`;
+    debugString += `  - Ephemeral RPC: ${engine.getEndpointEphemRpc()}\n`;
+
+    setDebugInfo(debugString);
+  }, [vaultClient, engine, getDelegationInfo]);
+
+  const fetchUnclaimedBalance = useCallback(async () => {
+    const sessionWallet = engine.getSessionPayer()?.toString();
+    if (!sessionWallet) return;
+    try {
+      const response = await axios.get<PlayerStats>(`${API_URL}/api/v1/players/stats?wallet=${sessionWallet}`);
+      setUnclaimedBalance(Number(response.data.balances.f2p_earnings));
+    } catch (error) {
+      console.error("Failed to fetch unclaimed balance:", error);
+    }
+  }, [engine]);
 
   const checkStatus = useCallback(async () => {
     // fetch session wallet balance
@@ -136,11 +249,17 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
     if (!engine.getWalletConnected()) return;
     const { balance, tokenName } = await fetchWalletTokenBalance(engine, NETWORK !== "mainnet");
     setWalletBalance(balance);
-  }, [vaultClient, engine, refreshVaultBalances]);
+  }, [vaultClient, engine, refreshVaultBalances, fetchUnclaimedBalance]);
 
   useEffect(() => {
     checkStatus();
   }, [checkStatus]);
+
+  useEffect(() => {
+    if (status === "ready_to_delegate" || status === "delegated") {
+      fetchDebugInfo();
+    }
+  }, [status, fetchDebugInfo]);
 
   const handleEnableWallet = async () => {
     if (!vaultClient) return;
@@ -151,7 +270,7 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
         cMint = new PublicKey(Object.keys(cachedTokenMetadata)[1]);
       }
       //const validatorKey = getValidatorKeyForEndpoint("america");
-      await vaultClient.setupUserAccounts(cMint); //new PublicKey(validatorKey) 
+      await vaultClient.setupUserAccounts(cMint); //new PublicKey(validatorKey)
       await checkStatus();
     } catch (error) {
       console.error("Failed to enable wallet:", error);
@@ -181,17 +300,6 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
       setDialog(null);
     }
   };
-
-  const fetchUnclaimedBalance = useCallback(async () => {
-    const sessionWallet = engine.getSessionPayer()?.toString();
-    if (!sessionWallet) return;
-    try {
-      const response = await axios.get<PlayerStats>(`${API_URL}/api/v1/players/stats?wallet=${sessionWallet}`);
-      setUnclaimedBalance(Number(response.data.balances.f2p_earnings));
-    } catch (error) {
-      console.error("Failed to fetch unclaimed balance:", error);
-    }
-  }, [engine]);
 
   const fetchUserWalletUiAmount = useCallback(
     async (mint: string) => {
@@ -303,6 +411,40 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
               </tbody>
             </table>
 
+            {(resetGameWallet || status === "ready_to_delegate") && (
+              <div className="session-prompt">
+                <p>Your session wallet needs to be reset. This will not affect your vault balance.</p>
+                <button
+                  className="btn-primary"
+                  onClick={async () => {
+                    const alertId = NotificationService.addAlert({
+                      type: "success",
+                      message: "reinitializing wallet...",
+                      shouldExit: false,
+                    });
+                    try {
+                      await vaultClient?.newGameWallet();
+                      setResetGameWallet(false);
+                    } catch (error) {
+                      console.error("Failed to reset game wallet:", error);
+                      const exitAlertId = NotificationService.addAlert({
+                        type: "error",
+                        message: "wallet reset failed",
+                        shouldExit: false,
+                      });
+                      setTimeout(() => {
+                        NotificationService.updateAlert(exitAlertId, { shouldExit: true });
+                      }, 3000);
+                    } finally {
+                      NotificationService.updateAlert(alertId, { shouldExit: true });
+                    }
+                  }}
+                >
+                  Reset Session Wallet
+                </button>
+              </div>
+            )}
+
             <div className="session-wallet-info">
               <div className="session-wallet-header">
                 <span className="session-label">Session Wallet</span>
@@ -370,41 +512,17 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
                 </button>
               </div>
               <p className="info-text-small">Session wallets are temporary and do not store funds.</p>
-            </div>
 
-            {(resetGameWallet || status === "ready_to_delegate") && (
-              <div className="session-prompt">
-                <p>Your session wallet needs to be reset. This will not affect your vault balance.</p>
-                <button
-                  className="btn-primary"
-                  onClick={async () => {
-                    const alertId = NotificationService.addAlert({
-                      type: "success",
-                      message: "reinitializing wallet...",
-                      shouldExit: false,
-                    });
-                    try {
-                      await vaultClient?.newGameWallet();
-                      setResetGameWallet(false);
-                    } catch (error) {
-                      console.error("Failed to reset game wallet:", error);
-                      const exitAlertId = NotificationService.addAlert({
-                        type: "error",
-                        message: "wallet reset failed",
-                        shouldExit: false,
-                      });
-                      setTimeout(() => {
-                        NotificationService.updateAlert(exitAlertId, { shouldExit: true });
-                      }, 3000);
-                    } finally {
-                      NotificationService.updateAlert(alertId, { shouldExit: true });
-                    }
-                  }}
-                >
-                  Reset Session Wallet
-                </button>
-              </div>
-            )}
+              <span className="debug-toggle" onClick={() => setShowDebugInfo(!showDebugInfo)}>
+                {showDebugInfo ? "Hide advanced info" : "Show advanced info"}
+              </span>
+
+              {showDebugInfo && (
+                <div className="debug-info">
+                  <pre>{debugInfo}</pre>
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>

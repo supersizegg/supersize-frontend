@@ -278,7 +278,7 @@ export const cachedTokenMetadata: Record<
   "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo": {
     name: "PayPal USD",
     symbol: "PYUSD",
-    image: `${process.env.PUBLIC_URL}/usdc.png`,
+    image: `${process.env.PUBLIC_URL}/pyusdlogo.webp`,
     network: "mainnet",
   },
   AsoX43Q5Y87RPRGFkkYUvu8CSksD9JXNEqWVGVsr8UEp: {
