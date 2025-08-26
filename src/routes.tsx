@@ -26,6 +26,7 @@ const AppRoutes = () => {
   const [sessionWalletInUse, setSessionWalletInUse] = useState<boolean>(true); //(NETWORK === 'mainnet' ? false : true);
   const [username, setUsername] = useState<string>("");
   const [tokenBalance, setTokenBalance] = useState<number>(0);
+  const [isEndpointResolved, setIsEndpointResolved] = useState(false);
   const [activeGamesLoaded, setActiveGamesLoaded] = useState<FetchedGame[]>(
     /*(NETWORK === 'mainnet' 
       ? [...activeGamesList[NETWORK], ...activeGamesList['devnet']]

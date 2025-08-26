@@ -169,7 +169,11 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ engine, tokenBalance }) => {
                     }
                   >
                     <td data-label="Rank">{i + 1}</td>
-                    <td data-label="Player">{player.wallet}</td>
+                    <td data-label="Player">
+                      {window.innerWidth > 768
+                        ? player.wallet
+                        : `${player.wallet.slice(0, 4)}...${player.wallet.slice(-4)}`}
+                    </td>
                     <td data-label="Total" className="align-right">
                       {player.balance.toLocaleString()}
                     </td>
