@@ -1,4 +1,4 @@
-import { PublicKey } from "@solana/web3.js";
+import { Connection, PublicKey } from "@solana/web3.js";
 import { ApplySystem } from "@magicblock-labs/bolt-sdk";
 
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
@@ -6,6 +6,7 @@ import { COMPONENT_MAP_ID, COMPONENT_PLAYER_ID, SYSTEM_INIT_PLAYER_ID } from "./
 
 export async function gameSystemInitPlayer(
   engine: MagicBlockEngine,
+  connectionEphem: Connection,
   worldPda: PublicKey,
   newplayerPda: PublicKey,
   newmapentityPda: PublicKey,
@@ -26,5 +27,5 @@ export async function gameSystemInitPlayer(
     systemId: SYSTEM_INIT_PLAYER_ID,
   });
 
-  return await engine.processSessionEphemTransactionHard("initplayer:" + newplayerPda, initPlayer.transaction);
+  return await engine.processSessionEphemTransactionHard("initplayer:" + newplayerPda, initPlayer.transaction, connectionEphem);
 }

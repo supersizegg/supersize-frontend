@@ -342,7 +342,6 @@ const Home = ({
         setTokenBalance(tokenBalance);
         setHasInsufficientTokenBalance(hasInsufficientTokenBalance);
       }
-
       const result = await gameExecuteJoin(
         preferredRegion,
         engine,

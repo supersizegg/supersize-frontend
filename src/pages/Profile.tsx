@@ -31,6 +31,7 @@ import {
   handleUndelegatePlayer,
   handleDelegatePlayer,
   handleDeleteGame,
+  handleResetToken,
   handleReinitializeClick,
   countMatchingTransactions,
   gameTransfer,
@@ -289,6 +290,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
   const [valueOnMap, setValueOnMap] = useState<number>(0);
   const [foodComponentCheck, setFoodComponentCheck] = useState<string>("");
   const [depositValue, setDepositValue] = useState<string>("");
+  const [resetTokenInput, setResetTokenInput] = useState<string>("");
   const [currentFoodToAdd, setCurrentFoodToAdd] = useState<number>(0);
   const [initVaultInput, setInitVaultInput] = useState("");
   const [selectedMapComponentPda, setSelectedMapComponentPda] = useState<PublicKey | null>(null);
@@ -360,14 +362,26 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
 
     try {
       // p1: Process game and anteroom data
-      const processGameData = async (client: SupersizeVaultClient) => {
+      const processGameData = async () => {
+        let endpointEphemRpc = "";
         try {
           let balance = 0;
           if (newGameInfo.tokenMint) {
-            const balancePda = client?.mapBalancePda(mapComponentPda, newGameInfo.tokenMint);
+            const balancePda = vaultClient?.mapBalancePda(mapComponentPda, newGameInfo.tokenMint);
+            if (!balancePda) {
+              throw new Error("Balance PDA not found");
+            }
+            const validEndpointResult = await getValidEndpoint(engine, balancePda);
+            console.log("validEndpointResult", validEndpointResult);
+            endpointEphemRpc = validEndpointResult;
+            setEndpointEphemRpc(validEndpointResult);
+            engine.setTempEndpointEphemRpc(validEndpointResult);
+            const newVaultClient = new SupersizeVaultClient(engine);
+            setVaultClient(newVaultClient);
+            
             if (balancePda) {
               setGameWallet(balancePda.toString());
-              const new_balance = await client?.getGameBalance(mapComponentPda, newGameInfo.tokenMint);
+              const new_balance = await newVaultClient?.getGameBalance(mapComponentPda, newGameInfo.tokenMint);
               console.log("new_balance", new_balance);
               if (new_balance && new_balance !== "wrong_server") {
                 balance = new_balance;
@@ -398,7 +412,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
         }
 
         const { gameInfo: updatedGameInfo } = await getGameData(engine, newGameInfo.worldId, "", newGameInfo);
-
+        updatedGameInfo.endpoint = endpointEphemRpc;
         return updatedGameInfo;
       };
 
@@ -476,14 +490,8 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
         const buyInSum = count * newGameInfo.buy_in;
         setCashoutStats({ buyInSum: buyInSum / 10 ** newGameInfo.decimals, buyInCount: count });
       };
-
-      const validEndpointResult = await getValidEndpoint(engine, mapComponentPda);
-      setEndpointEphemRpc(validEndpointResult);
-      engine.setTempEndpointEphemRpc(validEndpointResult);
-      const refreshedVaultClient = new SupersizeVaultClient(engine);
-      setVaultClient(refreshedVaultClient);
-      const updatedGameInfo = await processGameData(refreshedVaultClient);
-      updatedGameInfo.endpoint = validEndpointResult;
+      
+      const updatedGameInfo = await processGameData();
       setMyGames((prevMyGames) =>
         prevMyGames.map((game) => (game.worldId === updatedGameInfo.worldId ? updatedGameInfo : game)),
       );
@@ -953,6 +961,32 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                   </>
                 )}
               </p>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  width: "100%",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <div style={{ display: "flex", flexWrap: "wrap", width: "50%", alignItems: "center", justifyContent: "center" }}>
+                <DepositInput
+                  placeholder={"new token mint"}
+                  defaultValue={resetTokenInput}
+                  onCommit={(value) => {
+                    setResetTokenInput(value);
+                  }}
+                />
+                </div>
+                <button
+                  className="btn-copy"
+                  style={{ flex: "1 1 10%", margin: "10px"}}
+                  onClick={() => handleResetToken(engine, row, resetTokenInput)}
+                >
+                  Reset Game Token
+                </button>
+              </div>
               <div
                 style={{
                   display: "flex",

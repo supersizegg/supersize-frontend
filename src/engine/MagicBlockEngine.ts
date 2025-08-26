@@ -198,7 +198,7 @@ export class MagicBlockEngine {
   }
 
   async processSessionEphemTransaction(name: string, transaction: Transaction): Promise<string> {
-    //log(name, "sending");
+    log(name, "sending");
     // transaction.compileMessage;
     const signature = await this.connectionEphem.sendTransaction(transaction, [this.sessionKey], {
       skipPreflight: true,
@@ -217,14 +217,14 @@ export class MagicBlockEngine {
     return signature;
   }
 
-  async processSessionEphemTransactionHard(name: string, transaction: Transaction): Promise<string> {
+  async processSessionEphemTransactionHard(name: string, transaction: Transaction, connection: Connection): Promise<string> {
     //log(name, "sending");
     // transaction.compileMessage;
-    const signature = await this.connectionEphem.sendTransaction(transaction, [this.sessionKey], {
+    const signature = await connection.sendTransaction(transaction, [this.sessionKey], {
       skipPreflight: true,
       preflightCommitment: "processed",
     });
-    await this.waitSignatureConfirmation(name, signature, this.connectionEphem, "confirmed", 1000, true);
+    await this.waitSignatureConfirmation(name, signature, connection, "confirmed", 1000, true);
     return signature;
   }
 

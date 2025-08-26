@@ -891,7 +891,9 @@
         },
         {
           "name": "token_program",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+          "docs": [
+            "Accept **either** SPL Token or Token-2022 at runtime"
+          ]
         },
         {
           "name": "rent",
@@ -1025,7 +1027,9 @@
         },
         {
           "name": "token_program",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+          "docs": [
+            "Accept **either** SPL Token or Token-2022 at runtime"
+          ]
         },
         {
           "name": "rent",
@@ -1136,7 +1140,9 @@
         },
         {
           "name": "token_program",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+          "docs": [
+            "Accept **either** SPL Token or Token-2022 at runtime"
+          ]
         },
         {
           "name": "rent",
@@ -1647,7 +1653,9 @@
         },
         {
           "name": "token_program",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+          "docs": [
+            "Accept **either** SPL Token or Token-2022 at runtime"
+          ]
         },
         {
           "name": "rent",
@@ -1781,7 +1789,9 @@
         },
         {
           "name": "token_program",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+          "docs": [
+            "Accept **either** SPL Token or Token-2022 at runtime"
+          ]
         },
         {
           "name": "rent",

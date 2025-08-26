@@ -15,7 +15,15 @@ export async function gameSystemExit(
   entityMatch: PublicKey,
 ) {
   const isGuest = (preferredRegion == undefined || preferredRegion == "" || !engine.getWalletConnected());
-  const parentKey = isGuest ? new PublicKey("DdGB1EpmshJvCq48W1LvB1csrDnC4uataLnQbUVhp6XB") : engine.getWalletPayer();
+  let guestWallet = new PublicKey("39tYJK9GojqB31shcwXJL6kRQpUPAaX59iTHxYe4rY7k");
+  if (preferredRegion == "ameria") {
+    guestWallet = new PublicKey("39tYJK9GojqB31shcwXJL6kRQpUPAaX59iTHxYe4rY7k");
+  } else if (preferredRegion == "asia") {
+    guestWallet = new PublicKey("99Pb6WAtKpb5zqQkmVM4AVRYDNJjtghh25FD3nGPWoV7");
+  } else if (preferredRegion == "europe") {
+    guestWallet = new PublicKey("99Pb6WAtKpb5zqQkmVM4AVRYDNJjtghh25FD3nGPWoV7");
+  }
+  const parentKey = isGuest ? guestWallet : engine.getWalletPayer();
 
   if (!parentKey) {
     throw new Error("User wallet is not connected.");

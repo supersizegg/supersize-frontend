@@ -8,7 +8,7 @@ import {
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
-import { getAssociatedTokenAddressSync, getMint } from "@solana/spl-token";
+import { getAssociatedTokenAddressSync, getMint, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 
 import supersizeVaultIdl from "../backend/target/idl/supersize_vault.json";
 import { SupersizeVault } from "../backend/target/types/supersize_vault";
@@ -49,7 +49,7 @@ export class SupersizeVaultClient {
     this.wallet = engine.getWalletPayer();
     this.mainChainConnection = engine.getConnectionChain();
     this.ephemConnection = engine.getConnectionEphem();
-    this.routerUrl = NETWORK === "devnet" ? "https://devnet-router.magicblock.app" : "https://router.magicblock.app";
+    this.routerUrl = NETWORK === "mainnet" ? "https://router.magicblock.app" : "https://devnet-router.magicblock.app";
   }
 
   gameWalletPda(user = this.wallet) {
@@ -95,12 +95,12 @@ export class SupersizeVaultClient {
 
     const initializeTx = new Transaction();
     initializeTx.add(
-      await this.program.methods.initialize().accounts({ mintOfToken: mint, signer: this.wallet }).instruction(),
+      await this.program.methods.initialize().accounts({ mintOfToken: mint, signer: this.wallet, tokenProgram: TOKEN_2022_PROGRAM_ID}).instruction(),
     );
     await this.engine.processWalletTransaction("InitializeVault", initializeTx);
   }
 
-  async setupUserAccounts(mint: PublicKey) {
+  async setupUserAccounts(mint: PublicKey, validatorOverride: PublicKey | null = null) {
     if (!this.wallet) throw new Error("Wallet not connected to set up accounts.");
 
     const setupTx = new Transaction();
@@ -112,7 +112,7 @@ export class SupersizeVaultClient {
     const gwInfo = await this.mainChainConnection.getAccountInfo(gwPda);
 
     const ephemIdentity = await this.engine.getConnectionEphem().getSlotLeader();
-    const validator = new PublicKey(ephemIdentity);
+    const validator = validatorOverride ? validatorOverride : new PublicKey(ephemIdentity);
     if (!gwInfo) {
       console.log("Creating GameWallet PDA...");
       setupTx.add(
@@ -225,10 +225,10 @@ export class SupersizeVaultClient {
   async gameTranfer(mint: PublicKey, uiAmount: number, mapComponentPda: PublicKey, deposit: boolean = true) {
     if (!this.wallet) throw new Error("Wallet not connected.");
 
-    const mintInfo = await getMint(this.mainChainConnection, mint);
+    const mintInfo = await getMint(this.mainChainConnection, mint, "confirmed", TOKEN_2022_PROGRAM_ID);
     const decimals = mintInfo.decimals;
     const tokens = new BN(Math.round(uiAmount * 10 ** decimals));
-    const userAta = getAssociatedTokenAddressSync(mint, this.wallet);
+    const userAta = getAssociatedTokenAddressSync(mint, this.wallet, true, TOKEN_2022_PROGRAM_ID);
     console.log(uiAmount, tokens, decimals);
     let transferIx: TransactionInstruction | null = null;
     if (deposit) {
@@ -239,6 +239,7 @@ export class SupersizeVaultClient {
           senderTokenAccount: userAta,
           map: mapComponentPda,
           payer: this.wallet,
+          tokenProgram: TOKEN_2022_PROGRAM_ID,
         })
         .instruction();
     } else {
@@ -249,6 +250,7 @@ export class SupersizeVaultClient {
           senderTokenAccount: userAta,
           map: mapComponentPda,
           payer: this.wallet,
+          tokenProgram: TOKEN_2022_PROGRAM_ID,
         })
         .instruction();
     }
@@ -317,13 +319,14 @@ export class SupersizeVaultClient {
     await this.setupUserAccounts(mint);
 
     const { lamports } = await this.uiAmountToLamports(mint, uiAmount);
-    const userAta = getAssociatedTokenAddressSync(mint, this.wallet);
+    const userAta = getAssociatedTokenAddressSync(mint, this.wallet, true, TOKEN_2022_PROGRAM_ID);
     const depositIx = await this.program.methods
       .deposit(lamports)
       .accounts({
         mintOfToken: mint,
         senderTokenAccount: userAta,
         payer: this.wallet,
+        tokenProgram: TOKEN_2022_PROGRAM_ID,
       })
       .instruction();
 
@@ -388,9 +391,9 @@ export class SupersizeVaultClient {
 
     const { lamports } = await this.uiAmountToLamports(mint, uiAmount);
 
-    let userAta = getAssociatedTokenAddressSync(mint, this.wallet);
+    let userAta = getAssociatedTokenAddressSync(mint, this.wallet, true, TOKEN_2022_PROGRAM_ID);
     if (payoutWallet) {
-      userAta = getAssociatedTokenAddressSync(mint, payoutWallet);
+      userAta = getAssociatedTokenAddressSync(mint, payoutWallet, true, TOKEN_2022_PROGRAM_ID);
     }
 
     const currentlyDelegated = await this.isDelegated(mint);
@@ -413,6 +416,7 @@ export class SupersizeVaultClient {
           mintOfToken: mint,
           senderTokenAccount: userAta,
           payer: this.wallet,
+          tokenProgram: TOKEN_2022_PROGRAM_ID,
         })
         .instruction(),
     );
@@ -518,7 +522,7 @@ export class SupersizeVaultClient {
     const balanceAcc = await currentProgramEphem.account.balance.fetchNullable(balPda);
     if (!balanceAcc) return "wrong_server";
     const conn = this.program.provider.connection;
-    const { decimals } = await getMint(conn, mint);
+    const { decimals } = await getMint(conn, mint, "confirmed", TOKEN_2022_PROGRAM_ID);
     let finalnum = Number(balanceAcc.balance) / 10 ** decimals;
     console.log("finalnum", mint.toString(), finalnum);
     return finalnum; //Number(acc.balance) / 10 ** decimals;
@@ -539,7 +543,7 @@ export class SupersizeVaultClient {
     }
 
     const conn = this.program.provider.connection;
-    const { decimals } = await getMint(conn, mint);
+    const { decimals } = await getMint(conn, mint, "confirmed", TOKEN_2022_PROGRAM_ID);
     return Number(balanceAcc.balance) / 10 ** decimals;
   }
 
@@ -570,7 +574,7 @@ export class SupersizeVaultClient {
       });
 
       const { result } = response.data;
-
+      
       if (result.isDelegated && result.delegationRecord) {
         const validatorAuthority = result.delegationRecord.authority;
         // @ts-ignore
@@ -637,7 +641,7 @@ export class SupersizeVaultClient {
   }
 
   private async uiAmountToLamports(mint: PublicKey, uiAmount: number) {
-    const mintInfo = await getMint(this.mainChainConnection, mint);
+    const mintInfo = await getMint(this.mainChainConnection, mint, "confirmed", TOKEN_2022_PROGRAM_ID);
     const factor = 10 ** mintInfo.decimals;
     const lamports = new BN(Math.round(uiAmount * factor));
     return { lamports, factor };

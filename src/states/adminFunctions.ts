@@ -15,6 +15,49 @@ import { MagicBlockEngine } from "@engine/MagicBlockEngine";
 import { gameSystemInitSection } from "./gameSystemInitSection";
 import { SupersizeVaultClient } from "../engine/SupersizeVaultClient";
 import NotificationService from "@components/notification/NotificationService";
+import { getRegion, getValidatorKeyForEndpoint } from "../utils/helper";
+import { SYSTEM_INIT_MAP_ID } from "./gamePrograms";
+
+const undelegateMap = async (engine: MagicBlockEngine, mapComponentPda: PublicKey) => {
+  const undelegateIx = createUndelegateInstruction({
+    payer: engine.getSessionPayer(),
+    delegatedAccount: mapComponentPda,
+    componentPda: COMPONENT_MAP_ID,
+  });
+  const tx = new anchor.web3.Transaction().add(undelegateIx);
+  tx.recentBlockhash = (await engine.getConnectionEphem().getLatestBlockhash()).blockhash;
+  tx.feePayer = engine.getSessionPayer();
+  try {
+    const undelsignature = await engine.processSessionEphemTransaction(
+      "undelmap:" + mapComponentPda.toString(),
+      tx,
+    );
+    console.log("undelegate", undelsignature);
+  } catch (error) {
+    console.log("Error undelegating:", error);
+  }
+}
+
+const delegateMap = async (engine: MagicBlockEngine, mapComponentPda: PublicKey, mapEntityPda: PublicKey) => {
+  const delegateIx = createDelegateInstruction({
+    entity: mapEntityPda,
+    account: mapComponentPda,
+    ownerProgram: COMPONENT_MAP_ID,
+    payer: engine.getSessionPayer(),
+  });
+  const tx = new anchor.web3.Transaction().add(delegateIx);
+  tx.recentBlockhash = (await engine.getConnectionEphem().getLatestBlockhash()).blockhash;
+  tx.feePayer = engine.getSessionPayer();
+  try {
+    const delsignature = await engine.processSessionChainTransaction(
+      "delmap:" + mapComponentPda.toString(),
+      tx,
+    );
+    console.log("delegate", delsignature);
+  } catch (error) {
+    console.log("Error delegating:", error);
+  }
+}
 
 export const handleUndelegatePlayer = async (
     engine: MagicBlockEngine,
@@ -91,6 +134,65 @@ export const handleDelegatePlayer = async (
       NotificationService.updateAlert(alertId, { shouldExit: true });
     }
 };
+
+export const handleResetToken = async (engine: MagicBlockEngine, gameInfo: ActiveGame, newTokenMint: string) => {
+    console.log("reset token", gameInfo.worldId.toString(), newTokenMint);
+    const region = getRegion(gameInfo.endpoint);
+    const validatorKey = getValidatorKeyForEndpoint(region);
+    if (!validatorKey) {
+      throw new Error("Invalid endpoint.");
+    }
+    //get the validator where the game is stored, like we do for wallets
+    //include validator in createDelegateInstruction when creating a game
+    console.log("validatorKey", validatorKey, region, gameInfo);
+    
+    const mapEntityPda = FindEntityPda({
+      worldId: gameInfo.worldId,
+      entityId: new anchor.BN(0),
+      seed: stringToUint8Array("origin"),
+    });
+
+    const mapComponentPda = FindComponentPda({
+        componentId: COMPONENT_MAP_ID,
+        entity: mapEntityPda,
+    });
+    await undelegateMap(engine, mapComponentPda);
+
+    const mintInfo = await engine.getConnectionChain().getParsedAccountInfo(new PublicKey(newTokenMint));
+    let decimals = 9;
+    if (mintInfo.value && "parsed" in mintInfo.value.data) {
+      decimals = mintInfo.value.data.parsed.info.decimals;
+    } else {
+      throw new Error("Invalid token mint info.");
+    }
+
+    let prev_buy_in = gameInfo.buy_in / 10 ** gameInfo.decimals;
+    console.log("prev_buy_in", prev_buy_in , decimals);
+    const initGame = await ApplySystem({
+      authority: engine.getSessionPayer(),
+      world: gameInfo.worldPda,
+      entities: [
+        {
+          entity: mapEntityPda,
+          components: [{ componentId: COMPONENT_MAP_ID }],
+        },
+      ],
+      systemId: SYSTEM_INIT_MAP_ID,
+      args: {
+        name: gameInfo.name,
+        buy_in: prev_buy_in * 10 ** decimals,
+        token_string: newTokenMint,
+        game_type: "blob",
+      },
+    });
+
+    await engine.processSessionChainTransaction("initmap:" + mapEntityPda, initGame.transaction);
+
+
+    const vaultClient = new SupersizeVaultClient(engine);
+    await vaultClient.setupGameWallet(mapComponentPda, new PublicKey(newTokenMint), new PublicKey(validatorKey));
+    await delegateMap(engine, mapComponentPda, mapEntityPda);
+}
 
 export const handleDeleteGame = async (engine: MagicBlockEngine, gameInfo: ActiveGame) => {
     console.log("delete game", gameInfo.worldId.toString());
@@ -250,6 +352,7 @@ export const handleReinitializeClick = async (engine: MagicBlockEngine, gameInfo
         console.log(`Delegated food batch: ${delSig}`);
         const initFoodSig = await gameSystemInitSection(
           engine,
+          engine.getConnectionEphem(),
           gameInfo.worldPda,
           foodEntityPda,
           mapEntityPda,

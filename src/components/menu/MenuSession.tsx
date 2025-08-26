@@ -8,7 +8,8 @@ import TokenTransferModal from "../TokenTransferModal/TokenTransferModal";
 import "./MenuSession.scss";
 import NotificationService from "@components/notification/NotificationService";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
-import { formatBuyIn, fetchWalletTokenBalance } from "../../utils/helper";
+import { formatBuyIn, fetchWalletTokenBalance, getValidatorKeyForEndpoint } from "../../utils/helper";
+import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 const SESSION_LOCAL_STORAGE = "magicblock-session-key";
 
 type UserStatus = "loading" | "uninitialized" | "ready_to_delegate" | "delegated";
@@ -149,7 +150,8 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
       if (NETWORK !== "mainnet") {
         cMint = new PublicKey(Object.keys(cachedTokenMetadata)[1]);
       }
-      await vaultClient.setupUserAccounts(cMint);
+      //const validatorKey = getValidatorKeyForEndpoint("america");
+      await vaultClient.setupUserAccounts(cMint); //new PublicKey(validatorKey) 
       await checkStatus();
     } catch (error) {
       console.error("Failed to enable wallet:", error);
@@ -197,7 +199,7 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
       const conn = engine.getConnectionChain();
       const payer = engine.getWalletPayer();
       const { value } = await conn.getParsedTokenAccountsByOwner(payer, {
-        programId: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+        programId: TOKEN_2022_PROGRAM_ID, //new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
       });
       const acct = value.find((v) => v.account.data.parsed.info.mint === mint);
       return acct ? (acct.account.data.parsed.info.tokenAmount.uiAmount as number) : 0;

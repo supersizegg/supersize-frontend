@@ -6,6 +6,7 @@ import { MagicBlockEngine } from "../engine/MagicBlockEngine";
 import { COMPONENT_PLAYER_ID, COMPONENT_MAP_ID, SYSTEM_BUY_IN_ID, SUPERSIZE_VAULT_PROGRAM_ID } from "./gamePrograms";
 import { ActiveGame } from "@utils/types";
 import { SupersizeVaultClient } from "../engine/SupersizeVaultClient";
+import { getRegion } from "../utils/helper";
 
 export async function gameSystemJoin(
   preferredRegion: string,
@@ -16,8 +17,16 @@ export async function gameSystemJoin(
   playerName: string,
 ) {
   const isGuest = (preferredRegion == undefined || preferredRegion == "" || !engine.getWalletConnected());
-  const parentKey = isGuest ? new PublicKey("DdGB1EpmshJvCq48W1LvB1csrDnC4uataLnQbUVhp6XB") : engine.getWalletPayer();
-
+  let guestWallet = new PublicKey("39tYJK9GojqB31shcwXJL6kRQpUPAaX59iTHxYe4rY7k");
+  if (getRegion(engine.getConnectionEphem().rpcEndpoint) == "ameria") {
+    guestWallet = new PublicKey("39tYJK9GojqB31shcwXJL6kRQpUPAaX59iTHxYe4rY7k");
+  } else if (getRegion(engine.getConnectionEphem().rpcEndpoint) == "asia") {
+    guestWallet = new PublicKey("99Pb6WAtKpb5zqQkmVM4AVRYDNJjtghh25FD3nGPWoV7");
+  } else if (getRegion(engine.getConnectionEphem().rpcEndpoint) == "europe") {
+    guestWallet = new PublicKey("99Pb6WAtKpb5zqQkmVM4AVRYDNJjtghh25FD3nGPWoV7");
+  }
+  const parentKey = isGuest ? guestWallet : engine.getWalletPayer();
+  console.log("parentKey", parentKey.toString(), "preferredRegion", preferredRegion, engine.getConnectionEphem());
   /* if (!parentKey) {
     throw new Error("User wallet is not connected.");
   } */

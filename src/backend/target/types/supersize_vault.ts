@@ -897,7 +897,9 @@ export type SupersizeVault = {
         },
         {
           "name": "tokenProgram",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+          "docs": [
+            "Accept **either** SPL Token or Token-2022 at runtime"
+          ]
         },
         {
           "name": "rent",
@@ -1031,7 +1033,9 @@ export type SupersizeVault = {
         },
         {
           "name": "tokenProgram",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+          "docs": [
+            "Accept **either** SPL Token or Token-2022 at runtime"
+          ]
         },
         {
           "name": "rent",
@@ -1142,7 +1146,9 @@ export type SupersizeVault = {
         },
         {
           "name": "tokenProgram",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+          "docs": [
+            "Accept **either** SPL Token or Token-2022 at runtime"
+          ]
         },
         {
           "name": "rent",
@@ -1653,7 +1659,9 @@ export type SupersizeVault = {
         },
         {
           "name": "tokenProgram",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+          "docs": [
+            "Accept **either** SPL Token or Token-2022 at runtime"
+          ]
         },
         {
           "name": "rent",
@@ -1787,7 +1795,9 @@ export type SupersizeVault = {
         },
         {
           "name": "tokenProgram",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+          "docs": [
+            "Accept **either** SPL Token or Token-2022 at runtime"
+          ]
         },
         {
           "name": "rent",

@@ -26,9 +26,27 @@ import { COMPONENT_MAP_ID, COMPONENT_PLAYER_ID } from "@states/gamePrograms";
 import { FindComponentPda } from "@magicblock-labs/bolt-sdk";
 import { BN } from "@coral-xyz/anchor";
 import { HELIUS_API_KEY } from "@utils/constants";
-import { getAccount, getMint, NATIVE_MINT } from "@solana/spl-token";
+import { getAccount, getMint, NATIVE_MINT, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import { Circle } from "./types";
 import { SupersizeVaultClient } from "../engine/SupersizeVaultClient";
+import { VALIDATOR_MAP } from "./constants";
+import axios from "axios";
+
+interface DelegationStatusResult {
+  isDelegated: boolean;
+  delegationRecord?: {
+    authority: string;
+    owner: string;
+    delegationSlot: number;
+    lamports: number;
+  };
+}
+
+interface RouterResponse {
+  jsonrpc: "2.0";
+  id: number;
+  result: DelegationStatusResult;
+}
 
 export function getCustomErrorCode(error: any): number | undefined {
   let parsed: any = error;
@@ -284,7 +302,8 @@ export const pingSpecificEndpoint = async (endpoint: string) => {
   return { endpoint: endpoint, pingTime: bestPingTime, region: options[endpoints[NETWORK].indexOf(endpoint)] };
 };
 
-export const getValidEndpoint = async (engine: MagicBlockEngine, mapComponentPda: PublicKey) => {
+export const getValidEndpoint = async (engine: MagicBlockEngine, mapBalancePda: PublicKey) => {
+  /*
   return Promise.any(
     endpoints[NETWORK].map(async (endpoint) => {
       const mapParsedData = await mapFetchOnSpecificEphem(engine, mapComponentPda, endpoint);
@@ -294,6 +313,34 @@ export const getValidEndpoint = async (engine: MagicBlockEngine, mapComponentPda
       return endpoint;
     }),
   );
+  */
+  try {
+    const routerUrl = NETWORK === "mainnet" ? "https://router.magicblock.app" : "https://devnet-router.magicblock.app";
+    //let mapacc = await mapFetchOnSpecificEphem(engine, mapComponentPda, endpoint);
+    const response = await axios.post<RouterResponse>(routerUrl, {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "getDelegationStatus",
+      params: [mapBalancePda.toBase58()],
+    });
+
+    const { result } = response.data;
+    console.log("result", result);
+    if (result.isDelegated && result.delegationRecord) {
+      const validatorAuthority = result.delegationRecord.authority;
+      // @ts-ignore
+      const correctEndpoint = VALIDATOR_MAP[NETWORK][validatorAuthority];
+      if (correctEndpoint) {
+        return correctEndpoint;
+      } else {
+        console.warn(`Account is delegated to an unknown validator: ${validatorAuthority}`);
+      }
+    } else {
+      console.log("Account is not delegated to any rollup");
+    }
+  } catch (error) {
+    console.error("Failed to query Magic Block Router for delegation status:", error);
+  }
 };
 
 export const checkTransactionStatus = async (
@@ -362,11 +409,14 @@ export async function fetchWalletTokenBalance(
     } else {
       const tokenAccounts = await connection.getTokenAccountsByOwner(wallet, {
         mint: tokenMint,
+        programId: TOKEN_2022_PROGRAM_ID,
       });
       if (tokenAccounts.value.length > 0) {
         const accountInfo = tokenAccounts.value[0].pubkey;
+
         const balanceInfo = await connection.getTokenAccountBalance(accountInfo);
-        const { decimals } = await getMint(connection, tokenMint);
+        const { decimals } = await getMint(connection, tokenMint, "confirmed", TOKEN_2022_PROGRAM_ID);
+        console.log(balanceInfo, "balanceInfo")
         balance = parseInt(balanceInfo.value.amount) || 0;
         denominator = 10 ** decimals;
       }
@@ -488,6 +538,20 @@ export function getRegion(endpoint: string): string {
   if (endpoint === endpoints[NETWORK][2]) return "asia";
   return endpoint;
 }
+
+export const getValidatorKeyForEndpoint = (region: string): string | null => {
+  let endpoint = "";
+  if (region == "europe") {
+    endpoint = endpoints[NETWORK][0];
+  } else if (region == "america") {
+    endpoint = endpoints[NETWORK][1];
+  } else if (region == "asia") {
+    endpoint = endpoints[NETWORK][2];
+  }
+  const entries = Object.entries(VALIDATOR_MAP[NETWORK]);
+  const match = entries.find(([, url]) => url === endpoint);
+  return match ? match[0] : null;
+};
 
 export const getSectionIndex = (x: number, y: number, mapSize: number, duplicateEncodings: number = 1): number => {
   const sectionSize = 1000;
@@ -660,11 +724,12 @@ export const getGameData = async (
     entity: mapEntityPda,
   });
   let network = getNetwork(thisEndpoint);
-
+  /*
   let mapParsedDataPromise = mapFetchOnChain(engine, mapComponentPda);
   if (thisEndpoint !== "") {
     mapParsedDataPromise = mapFetchOnSpecificEphem(engine, mapComponentPda, thisEndpoint);
   }
+  */
   const mapParsedData = await mapFetchOnChain(engine, mapComponentPda);
 
   if (!mapParsedData) {
@@ -674,7 +739,7 @@ export const getGameData = async (
   gameInfo.name = mapParsedData.name;
   gameInfo.max_players = 100;
   gameInfo.size = 10000;
-  gameInfo.buy_in = mapParsedData.buyIn.toNumber();
+  gameInfo.buy_in = Number(mapParsedData.buyIn.toString());
   gameInfo.is_free = mapParsedData.name.startsWith("f-");
   gameInfo.isLoaded = true;
   gameInfo.active_players = mapParsedData.activePlayers;
@@ -879,8 +944,13 @@ export const fetchGames = async (engine: MagicBlockEngine, myGames: ActiveGame[]
         });
 
         const mapParsedData = await mapFetchOnChain(engine, mapComponentPda);
+        
         if (mapParsedData?.authority && mapParsedData.authority.toString() === engine.getSessionPayer().toString()) {
-          const newGameInfo: ActiveGame = {
+          const {gameInfo: mapParsedData} = await getGameData(engine, worldId.worldId, "", {
+            worldId: worldId.worldId,
+            worldPda: worldPda,
+          } as ActiveGame);
+          /* const newGameInfo: ActiveGame = {
             worldId: worldId.worldId,
             worldPda,
             name: mapParsedData.name,
@@ -895,11 +965,12 @@ export const fetchGames = async (engine: MagicBlockEngine, myGames: ActiveGame[]
             endpoint: "",
             isLoaded: true,
             permissionless: false,
-          };
+          }; */
+          
 
-          newGames = newGames.some((game) => game.worldId === newGameInfo.worldId)
+          newGames = newGames.some((game) => game.worldId === mapParsedData.worldId)
             ? [...newGames]
-            : [newGameInfo, ...newGames];
+            : [mapParsedData, ...newGames];
         }
       } catch (error) {
         console.log("error", error);

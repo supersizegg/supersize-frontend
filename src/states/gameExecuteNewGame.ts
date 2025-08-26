@@ -1,6 +1,6 @@
 import React from "react";
 import { PublicKey, Connection } from "@solana/web3.js";
-import { getAssociatedTokenAddress } from "@solana/spl-token";
+import { getAssociatedTokenAddress, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import { FetchedGame, PlayerInfo, ActiveGame } from "@utils/types";
 import { fetchTokenMetadata } from "@utils/helper";
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
@@ -28,9 +28,11 @@ import {
 } from "./gameSteps";
 import { SupersizeVaultClient } from "../engine/SupersizeVaultClient";
 import { endpoints } from "../utils/constants";
+import { getRegion, getValidatorKeyForEndpoint } from "../utils/helper";
 
 export async function gameExecuteNewGame(
   engine: MagicBlockEngine,
+  selectedServer: string,
   buy_in: number,
   game_owner_wallet_string: string,
   game_token_string: string,
@@ -44,7 +46,7 @@ export async function gameExecuteNewGame(
 ) {
   const gameOwnerWallet = new PublicKey(game_owner_wallet_string);
   const mint_of_token = new PublicKey(game_token_string);
-  const owner_token_account = await getAssociatedTokenAddress(mint_of_token, gameOwnerWallet);
+  const owner_token_account = await getAssociatedTokenAddress(mint_of_token, gameOwnerWallet, true, TOKEN_2022_PROGRAM_ID);
   let decimals = 9;
   const connection = new Connection(RPC_CONNECTION[NETWORK]);
   const mintInfo = await connection.getParsedAccountInfo(mint_of_token);
@@ -53,6 +55,14 @@ export async function gameExecuteNewGame(
   } else {
     throw new Error("Invalid token mint info.");
   }
+
+  const region = getRegion(selectedServer);
+  const validator = getValidatorKeyForEndpoint(region);
+  if(!validator)throw new Error("Invalid validator key.");
+
+  const launchConnectionEphem = new Connection(selectedServer, {
+    wsEndpoint: selectedServer.replace("http", "ws"),
+  });
 
   const context: GameContext = {
     engine,
@@ -78,7 +88,7 @@ export async function gameExecuteNewGame(
   await stepInitMapComponent(context, setTransactions, showPrompt);
   await stepInitFoodComponents(context, setTransactions, showPrompt);
   await stepInitPlayerComponents(context, setTransactions, showPrompt);
-  await stepSetupVault(context, mint_of_token, gameOwnerWallet, setTransactions, showPrompt);
+  //await stepSetupVault(context, mint_of_token, gameOwnerWallet, setTransactions, showPrompt);
   await stepInitializeGame(context, game_name, buy_in, mint_of_token.toString(), decimals, setTransactions, showPrompt);
 
   const mapComponentPda = await (async () => {
@@ -91,18 +101,19 @@ export async function gameExecuteNewGame(
   const vaultClient = new SupersizeVaultClient(context.engine);
 
   /* validator identities are different on Devnet and Mainnet */
-  const ephemIdentity = await context.engine.getConnectionEphem().getSlotLeader();
-  const validator = new PublicKey(ephemIdentity);
-  console.log("validator", validator.toString());
+  //const ephemIdentity = await context.engine.getConnectionEphem().getSlotLeader();
+  //const validatorKey = new PublicKey(ephemIdentity);
+  const validatorKey = new PublicKey(validator);
+  console.log("validator", validatorKey.toString());
   console.log("ephem rpc", context.engine.getEndpointEphemRpc());
 
-  await vaultClient.setupGameWallet(mapComponentPda, mint_of_token, validator);
+  await vaultClient.setupGameWallet(mapComponentPda, mint_of_token, validatorKey);
 
-  await stepDelegateMap(context, setTransactions, showPrompt);
-  await stepDelegateFood(context, setTransactions, showPrompt);
-  await stepDelegatePlayers(context, setTransactions, showPrompt);
-  await stepInitPlayers(context, setTransactions, showPrompt);
-  await stepInitFoodPositions(context, 10000, setTransactions, showPrompt);
+  await stepDelegateMap(context, validatorKey ,setTransactions, showPrompt);
+  await stepDelegateFood(context, validatorKey, setTransactions, showPrompt);
+  await stepDelegatePlayers(context, validatorKey, setTransactions, showPrompt);
+  await stepInitPlayers(context, launchConnectionEphem, setTransactions, showPrompt);
+  await stepInitFoodPositions(context, launchConnectionEphem, 10000, setTransactions, showPrompt);
   await stepReclaimSOL(context, gameOwnerWallet, setTransactions, showPrompt);
 
   // Finalize: update active games.
@@ -119,7 +130,7 @@ export async function gameExecuteNewGame(
       image: tokenMetadata.image || `${process.env.PUBLIC_URL}/default.png`,
       token: tokenMetadata.name || "TOKEN",
       buy_in: buy_in,
-      endpoint: engine.getEndpointEphemRpc(),
+      endpoint: selectedServer,//engine.getEndpointEphemRpc(),
     } as ActiveGame,
     playerInfo: {
       playerStatus: "new_player",

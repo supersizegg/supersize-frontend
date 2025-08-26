@@ -415,6 +415,7 @@ export async function stepInitializeGame(
 // 15) Delegate the map component
 export async function stepDelegateMap(
   context: GameContext,
+  validatorKey: PublicKey,
   setTransactions: React.Dispatch<React.SetStateAction<{ id: string; status: string }[]>>,
   showPrompt: (errorMessage: string) => Promise<boolean>,
 ) {
@@ -431,7 +432,7 @@ export async function stepDelegateMap(
         account: mapComponentPda,
         ownerProgram: COMPONENT_MAP_ID,
         payer: context.engine.getSessionPayer(),
-      });
+      }, 0, validatorKey);
       const maptx = new Transaction()
         .add(mapdelegateIx)
         .add(ComputeBudgetProgram.setComputeUnitLimit({ units: 80_000 }))
@@ -447,6 +448,7 @@ export async function stepDelegateMap(
 // 16) Delegate food components
 export async function stepDelegatePlayers(
   context: GameContext,
+  validatorKey: PublicKey,
   setTransactions: React.Dispatch<React.SetStateAction<{ id: string; status: string }[]>>,
   showPrompt: (errorMessage: string) => Promise<boolean>,
 ) {
@@ -464,7 +466,7 @@ export async function stepDelegatePlayers(
             account: context.playersComponentPdas[i + index],
             ownerProgram: COMPONENT_PLAYER_ID,
             payer: context.engine.getSessionPayer(),
-          });
+          }, 0, validatorKey);
         });
         const instructions = await Promise.all(delegatePromises);
         instructions.forEach((instruction) => tx.add(instruction));
@@ -491,6 +493,7 @@ export async function stepDelegatePlayers(
 // 16) Delegate food components
 export async function stepDelegateFood(
   context: GameContext,
+  validatorKey: PublicKey,
   setTransactions: React.Dispatch<React.SetStateAction<{ id: string; status: string }[]>>,
   showPrompt: (errorMessage: string) => Promise<boolean>,
 ) {
@@ -508,7 +511,7 @@ export async function stepDelegateFood(
             account: context.foodComponentPdas[i + index],
             ownerProgram: COMPONENT_SECTION_ID,
             payer: context.engine.getSessionPayer(),
-          });
+          }, 0, validatorKey)
         });
         const instructions = await Promise.all(delegatePromises);
         instructions.forEach((instruction) => tx.add(instruction));
@@ -535,6 +538,7 @@ export async function stepDelegateFood(
 // 17) Initialize players
 export async function stepInitPlayers(
   context: GameContext,
+  connectionEphem: Connection,
   setTransactions: React.Dispatch<React.SetStateAction<{ id: string; status: string }[]>>,
   showPrompt: (errorMessage: string) => Promise<boolean>,
 ) {
@@ -546,6 +550,7 @@ export async function stepInitPlayers(
       for (let i = 0; i < context.playerEntityPdas.length; i++) {
         const initPlayerSig = await gameSystemInitPlayer(
           context.engine,
+          connectionEphem,
           context.world.worldPda,
           context.playerEntityPdas[i],
           context.mapEntityPda,
@@ -561,6 +566,7 @@ export async function stepInitPlayers(
 // 17) Initialize food positions
 export async function stepInitFoodPositions(
   context: GameContext,
+  connectionEphem: Connection,
   game_size: number,
   setTransactions: React.Dispatch<React.SetStateAction<{ id: string; status: string }[]>>,
   showPrompt: (errorMessage: string) => Promise<boolean>,
@@ -577,6 +583,7 @@ export async function stepInitFoodPositions(
           const { x, y } = getTopLeftCorner(overallIndex, game_size);
           const initFoodSig = await gameSystemInitSection(
             context.engine,
+            connectionEphem,
             context.world.worldPda,
             foodPda,
             context.mapEntityPda,

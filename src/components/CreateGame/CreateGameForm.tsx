@@ -94,6 +94,7 @@ const CreateGameForm: React.FC<gameProps> = ({
     engine.setTempEndpointEphemRpc(selectedServer);
     gameExecuteNewGame(
       engine,
+      selectedServer,
       formData[1],
       formData[2],
       formData[3],

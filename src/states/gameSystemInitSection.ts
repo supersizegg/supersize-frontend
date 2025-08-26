@@ -1,4 +1,4 @@
-import { PublicKey } from "@solana/web3.js";
+import { Connection, PublicKey } from "@solana/web3.js";
 import { ApplySystem } from "@magicblock-labs/bolt-sdk";
 
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
@@ -6,6 +6,7 @@ import { COMPONENT_MAP_ID, SYSTEM_INIT_SECTION_ID, COMPONENT_SECTION_ID } from "
 
 export async function gameSystemInitSection(
   engine: MagicBlockEngine,
+  connectionEphem: Connection,
   worldPda: PublicKey,
   newsectionPda: PublicKey,
   newmapentityPda: PublicKey,
@@ -32,5 +33,5 @@ export async function gameSystemInitSection(
     },
   });
 
-  return await engine.processSessionEphemTransactionHard("initsection:" + newsectionPda, initSection.transaction);
+  return await engine.processSessionEphemTransactionHard("initsection:" + newsectionPda, initSection.transaction, connectionEphem);
 }
