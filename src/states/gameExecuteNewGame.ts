@@ -110,8 +110,28 @@ export async function gameExecuteNewGame(
   await vaultClient.setupGameWallet(mapComponentPda, mint_of_token, validatorKey);
 
   await stepDelegateMap(context, validatorKey ,setTransactions, showPrompt);
-  await stepDelegateFood(context, validatorKey, setTransactions, showPrompt);
-  await stepDelegatePlayers(context, validatorKey, setTransactions, showPrompt);
+  await stepDelegateFood(0, 10, context, validatorKey, setTransactions, showPrompt);
+  await stepDelegateFood(10, 20, context, validatorKey, setTransactions, showPrompt);
+  await stepDelegateFood(20, 30, context, validatorKey, setTransactions, showPrompt);
+  await stepDelegateFood(30, 40, context, validatorKey, setTransactions, showPrompt);
+  await stepDelegateFood(40, 50, context, validatorKey, setTransactions, showPrompt);
+  await stepDelegateFood(50, 60, context, validatorKey, setTransactions, showPrompt);
+  await stepDelegateFood(60, 70, context, validatorKey, setTransactions, showPrompt);
+  await stepDelegateFood(70, 80, context, validatorKey, setTransactions, showPrompt);
+  await stepDelegateFood(80, 90, context, validatorKey, setTransactions, showPrompt);
+  await stepDelegateFood(90, 100, context, validatorKey, setTransactions, showPrompt);
+
+  await stepDelegatePlayers(0, 10, context, validatorKey, setTransactions, showPrompt);
+  await stepDelegatePlayers(10, 20, context, validatorKey, setTransactions, showPrompt);
+  await stepDelegatePlayers(20, 30, context, validatorKey, setTransactions, showPrompt);
+  await stepDelegatePlayers(30, 40, context, validatorKey, setTransactions, showPrompt);
+  await stepDelegatePlayers(40, 50, context, validatorKey, setTransactions, showPrompt);
+  await stepDelegatePlayers(50, 60, context, validatorKey, setTransactions, showPrompt);
+  await stepDelegatePlayers(60, 70, context, validatorKey, setTransactions, showPrompt);
+  await stepDelegatePlayers(70, 80, context, validatorKey, setTransactions, showPrompt);
+  await stepDelegatePlayers(80, 90, context, validatorKey, setTransactions, showPrompt);
+  await stepDelegatePlayers(90, 100, context, validatorKey, setTransactions, showPrompt);
+
   await stepInitPlayers(context, launchConnectionEphem, setTransactions, showPrompt);
   await stepInitFoodPositions(context, launchConnectionEphem, 10000, setTransactions, showPrompt);
   await stepReclaimSOL(context, gameOwnerWallet, setTransactions, showPrompt);

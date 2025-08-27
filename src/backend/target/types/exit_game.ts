@@ -65,13 +65,134 @@ export type ExitGame = {
       ],
       "args": [
         {
-          "name": "argsP",
+          "name": "args",
           "type": "bytes"
         }
       ],
       "returns": {
         "vec": "bytes"
       }
+    },
+    {
+      "name": "initExtraAccounts",
+      "discriminator": [
+        58,
+        71,
+        119,
+        115,
+        48,
+        174,
+        40,
+        177
+      ],
+      "accounts": [
+        {
+          "name": "supersizeVaultProgram",
+          "address": "DZtWbzgheM9YEaQu24dR3bkvWHURhSZw5jFwZyoz95DH"
+        },
+        {
+          "name": "gameWallet",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  97,
+                  109,
+                  101,
+                  45,
+                  119,
+                  97,
+                  108,
+                  108,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "parentKey"
+              }
+            ]
+          }
+        },
+        {
+          "name": "userBalance",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "parentKey"
+              },
+              {
+                "kind": "account",
+                "path": "mintOfToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "gameBalance",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "map"
+              },
+              {
+                "kind": "account",
+                "path": "mintOfToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "player"
+        },
+        {
+          "name": "map"
+        },
+        {
+          "name": "mintOfToken"
+        },
+        {
+          "name": "parentKey"
+        },
+        {
+          "name": "exitAuthority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  120,
+                  105,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "map"
+              },
+              {
+                "kind": "account",
+                "path": "player"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
     }
   ],
   "accounts": [

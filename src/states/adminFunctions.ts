@@ -17,6 +17,7 @@ import { SupersizeVaultClient } from "../engine/SupersizeVaultClient";
 import NotificationService from "@components/notification/NotificationService";
 import { getRegion, getValidatorKeyForEndpoint } from "../utils/helper";
 import { SYSTEM_INIT_MAP_ID } from "./gamePrograms";
+import { gameSystemInitPlayer } from "./gameSystemInitPlayer";
 
 const undelegateMap = async (engine: MagicBlockEngine, mapComponentPda: PublicKey) => {
   const undelegateIx = createUndelegateInstruction({
@@ -325,7 +326,57 @@ export const handleDeleteGame = async (engine: MagicBlockEngine, gameInfo: Activ
     }
 };
 
-export const handleReinitializeClick = async (engine: MagicBlockEngine, gameInfo: ActiveGame, foodEntityPda: PublicKey, foodComponentPda: PublicKey, x: number, y: number, seed: string): Promise<void> => {
+
+export const handleReinitializePlayerClick = async (engine: MagicBlockEngine, gameInfo: ActiveGame, playerEntityPda: PublicKey): Promise<void> => {
+      const mapEntityPda = FindEntityPda({
+        worldId: gameInfo.worldId,
+        entityId: new anchor.BN(0),
+        seed: stringToUint8Array("origin"),
+      });
+      const mapComponentPda = FindComponentPda({
+        componentId: COMPONENT_MAP_ID,
+        entity: mapEntityPda,
+      });
+
+      const alertId = NotificationService.addAlert({
+        type: "success",
+        message: "reinitializing player...",
+        shouldExit: false,
+      });
+
+      try {
+        console.log("initPlayerSig", playerEntityPda.toString(), mapComponentPda.toString(), engine.getConnectionEphem());
+        const initPlayerSig = await gameSystemInitPlayer(
+          engine,
+          engine.getConnectionEphem(),
+          gameInfo.worldPda,
+          playerEntityPda,
+          mapEntityPda,
+        );
+        console.log("initPlayerSig", initPlayerSig);
+      } catch (e) {
+        // @ts-ignore
+        if (e.message.includes("ExternalAccountLamportSpend")) {
+          console.log(e);
+        } else {
+          console.log("Error reinitializing food:", e);
+          const exitAlertId = NotificationService.addAlert({
+            type: "error",
+            message: "reinitialize failed",
+            shouldExit: false,
+          });
+          setTimeout(() => {
+            NotificationService.updateAlert(exitAlertId, { shouldExit: true });
+          }, 3000);
+          throw e;
+        }
+      } finally {
+        NotificationService.updateAlert(alertId, { shouldExit: true });
+      }
+};
+
+export const handleReinitializeClick = async (engine: MagicBlockEngine, gameInfo: ActiveGame, foodEntityPda: PublicKey, 
+  foodComponentPda: PublicKey, x: number, y: number, seed: string): Promise<void> => {
     const mapEntityPda = FindEntityPda({
       worldId: gameInfo.worldId,
       entityId: new anchor.BN(0),
@@ -348,8 +399,12 @@ export const handleReinitializeClick = async (engine: MagicBlockEngine, gameInfo
         shouldExit: false,
       });
       try {
-        const delSig = await engine.processSessionChainTransaction("redelegate", tx);
-        console.log(`Delegated food batch: ${delSig}`);
+        try{
+          const delSig = await engine.processSessionChainTransaction("redelegate", tx);
+          console.log(`Delegated food batch: ${delSig}`);
+        } catch (e) {
+          console.log("Error reinitializing food:", e);
+        }
         const initFoodSig = await gameSystemInitSection(
           engine,
           engine.getConnectionEphem(),

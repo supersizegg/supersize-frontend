@@ -447,17 +447,19 @@ export async function stepDelegateMap(
 
 // 16) Delegate food components
 export async function stepDelegatePlayers(
+  start_index: number,
+  end_index: number,
   context: GameContext,
   validatorKey: PublicKey,
   setTransactions: React.Dispatch<React.SetStateAction<{ id: string; status: string }[]>>,
   showPrompt: (errorMessage: string) => Promise<boolean>,
 ) {
-  const delegatePlayersTxnId = "delegate-players";
+  const delegatePlayersTxnId = `delegate-players-${start_index+1}`;
   await executeStep(
     delegatePlayersTxnId,
     async () => {
       const delbatchSize = 1; //3
-      for (let i = 0; i < context.playerEntityPdas.length; i += delbatchSize) {
+      for (let i = start_index; i < end_index; i += delbatchSize) {
         const tx = new Transaction();
         const batch = context.playerEntityPdas.slice(i, i + delbatchSize);
         const delegatePromises = batch.map(async (playerEntityPda, index) => {
@@ -492,17 +494,19 @@ export async function stepDelegatePlayers(
 
 // 16) Delegate food components
 export async function stepDelegateFood(
+  start_index: number,
+  end_index: number,
   context: GameContext,
   validatorKey: PublicKey,
   setTransactions: React.Dispatch<React.SetStateAction<{ id: string; status: string }[]>>,
   showPrompt: (errorMessage: string) => Promise<boolean>,
 ) {
-  const delegateFoodTxnId = "delegate-food";
+  const delegateFoodTxnId = `delegate-food-${start_index+1}`;
   await executeStep(
     delegateFoodTxnId,
     async () => {
       const delbatchSize = 1; //3
-      for (let i = 0; i < context.foodEntityPdas.length; i += delbatchSize) {
+      for (let i = start_index; i < end_index; i += delbatchSize) {
         const tx = new Transaction();
         const batch = context.foodEntityPdas.slice(i, i + delbatchSize);
         const delegatePromises = batch.map(async (foodEntityPda, index) => {

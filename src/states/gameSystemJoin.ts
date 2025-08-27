@@ -21,7 +21,7 @@ export async function gameSystemJoin(
   if (getRegion(engine.getConnectionEphem().rpcEndpoint) == "ameria") {
     guestWallet = new PublicKey("39tYJK9GojqB31shcwXJL6kRQpUPAaX59iTHxYe4rY7k");
   } else if (getRegion(engine.getConnectionEphem().rpcEndpoint) == "asia") {
-    guestWallet = new PublicKey("99Pb6WAtKpb5zqQkmVM4AVRYDNJjtghh25FD3nGPWoV7");
+    guestWallet = new PublicKey("8pgaMkENhPtjXjV1kkYLgAS9E7hgYH3WaCaMfA1kLZL5");
   } else if (getRegion(engine.getConnectionEphem().rpcEndpoint) == "europe") {
     guestWallet = new PublicKey("99Pb6WAtKpb5zqQkmVM4AVRYDNJjtghh25FD3nGPWoV7");
   }
@@ -72,6 +72,7 @@ export async function gameSystemJoin(
   console.log("gameWalletPda", gameWalletPda.toString());
   console.log("userBalancePda", userBalancePda.toString());
   console.log("gameBalancePda", gameBalancePda.toString());
+  console.log("mintOfToken", mintOfToken.toString());
 
   const applyJoinSystem = await ApplySystem({
     authority: sessionWallet,

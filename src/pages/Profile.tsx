@@ -35,6 +35,7 @@ import {
   handleReinitializeClick,
   countMatchingTransactions,
   gameTransfer,
+  handleReinitializePlayerClick,
 } from "@states/adminFunctions";
 import DepositInput from "@components/util/DepositInput";
 import CollapsiblePanel from "@components/util/CollapsiblePanel";
@@ -727,22 +728,10 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                                       {player.delegated ? "Delegated" : "Undelegated"}
                                     </div>
                                     <div>
-                                      {((!player.delegated && player.parsedData?.status === "exited") ||
-                                        (player.delegated && player.playersParsedDataEphem?.status === "exited")) && (
-                                        <button
-                                          className="btn-copy"
-                                          style={{ maxHeight: "40px" }}
-                                          onClick={() => console.log("TODO: cashout")}
-                                        >
-                                          Cash Out
-                                        </button>
-                                      )}
-                                    </div>
-                                    <div>
                                       {player.delegated ? (
                                         <button
                                           className="btn-copy"
-                                          style={{ maxHeight: "40px", display: "none" }}
+                                          style={{ marginTop: "10px", maxHeight: "40px", display: "none" }}
                                           onClick={() => handleUndelegatePlayer(engine, player)}
                                         >
                                           Undelegate
@@ -750,12 +739,21 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                                       ) : (
                                         <button
                                           className="btn-copy"
-                                          style={{ maxHeight: "40px" }}
+                                          style={{ marginTop: "10px", maxHeight: "40px" }}
                                           onClick={() => handleDelegatePlayer(engine, player)}
                                         >
                                           Delegate
                                         </button>
                                       )}
+                                    </div>
+                                    <div>
+                                      <button
+                                        className="btn-copy"
+                                        style={{ marginTop: "10px", maxHeight: "40px", display:( player.playersParsedDataEphem && player.playersParsedDataEphem.map) ? "none" : "flex" }}
+                                        onClick={() => handleReinitializePlayerClick(engine, row, player.playerEntityPda)}
+                                      >
+                                        reinit
+                                      </button>
                                     </div>
                                   </div>
                                 </td>

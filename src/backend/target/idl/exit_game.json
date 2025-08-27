@@ -59,7 +59,7 @@
       ],
       "args": [
         {
-          "name": "_args_p",
+          "name": "_args",
           "type": "bytes"
         }
       ],
@@ -184,10 +184,6 @@
               }
             ]
           }
-        },
-        {
-          "name": "instruction_sysvar",
-          "address": "Sysvar1nstructions1111111111111111111111111"
         }
       ],
       "args": []

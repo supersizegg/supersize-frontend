@@ -826,14 +826,18 @@ export const getMyPlayerStatus = async (
 
   const results = await Promise.all(fetchPromises);
   for (const { playersComponentPda, playersacc, playersParsedDataER, playerEntityPda } of results) {
+    
     if (!playersacc) {
       continue;
     }
 
     if (playersacc.owner.toString() === "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh") {
       if (playersParsedDataER) {
-        if (playersParsedDataER.score > 0) {
+        if (playersParsedDataER.circles.length > 0) {
           activeplayers += 1;
+        }
+        if(playersParsedDataER.authority){
+          console.log("playersacc", playersParsedDataER.authority.toString())
         }
       }
       if (
@@ -844,7 +848,8 @@ export const getMyPlayerStatus = async (
         newplayerEntityPda = playerEntityPda;
         playerStatus = "in_game";
       } else {
-        if (playersParsedDataER && playersParsedDataER.score == 0 && newplayerEntityPda == null) {
+        if (playersParsedDataER && playersParsedDataER.circles.length == 0 && 
+          !playersParsedDataER.authority && newplayerEntityPda == null) {
           newplayerEntityPda = playerEntityPda;
           playerStatus = "new_player";
         }
