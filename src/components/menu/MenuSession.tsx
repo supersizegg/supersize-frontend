@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey, Connection } from "@solana/web3.js";
 import { useMagicBlockEngine } from "../../engine/MagicBlockEngineProvider";
 import { SupersizeVaultClient } from "../../engine/SupersizeVaultClient";
 import { cachedTokenMetadata, NETWORK, API_URL, VALIDATOR_MAP } from "../../utils/constants";
@@ -61,6 +61,7 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
   }>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isActivating, setIsActivating] = useState(false);
   const isMounted = useRef(false);
   const [debugInfo, setDebugInfo] = useState<string>("");
   const [showDebugInfo, setShowDebugInfo] = useState<boolean>(false);
@@ -203,6 +204,36 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
     setDebugInfo(debugString);
   }, [vaultClient, engine, getDelegationInfo]);
 
+  const pollForAccount = (
+    connection: Connection,
+    accountPublicKey: PublicKey,
+    timeout = 20000,
+    pollInterval = 1000,
+  ): Promise<boolean> => {
+    return new Promise((resolve) => {
+      let elapsed = 0;
+      const intervalId = setInterval(async () => {
+        elapsed += pollInterval;
+
+        if (elapsed >= timeout) {
+          clearInterval(intervalId);
+          resolve(false);
+          return;
+        }
+
+        try {
+          const accountInfo = await connection.getAccountInfo(accountPublicKey);
+          if (accountInfo) {
+            clearInterval(intervalId);
+            resolve(true);
+          }
+        } catch (error) {
+          console.error("Polling failed with error:", error);
+        }
+      }, pollInterval);
+    });
+  };
+
   const fetchUnclaimedBalance = useCallback(async () => {
     const sessionWallet = engine.getSessionPayer()?.toString();
     if (!sessionWallet) return;
@@ -274,19 +305,38 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
   }, [status, fetchDebugInfo, isInitializing]);
 
   const handleEnableWallet = async () => {
-    if (!vaultClient) return;
-    setStatus("loading");
+    if (!vaultClient || !engine) return;
+    setIsActivating(true);
+
     try {
-      let cMint = new PublicKey(Object.keys(cachedTokenMetadata)[0]);
-      if (NETWORK !== "mainnet") {
-        cMint = new PublicKey(Object.keys(cachedTokenMetadata)[1]);
+      let cMint = new PublicKey(
+        Object.keys(cachedTokenMetadata).filter((mint) => cachedTokenMetadata[mint].network === NETWORK)[0],
+      );
+
+      await vaultClient.setupUserAccounts(cMint);
+
+      const gwPda = vaultClient.gameWalletPda();
+      const accountExists = await pollForAccount(engine.getConnectionChain(), gwPda);
+
+      if (accountExists) {
+        NotificationService.addAlert({
+          type: "success",
+          message: "Vault activated successfully!",
+          shouldExit: true,
+        });
+      } else {
+        throw new Error("Please refresh the page and try again.");
       }
-      //const validatorKey = getValidatorKeyForEndpoint("america");
-      await vaultClient.setupUserAccounts(cMint); //new PublicKey(validatorKey)
-      await checkStatus();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to enable wallet:", error);
-      setStatus("uninitialized");
+      NotificationService.addAlert({
+        type: "error",
+        message: error.message || "Failed to activate vault.",
+        shouldExit: true,
+      });
+    } finally {
+      await checkStatus();
+      setIsActivating(false);
     }
   };
 
@@ -319,7 +369,7 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
       const conn = engine.getConnectionChain();
       const payer = engine.getWalletPayer();
       const { value } = await conn.getParsedTokenAccountsByOwner(payer, {
-        programId: TOKEN_2022_PROGRAM_ID, //new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+        programId: TOKEN_2022_PROGRAM_ID,
       });
       const acct = value.find((v) => v.account.data.parsed.info.mint === mint);
       return acct ? (acct.account.data.parsed.info.tokenAmount.uiAmount as number) : 0;
@@ -336,8 +386,8 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
       return (
         <div className="session-prompt">
           <p>Activate your vault. This requires one-time approval.</p>
-          <button className="btn-primary" onClick={handleEnableWallet}>
-            Activate Vault
+          <button className="btn-primary" onClick={handleEnableWallet} disabled={isActivating}>
+            {isActivating ? "Activating..." : "Activate Vault"}
           </button>
         </div>
       );
@@ -347,7 +397,6 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
       return (
         <>
           <div className="vault-header">
-            {/* <h3>Vault</h3> */}
             <button className="btn-subtle" onClick={checkStatus} disabled={isRefreshing}>
               {isRefreshing ? "Refreshing..." : "Refresh"}
             </button>
