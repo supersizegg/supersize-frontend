@@ -1,13 +1,6 @@
 import { BN, Idl, Program } from "@coral-xyz/anchor";
 import axios from "axios";
-import {
-  Connection,
-  LAMPORTS_PER_SOL,
-  PublicKey,
-  SystemProgram,
-  Transaction,
-  TransactionInstruction,
-} from "@solana/web3.js";
+import { Connection, PublicKey, SystemProgram, Transaction, TransactionInstruction } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync, getMint, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 
 import supersizeVaultIdl from "../backend/target/idl/supersize_vault.json";
@@ -76,7 +69,7 @@ export class SupersizeVaultClient {
     )[0];
   }
 
-  async isDelegated(mint: PublicKey): Promise<boolean> {
+  async isBalanceDelegated(mint: PublicKey): Promise<boolean> {
     if (!this.wallet) return false;
     const balancePda = this.userBalancePda(this.wallet, mint);
     const accountInfo = await this.mainChainConnection.getAccountInfo(balancePda);
@@ -95,7 +88,10 @@ export class SupersizeVaultClient {
 
     const initializeTx = new Transaction();
     initializeTx.add(
-      await this.program.methods.initialize().accounts({ mintOfToken: mint, signer: this.wallet, tokenProgram: TOKEN_2022_PROGRAM_ID}).instruction(),
+      await this.program.methods
+        .initialize()
+        .accounts({ mintOfToken: mint, signer: this.wallet, tokenProgram: TOKEN_2022_PROGRAM_ID })
+        .instruction(),
     );
     await this.engine.processWalletTransaction("InitializeVault", initializeTx);
   }
@@ -196,7 +192,10 @@ export class SupersizeVaultClient {
     //await this.setupUserAccounts(mint);
     // there should be a notification so the user knows whats happening
 
-    const [walletDelegated, userDelegated] = await Promise.all([this.isWalletDelegated(), this.isDelegated(mint)]);
+    const [walletDelegated, userDelegated] = await Promise.all([
+      this.isWalletDelegated(),
+      this.isBalanceDelegated(mint),
+    ]);
     if (!walletDelegated || !userDelegated) {
       const ephemIdentity = await this.engine.getConnectionEphem().getSlotLeader();
       const validator = new PublicKey(ephemIdentity);
@@ -204,9 +203,11 @@ export class SupersizeVaultClient {
       const tx = new Transaction();
 
       if (!walletDelegated) {
+        console.log("Delegating GameWallet PDA...");
         tx.add(await this.program.methods.delegateWallet(validator).accounts({ payer: this.wallet }).instruction());
       }
       if (!userDelegated) {
+        console.log("Delegating Balance PDA...");
         tx.add(
           await this.program.methods
             .delegateUser(validator)
@@ -330,7 +331,7 @@ export class SupersizeVaultClient {
       })
       .instruction();
 
-    const currentlyDelegated = await this.isDelegated(mint);
+    const currentlyDelegated = await this.isBalanceDelegated(mint);
     if (currentlyDelegated) {
       const transaction = new Transaction();
       await this.undelegateAll(mint);
@@ -396,7 +397,7 @@ export class SupersizeVaultClient {
       userAta = getAssociatedTokenAddressSync(mint, payoutWallet, true, TOKEN_2022_PROGRAM_ID);
     }
 
-    const currentlyDelegated = await this.isDelegated(mint);
+    const currentlyDelegated = await this.isBalanceDelegated(mint);
     if (currentlyDelegated) {
       console.log("Undelegating before withdrawal...");
       await this.undelegateAll(mint);
@@ -574,7 +575,7 @@ export class SupersizeVaultClient {
       });
 
       const { result } = response.data;
-      
+
       if (result.isDelegated && result.delegationRecord) {
         const validatorAuthority = result.delegationRecord.authority;
         // @ts-ignore
@@ -603,12 +604,15 @@ export class SupersizeVaultClient {
     const validator = new PublicKey(ephemIdentity);
 
     try {
-      const undelegateTx = new Transaction().add(
-        await this.program.methods.undelegateWallet(this.wallet).accounts({}).instruction(),
-      );
-      const signers = [this.engine.getSessionKey()];
-      const signature = await this.engine.getConnectionEphem().sendTransaction(undelegateTx, signers);
-      await this.engine.getConnectionEphem().confirmTransaction(signature, "confirmed");
+      const walletDelegated = await this.isWalletDelegated();
+      if (walletDelegated) {
+        const undelegateTx = new Transaction().add(
+          await this.program.methods.undelegateWallet(this.wallet).accounts({}).instruction(),
+        );
+        const signers = [this.engine.getSessionKey()];
+        const signature = await this.engine.getConnectionEphem().sendTransaction(undelegateTx, signers);
+        await this.engine.getConnectionEphem().confirmTransaction(signature, "confirmed");
+      }
     } catch (error) {
       console.error("Error in newGameWallet:", error);
     }
