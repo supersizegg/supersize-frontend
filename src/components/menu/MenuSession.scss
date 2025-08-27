@@ -49,6 +49,12 @@
     background-color: #333;
     color: #fff;
   }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: #222;
+  }
 }
 
 .token-table {
