@@ -390,6 +390,8 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
             encoded_user_defined_event_data: '',
             payer: engine.getWalletPayer().toBase58(),
             quote_response: quoteResp,
+            compute_unit_limit: 200000,
+            compute_unit_price: 1,
           }),
         }
       ).then((r) => r.json());
