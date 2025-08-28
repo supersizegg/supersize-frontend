@@ -2,10 +2,27 @@ import React, { useEffect, useMemo, useReducer, useRef } from "react";
 import { MenuBar } from "@components/menu/MenuBar";
 import BackButton from "@components/util/BackButton";
 import TradingViewWidget from "@components/util/TradingViewWidget";
-import { VersionedTransaction } from "@solana/web3.js";
 import { useMagicBlockEngine } from "@engine/MagicBlockEngineProvider";
 import "./Shop.scss";
 import AnimatedBackground from "../components/util/AnimatedBackground";
+import {
+  Connection,
+  Keypair,
+  PublicKey,
+  Transaction,
+  SystemProgram,
+  LAMPORTS_PER_SOL,
+  ComputeBudgetProgram,
+  Commitment,
+  VersionedTransaction
+} from '@solana/web3.js';
+import {
+  getMint,
+  getAccount,
+  getAssociatedTokenAddressSync,
+  createAssociatedTokenAccountInstruction,
+  TOKEN_2022_PROGRAM_ID,
+} from '@solana/spl-token';
 
 const TOKEN_NAME = "PYUSD";
 const OUTPUT_MINT = "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo";
@@ -288,6 +305,119 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
     }
   };
 
+  async function ensureAta(mint: PublicKey): Promise<PublicKey> {
+    const ata = getAssociatedTokenAddressSync(
+      mint,
+      engine.getWalletPayer(),
+      false,
+      TOKEN_2022_PROGRAM_ID
+    );
+    const info = await engine.getConnectionChain().getAccountInfo(ata);
+    if (!info) {
+      const tx = new Transaction();
+      tx.add(
+        createAssociatedTokenAccountInstruction(
+          engine.getWalletPayer(),
+          ata,
+          engine.getWalletPayer(),
+          mint,
+          TOKEN_2022_PROGRAM_ID
+        )
+      );
+
+      const sig = await engine.processWalletTransaction("createAssociatedTokenAccount", tx);
+    }
+    return ata;
+  }
+  
+  async function tradeToken({
+    tokenMint,
+    buy = true,
+    slippage = 500,
+  }: {
+    tokenMint: PublicKey;
+    buy: boolean;
+    slippage?: number;
+  }) {
+    try {
+      dispatch({ type: "WAIT", on: true });
+      dispatch({ type: "STATUS", status: { type: "info", message: "Preparing your swap…" } });
+
+      const sol = await retry<{ solana: { usd: number } }>((signal) => fetchJSON(COINGECKO_SOL, signal));
+      const solPrice = sol.solana.usd;
+      dispatch({ type: "SET_MARKET", solPrice });
+
+      const usd = clamp(state.usd, USD_MIN, USD_MAX);
+      const solAmount = usd / solPrice;
+      const lamports = Math.floor(solAmount * 1e9);
+      if (!Number.isFinite(lamports) || lamports <= 0) throw new Error("Invalid amount");
+
+      //if (buy) {
+      //  await ensureAta(tokenMint);
+      //}
+
+      const quoteBody = buy
+        ? {
+            config_version: 2,
+            max_sol_spend: solAmount,
+            mint: tokenMint.toBase58(),
+            program_id: new PublicKey("HEAVENoP2qxoeuF8Dj2oT1GHEnu49U5mJYkdeC8BAX2o"),
+            slippage_bps: slippage,
+          }
+        : {
+            config_version: 2,
+            amount_in_ui: solAmount,
+            mint: tokenMint.toBase58(),
+            program_id: new PublicKey("HEAVENoP2qxoeuF8Dj2oT1GHEnu49U5mJYkdeC8BAX2o"),
+            slippage_bps: slippage,
+      };
+
+      const quoteResp = await fetch(
+        `https://tx.api.heaven.xyz/quote/${buy ? 'buy' : 'sell'}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(quoteBody),
+        }
+      ).then((r) => r.json());
+
+      const txResp = await fetch(
+        `https://tx.api.heaven.xyz/tx/${buy ? 'buy' : 'sell'}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            encoded_user_defined_event_data: '',
+            payer: engine.getWalletPayer().toBase58(),
+            quote_response: quoteResp,
+          }),
+        }
+      ).then((r) => r.json());
+      console.log(txResp, 'txResp');
+      const tx = VersionedTransaction.deserialize(
+        Buffer.from(txResp.tx, 'base64')
+      );
+      tx.message.recentBlockhash = (await engine.getConnectionChain().getRecentBlockhash()).blockhash;
+      //@ts-expect-error
+      const walletContext: any = engine.walletContext as any;
+      const sig = await walletContext.sendTransaction(tx, engine.getConnectionChain());
+      await engine.getConnectionChain().confirmTransaction(sig, "confirmed");
+
+      dispatch({
+        type: "STATUS",
+        status: {
+          type: "success",
+          message: `Success! You bought ${state.estOut ?? "tokens"}. Go to profile to deposit them for play.`,
+        },
+      });
+    } catch (e: any) {
+      const msg = typeof e?.message === "string" ? e.message : "Failed to complete purchase.";
+      dispatch({ type: "STATUS", status: { type: "error", message: msg } });
+    } finally {
+      dispatch({ type: "WAIT", on: false });
+    }
+  }
+
   return (
     <div className="shop-page">
       <AnimatedBackground />
@@ -358,7 +488,10 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
 
           <button
             className="buy-btn"
-            onClick={buyToken}
+            onClick={() => tradeToken({
+              tokenMint: new PublicKey("LiGHtkg3uTa9836RaNkKLLriqTNRcMdRAhqjGWNv777"),
+              buy: true,
+            })} //buyToken
             disabled={!walletConnected || state.waiting}
             aria-busy={state.waiting}
           >
