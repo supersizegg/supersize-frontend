@@ -2,17 +2,15 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import { PublicKey, Connection } from "@solana/web3.js";
 import { useMagicBlockEngine } from "../../engine/MagicBlockEngineProvider";
-import { SupersizeVaultClient } from "../../engine/SupersizeVaultClient";
+import { SupersizeVaultClient, AccountSyncState } from "../../engine/SupersizeVaultClient";
 import { cachedTokenMetadata, NETWORK, API_URL, VALIDATOR_MAP } from "../../utils/constants";
 import TokenTransferModal from "../TokenTransferModal/TokenTransferModal";
 import "./MenuSession.scss";
 import NotificationService from "@components/notification/NotificationService";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
-import { formatBuyIn, fetchWalletTokenBalance, getValidatorKeyForEndpoint, getRegion } from "../../utils/helper";
+import { formatBuyIn, getRegion } from "../../utils/helper";
 import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 const SESSION_LOCAL_STORAGE = "magicblock-session-key";
-
-type UserStatus = "loading" | "uninitialized" | "ready_to_delegate" | "delegated";
 
 export interface TokenBalance {
   mint: string;
@@ -50,19 +48,19 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
   const { engine } = useMagicBlockEngine();
 
   const [vaultClient, setVaultClient] = useState<SupersizeVaultClient | null>(null);
-  const [status, setStatus] = useState<UserStatus>("loading");
-  const [resetGameWallet, setResetGameWallet] = useState(false);
   const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
-  const [walletBalance, setWalletBalance] = useState<number>(0);
   const [unclaimedBalance, setUnclaimedBalance] = useState<number>(0);
   const [dialog, setDialog] = useState<null | {
     type: "deposit" | "withdraw";
     token: TokenBalance & { symbol: string; decimals: number };
   }>(null);
+
   const [isInitializing, setIsInitializing] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isActivating, setIsActivating] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncState, setSyncState] = useState<AccountSyncState | null>(null);
   const isMounted = useRef(false);
+
   const [debugInfo, setDebugInfo] = useState<string>("");
   const [showDebugInfo, setShowDebugInfo] = useState<boolean>(false);
 
@@ -101,22 +99,21 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
   const refreshVaultBalances = useCallback(async () => {
     if (!vaultClient) return;
 
-    const supportedMints = Object.keys(cachedTokenMetadata);
+    const supportedMints = Object.keys(cachedTokenMetadata).filter(
+      (mint) => cachedTokenMetadata[mint].network === NETWORK,
+    );
+
     const balances: TokenBalance[] = [];
 
     for (const mintStr of supportedMints) {
-      const mint = new PublicKey(mintStr);
-      const uiAmount = await vaultClient.getVaultBalance(mint);
-      if (uiAmount == "wrong_server") {
-        balances.push({ mint: mintStr, uiAmount: -1 });
-      } else if (uiAmount >= 0) {
-        if (mintStr === "AsoX43Q5Y87RPRGFkkYUvu8CSksD9JXNEqWVGVsr8UEp") {
-          setTokenBalance(uiAmount);
-        }
-        balances.push({ mint: mintStr, uiAmount });
-      }
-    }
+      const uiAmount = await vaultClient.getVaultBalance(new PublicKey(mintStr));
 
+      // if (mintStr === PRIMARY_MINT[NETWORK]) {
+      //   setTokenBalance(uiAmount);
+      // }
+      balances.push({ mint: mintStr, uiAmount });
+    }
+    console.log("balances", balances);
     setTokenBalances(balances);
   }, [vaultClient, setTokenBalance]);
 
@@ -140,7 +137,7 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
           // @ts-ignore
           const correctEndpoint = VALIDATOR_MAP[NETWORK][validatorAuthority];
           if (correctEndpoint) {
-            return `Delegated to ${getRegion(correctEndpoint)} server`;
+            return `Delegated to ${getRegion(correctEndpoint)} server (${validatorAuthority.substring(0, 3)})`;
           } else {
             return `Delegated to unknown validator: ${validatorAuthority}`;
           }
@@ -177,7 +174,7 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
     if (supportedMints.length > 0) {
       const mint = new PublicKey(supportedMints[0]);
       const balancePda = vaultClient.userBalancePda(engine.getWalletPayer(), mint);
-      debugString += `Balance PDA (${mint.toBase58().slice(0, 4)}...):\n`;
+      debugString += `Balance PDA:\n`;
       debugString += `  - Status: ${await getDelegationInfo(balancePda)}\n`;
       debugString += `  - PDA: ${balancePda}\n`;
     } else {
@@ -245,121 +242,64 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
     }
   }, [engine]);
 
-  const checkStatus = useCallback(async () => {
-    if (!vaultClient || !engine.getWalletConnected()) {
-      setStatus("loading");
-      return;
-    }
+  const analyzeAccountState = useCallback(async () => {
+    if (!vaultClient) return;
 
     setIsRefreshing(true);
-
     try {
       await fetchUnclaimedBalance();
+      const state = await vaultClient.getSyncState();
+      setSyncState(state);
 
-      const gwPda = vaultClient.gameWalletPda();
-      const gwPdaCheck = await vaultClient.getGameWallet();
-      const accountInfo = await engine.getConnectionChain().getAccountInfo(gwPda);
-
-      if (!accountInfo) {
-        setStatus("uninitialized");
-      } else if (accountInfo.owner.equals(new PublicKey("DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh"))) {
-        if (gwPdaCheck && gwPdaCheck.toString() !== engine.getSessionPayer().toString()) {
-          setResetGameWallet(true);
-        }
-        setStatus("delegated");
-        await refreshVaultBalances();
-      } else {
-        if (gwPdaCheck && gwPdaCheck.toString() !== engine.getSessionPayer().toString()) {
-          setResetGameWallet(true);
-        }
-        setStatus("ready_to_delegate");
-        await refreshVaultBalances();
-      }
-
-      const { balance } = await fetchWalletTokenBalance(engine, NETWORK !== "mainnet");
-      setWalletBalance(balance);
+      //if (state.status === "ready_to_play") {
+      await refreshVaultBalances();
+      //}
     } catch (e) {
-      console.error("Failed to check status:", e);
-      setStatus("uninitialized");
+      console.error("Failed to analyze account state:", e);
+      setSyncState(null);
     } finally {
       setIsRefreshing(false);
     }
-  }, [vaultClient, engine, refreshVaultBalances, fetchUnclaimedBalance]);
+  }, [vaultClient, fetchUnclaimedBalance, refreshVaultBalances]);
 
   useEffect(() => {
     if (isMounted.current && vaultClient && engine.getWalletConnected()) {
-      checkStatus().finally(() => {
-        setIsInitializing(false);
-      });
+      analyzeAccountState().finally(() => setIsInitializing(false));
     } else if (!engine.getWalletConnected()) {
       setIsInitializing(false);
     }
-
     isMounted.current = true;
-  }, [vaultClient, engine, checkStatus]);
+  }, [vaultClient, engine, analyzeAccountState]);
 
   useEffect(() => {
-    if (!isInitializing && (status === "ready_to_delegate" || status === "delegated")) {
+    if (!isInitializing && syncState && syncState.status !== "uninitialized") {
       fetchDebugInfo();
     }
-  }, [status, fetchDebugInfo, isInitializing]);
+  }, [syncState, fetchDebugInfo, isInitializing]);
 
-  const handleEnableWallet = async () => {
-    if (!vaultClient || !engine) return;
-    setIsActivating(true);
+  const handleSynchronizeVault = async () => {
+    if (!vaultClient) return;
+    setIsSyncing(true);
+    const alertId = NotificationService.addAlert({
+      type: "success",
+      message: "Preparing vault...",
+      shouldExit: false,
+    });
 
     try {
-      let cMint = new PublicKey(
-        Object.keys(cachedTokenMetadata).filter((mint) => cachedTokenMetadata[mint].network === NETWORK)[0],
-      );
-
-      await vaultClient.setupUserAccounts(cMint);
-
-      const gwPda = vaultClient.gameWalletPda();
-      const accountExists = await pollForAccount(engine.getConnectionChain(), gwPda);
-
-      if (accountExists) {
-        NotificationService.addAlert({
-          type: "success",
-          message: "Vault activated successfully!",
-          shouldExit: true,
-        });
-      } else {
-        throw new Error("Please refresh the page and try again.");
-      }
-    } catch (error: any) {
-      console.error("Failed to enable wallet:", error);
-      NotificationService.addAlert({
-        type: "error",
-        message: error.message || "Failed to activate vault.",
-        shouldExit: true,
-      });
-    } finally {
-      await checkStatus();
-      setIsActivating(false);
-    }
-  };
-
-  const handleWithdraw = async (mint: string, uiAmount: number, payoutWallet: PublicKey | null) => {
-    if (!vaultClient || uiAmount <= 0) return;
-    setStatus("loading");
-    try {
-      await vaultClient.withdraw(new PublicKey(mint), uiAmount, payoutWallet);
-      const successAlertId = NotificationService.addAlert({
-        type: "success",
-        message: `withdraw successful`,
-        shouldExit: false,
-      });
-      setTimeout(() => {
-        NotificationService.updateAlert(successAlertId, { shouldExit: true });
-      }, 3000);
-      await checkStatus();
+      await vaultClient.resyncAndDelegateAll();
+      NotificationService.updateAlert(alertId, { message: "Vault is ready!", shouldExit: true, timeout: 3000 });
     } catch (error) {
-      console.error("Failed to withdraw:", error);
-      await checkStatus();
-      throw error;
+      console.error("Failed to synchronize vault:", error);
+      NotificationService.updateAlert(alertId, {
+        type: "error",
+        message: "Synchronization failed. Please try again.",
+        shouldExit: true,
+        timeout: 4000,
+      });
     } finally {
-      setDialog(null);
+      await analyzeAccountState();
+      setIsSyncing(false);
     }
   };
 
@@ -382,200 +322,178 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
       return <div className="loading-overlay">Sign in and activate your vault to start stacking coins!</div>;
     }
 
-    if (status === "uninitialized") {
+    if (!syncState) {
+      return null;
+    }
+
+    if (syncState.status === "uninitialized") {
       return (
         <div className="session-prompt">
           <p>Activate your vault. This requires one-time approval.</p>
-          <button className="btn-primary" onClick={handleEnableWallet} disabled={isActivating}>
-            {isActivating ? "Activating..." : "Activate Vault"}
+          <button className="btn-primary" onClick={handleSynchronizeVault} disabled={isSyncing}>
+            {isSyncing ? "Activating..." : "Activate Vault"}
           </button>
         </div>
       );
     }
 
-    if (status === "ready_to_delegate" || status === "delegated") {
-      return (
-        <>
-          <div className="vault-header">
-            <button className="btn-subtle" onClick={checkStatus} disabled={isRefreshing}>
-              {isRefreshing ? "Refreshing..." : "Refresh"}
+    return (
+      <>
+        {syncState.status === "needs_sync" && (
+          <div className="session-prompt">
+            <h4>
+              <b>Synchronization Required</b>
+            </h4>
+            <p>Your vault must be fully synchronized to play. You can still deposit or withdraw.</p>
+            <ul className="issue-list">
+              {syncState.issues.map((issue, i) => (
+                <li key={i}>{issue}</li>
+              ))}
+            </ul>
+            <button className="btn-primary" onClick={handleSynchronizeVault} disabled={isSyncing}>
+              {isSyncing ? "Synchronizing..." : "Synchronize Vault"}
             </button>
           </div>
+        )}
 
-          <table className="token-table">
-            <thead>
-              <tr>
-                <th>Token</th>
-                <th style={{ textAlign: "right" }}>Balance</th>
-                <th colSpan={2} style={{ width: "160px" }} className="desktop-only" />
-              </tr>
-            </thead>
-            <tbody>
-              {(status === "ready_to_delegate" || status === "delegated") &&
-                tokenBalances.map(({ mint, uiAmount }) => {
-                  let meta = cachedTokenMetadata[mint];
-                  if (!meta) return null;
-                  if (meta.network !== NETWORK) return null;
-                  const symbol = meta.symbol ?? mint.slice(0, 4) + "…";
-                  return (
-                    <tr key={mint}>
-                      <td className="token-cell">
-                        {meta.image && <img src={meta.image} alt={symbol} />}
-                        {symbol}
-                      </td>
-                      <td className="balance-cell">
-                        {uiAmount === -1 ? "Wrong Server" : formatBuyIn(Math.round(uiAmount * 1000) / 1000)}
-                      </td>
-                      <td className="desktop-only">
-                        <button
-                          className="table-btn"
-                          onClick={() =>
-                            setDialog({
-                              type: "deposit",
-                              token: { mint, uiAmount, symbol, decimals: meta.decimals ?? 0 },
-                            })
-                          }
-                        >
-                          Deposit
-                        </button>
-                      </td>
-                      <td className="desktop-only">
-                        <button
-                          className="table-btn outline"
-                          disabled={uiAmount === 0}
-                          onClick={() =>
-                            setDialog({
-                              type: "withdraw",
-                              token: { mint, uiAmount, symbol, decimals: meta.decimals ?? 0 },
-                            })
-                          }
-                        >
-                          Withdraw
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-            </tbody>
-          </table>
+        <div className="vault-header">
+          <button className="btn-subtle" onClick={analyzeAccountState} disabled={isRefreshing}>
+            {isRefreshing ? "Refreshing..." : "Refresh"}
+          </button>
+        </div>
 
-          {(resetGameWallet || status === "ready_to_delegate") && (
-            <div className="session-prompt">
-              <p>Your session wallet needs to be reset. This will not affect your vault balance.</p>
-              <button
-                className="btn-primary"
-                onClick={async () => {
-                  const alertId = NotificationService.addAlert({
-                    type: "success",
-                    message: "reinitializing wallet...",
-                    shouldExit: false,
-                  });
-                  try {
-                    await vaultClient?.newGameWallet();
-                    setResetGameWallet(false);
-                  } catch (error) {
-                    console.error("Failed to reset game wallet:", error);
-                    const exitAlertId = NotificationService.addAlert({
-                      type: "error",
-                      message: "wallet reset failed",
-                      shouldExit: false,
-                    });
-                    setTimeout(() => {
-                      NotificationService.updateAlert(exitAlertId, { shouldExit: true });
-                    }, 3000);
-                  } finally {
-                    NotificationService.updateAlert(alertId, { shouldExit: true });
+        <table className="token-table">
+          <thead>
+            <tr>
+              <th>Token</th>
+              <th style={{ textAlign: "right" }}>Balance</th>
+              <th colSpan={2} style={{ width: "160px" }} className="desktop-only" />
+            </tr>
+          </thead>
+          <tbody>
+            {tokenBalances.map(({ mint, uiAmount }) => {
+              let meta = cachedTokenMetadata[mint];
+              if (!meta || meta.network !== NETWORK) return null;
+              const symbol = meta.symbol ?? mint.slice(0, 4) + "…";
+              return (
+                <tr key={mint}>
+                  <td className="token-cell">
+                    {meta.image && <img src={meta.image} alt={symbol} />}
+                    {symbol}
+                  </td>
+                  <td className="balance-cell">{formatBuyIn(Math.round(uiAmount * 1000) / 1000)}</td>
+                  <td className="desktop-only">
+                    <button
+                      className="table-btn"
+                      onClick={() =>
+                        setDialog({
+                          type: "deposit",
+                          token: { mint, uiAmount, symbol, decimals: meta.decimals ?? 0 },
+                        })
+                      }
+                    >
+                      Deposit
+                    </button>
+                  </td>
+                  <td className="desktop-only">
+                    <button
+                      className="table-btn outline"
+                      disabled={uiAmount === 0}
+                      onClick={() =>
+                        setDialog({
+                          type: "withdraw",
+                          token: { mint, uiAmount, symbol, decimals: meta.decimals ?? 0 },
+                        })
+                      }
+                    >
+                      Withdraw
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        <div className="session-wallet-info">
+          <div className="session-wallet-header">
+            <span className="session-label">Session Wallet</span>
+            {syncState.status === "ready_to_play" && <span className="status-tag">[active]</span>}
+          </div>
+          <div className="session-wallet-actions">
+            <button
+              className="icon-button"
+              onClick={(e) => {
+                navigator.clipboard.writeText(engine.getSessionPayer().toString());
+                const button = e.currentTarget;
+                const originalContent = button.innerHTML;
+                button.textContent = "Copied";
+                setTimeout(() => {
+                  button.innerHTML = originalContent;
+                }, 1000);
+              }}
+              aria-label="Copy session wallet address"
+            >
+              <img src="/copy.png" alt="Copy" />
+            </button>
+            <button
+              className="icon-button"
+              onClick={() => {
+                const privateKey = engine.getSessionKey();
+                const secretKeyArray = Object.values(privateKey.secretKey);
+                const secretKeyBuffer = Buffer.from(secretKeyArray);
+                const base58Key = bs58.encode(secretKeyBuffer);
+                const json = JSON.stringify({ base58Key });
+                const blob = new Blob([json], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "session-wallet-key.json";
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+              aria-label="Export session key"
+            >
+              Export
+            </button>
+            <button
+              className="icon-button"
+              onClick={async () => {
+                const input = document.createElement("input");
+                input.type = "file";
+                input.accept = "application/json";
+                input.onchange = async (event) => {
+                  const target = event.target as HTMLInputElement;
+                  if (!target.files) return;
+                  const file = target.files[0];
+                  if (file) {
+                    const text = await file.text();
+                    const { base58Key } = JSON.parse(text);
+                    const secretKeyBuffer = bs58.decode(base58Key);
+                    const secretKeyArray = Array.from(secretKeyBuffer);
+                    localStorage.setItem(SESSION_LOCAL_STORAGE, JSON.stringify(secretKeyArray));
                   }
-                }}
-              >
-                Reset Session Wallet
-              </button>
+                };
+                input.click();
+              }}
+              aria-label="Import session key"
+            >
+              Import
+            </button>
+          </div>
+          <p className="info-text-small">Session wallets are temporary and do not store funds.</p>
+
+          <span className="debug-toggle" onClick={() => setShowDebugInfo(!showDebugInfo)}>
+            {showDebugInfo ? "Hide advanced info" : "Show advanced info"}
+          </span>
+          {showDebugInfo && (
+            <div className="debug-info">
+              <pre>{debugInfo}</pre>
             </div>
           )}
-
-          <div className="session-wallet-info">
-            <div className="session-wallet-header">
-              <span className="session-label">Session Wallet</span>
-              {status === "delegated" && !resetGameWallet && <span className="status-tag">[active]</span>}
-            </div>
-            <div className="session-wallet-actions">
-              <button
-                className="icon-button"
-                onClick={(e) => {
-                  navigator.clipboard.writeText(engine.getSessionPayer().toString());
-                  const button = e.currentTarget;
-                  const originalContent = button.innerHTML;
-                  button.textContent = "Copied";
-                  setTimeout(() => {
-                    button.innerHTML = originalContent;
-                  }, 1000);
-                }}
-                aria-label="Copy session wallet address"
-              >
-                <img src="/copy.png" alt="Copy" />
-              </button>
-              <button
-                className="icon-button"
-                onClick={() => {
-                  const privateKey = engine.getSessionKey();
-                  const secretKeyArray = Object.values(privateKey.secretKey);
-                  const secretKeyBuffer = Buffer.from(secretKeyArray);
-                  const base58Key = bs58.encode(secretKeyBuffer);
-                  const json = JSON.stringify({ base58Key });
-                  const blob = new Blob([json], { type: "application/json" });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = "session-wallet-key.json";
-                  a.click();
-                  URL.revokeObjectURL(url);
-                }}
-                aria-label="Export session key"
-              >
-                Export
-              </button>
-              <button
-                className="icon-button"
-                onClick={async () => {
-                  const input = document.createElement("input");
-                  input.type = "file";
-                  input.accept = "application/json";
-                  input.onchange = async (event) => {
-                    const target = event.target as HTMLInputElement;
-                    if (!target.files) return;
-                    const file = target.files[0];
-                    if (file) {
-                      const text = await file.text();
-                      const { base58Key } = JSON.parse(text);
-                      const secretKeyBuffer = bs58.decode(base58Key);
-                      const secretKeyArray = Array.from(secretKeyBuffer);
-                      localStorage.setItem(SESSION_LOCAL_STORAGE, JSON.stringify(secretKeyArray));
-                    }
-                  };
-                  input.click();
-                }}
-                aria-label="Import session key"
-              >
-                Import
-              </button>
-            </div>
-            <p className="info-text-small">Session wallets are temporary and do not store funds.</p>
-
-            <span className="debug-toggle" onClick={() => setShowDebugInfo(!showDebugInfo)}>
-              {showDebugInfo ? "Hide advanced info" : "Show advanced info"}
-            </span>
-
-            {showDebugInfo && (
-              <div className="debug-info">
-                <pre>{debugInfo}</pre>
-              </div>
-            )}
-          </div>
-        </>
-      );
-    }
-
-    return null;
+        </div>
+      </>
+    );
   };
 
   return (
@@ -606,22 +524,15 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
           fetchWalletBalance={fetchUserWalletUiAmount}
           onClose={() => setDialog(null)}
           onDone={async () => {
-            if (dialog.type === "deposit") {
-              setDialog(null);
-              const successAlertId = NotificationService.addAlert({
-                type: "success",
-                message: `deposit successful`,
-                shouldExit: false,
-              });
-              setTimeout(() => {
-                NotificationService.updateAlert(successAlertId, { shouldExit: true });
-              }, 3000);
-              await checkStatus();
-            } else {
-              // withdraw is handled by handleWithdraw
-            }
+            setDialog(null);
+            NotificationService.addAlert({
+              type: "success",
+              message: `${dialog.type} successful`,
+              shouldExit: true,
+              timeout: 3000,
+            });
+            await analyzeAccountState();
           }}
-          handleWithdraw={handleWithdraw}
         />
       )}
     </div>

@@ -174,7 +174,7 @@ export class MagicBlockEngine {
   }
 
   async processWalletTransaction(name: string, transaction: Transaction): Promise<string> {
-    log(name, "sending");
+    console.log(name, "sending");
     const signature = await this.walletContext.sendTransaction(transaction, this.provider.connection);
     console.log("signature", signature);
     await this.waitSignatureConfirmation(name, signature, this.provider.connection, "confirmed");
@@ -198,7 +198,6 @@ export class MagicBlockEngine {
   }
 
   async processSessionEphemTransaction(name: string, transaction: Transaction): Promise<string> {
-    log(name, "sending");
     // transaction.compileMessage;
     const signature = await this.connectionEphem.sendTransaction(transaction, [this.sessionKey], {
       skipPreflight: true,
@@ -217,7 +216,11 @@ export class MagicBlockEngine {
     return signature;
   }
 
-  async processSessionEphemTransactionHard(name: string, transaction: Transaction, connection: Connection): Promise<string> {
+  async processSessionEphemTransactionHard(
+    name: string,
+    transaction: Transaction,
+    connection: Connection,
+  ): Promise<string> {
     //log(name, "sending");
     // transaction.compileMessage;
     const signature = await connection.sendTransaction(transaction, [this.sessionKey], {
@@ -241,6 +244,11 @@ export class MagicBlockEngine {
     return new Promise((resolve, reject) => {
       let timeoutHandle: ReturnType<typeof setTimeout>;
       let done = false;
+
+      if (!signature) {
+        reject(new Error("No signature provided"));
+        return;
+      }
 
       // const origWarn = console.warn;
       // Override to no-op or filter

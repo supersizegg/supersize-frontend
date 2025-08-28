@@ -4,7 +4,6 @@ import BackButton from "@components/util/BackButton";
 import TradingViewWidget from "@components/util/TradingViewWidget";
 import { useMagicBlockEngine } from "@engine/MagicBlockEngineProvider";
 import "./Shop.scss";
-import AnimatedBackground from "../components/util/AnimatedBackground";
 import {
   Connection,
   Keypair,
@@ -14,15 +13,15 @@ import {
   LAMPORTS_PER_SOL,
   ComputeBudgetProgram,
   Commitment,
-  VersionedTransaction
-} from '@solana/web3.js';
+  VersionedTransaction,
+} from "@solana/web3.js";
 import {
   getMint,
   getAccount,
   getAssociatedTokenAddressSync,
   createAssociatedTokenAccountInstruction,
   TOKEN_2022_PROGRAM_ID,
-} from '@solana/spl-token';
+} from "@solana/spl-token";
 
 const TOKEN_NAME = "PYUSD";
 const OUTPUT_MINT = "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo";
@@ -306,12 +305,7 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
   };
 
   async function ensureAta(mint: PublicKey): Promise<PublicKey> {
-    const ata = getAssociatedTokenAddressSync(
-      mint,
-      engine.getWalletPayer(),
-      false,
-      TOKEN_2022_PROGRAM_ID
-    );
+    const ata = getAssociatedTokenAddressSync(mint, engine.getWalletPayer(), false, TOKEN_2022_PROGRAM_ID);
     const info = await engine.getConnectionChain().getAccountInfo(ata);
     if (!info) {
       const tx = new Transaction();
@@ -321,15 +315,15 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
           ata,
           engine.getWalletPayer(),
           mint,
-          TOKEN_2022_PROGRAM_ID
-        )
+          TOKEN_2022_PROGRAM_ID,
+        ),
       );
 
       const sig = await engine.processWalletTransaction("createAssociatedTokenAccount", tx);
     }
     return ata;
   }
-  
+
   async function tradeToken({
     tokenMint,
     buy = true,
@@ -370,7 +364,7 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
             mint: tokenMint.toBase58(),
             program_id: new PublicKey("HEAVENoP2qxoeuF8Dj2oT1GHEnu49U5mJYkdeC8BAX2o"),
             slippage_bps: slippage,
-      };
+          };
 
       const quoteResp = await fetch(
         `https://tx.api.heaven.xyz/quote/${buy ? 'buy' : 'sell'}`,
@@ -422,7 +416,6 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
 
   return (
     <div className="shop-page">
-      <AnimatedBackground />
       <MenuBar tokenBalance={tokenBalance} />
 
       <main className="shop-container">
@@ -490,10 +483,12 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
 
           <button
             className="buy-btn"
-            onClick={() => tradeToken({
-              tokenMint: new PublicKey("LiGHtkg3uTa9836RaNkKLLriqTNRcMdRAhqjGWNv777"),
-              buy: true,
-            })} //buyToken
+            onClick={() =>
+              tradeToken({
+                tokenMint: new PublicKey("LiGHtkg3uTa9836RaNkKLLriqTNRcMdRAhqjGWNv777"),
+                buy: true,
+              })
+            } //buyToken
             disabled={!walletConnected || state.waiting}
             aria-busy={state.waiting}
           >

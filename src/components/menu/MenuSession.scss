@@ -241,6 +241,36 @@
     margin: 0 0 1rem 0;
   }
 
+  .issue-list {
+    list-style: none;
+    padding: 1rem;
+    margin: 0 0 1.25rem 0;
+    text-align: left;
+    background-color: rgba(255, 193, 7, 0.1);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    border-radius: 8px;
+
+    li {
+      font-size: 0.9rem;
+      color: #f0f0f0;
+      position: relative;
+      padding-left: 1.5rem;
+      margin-bottom: 0.5rem;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      &::before {
+        content: "⚠️";
+        position: absolute;
+        left: 0;
+        top: 1px;
+        font-size: 0.8rem;
+      }
+    }
+  }
+
   .btn-primary {
     width: 100%;
     padding: 0.75rem 1.5rem;

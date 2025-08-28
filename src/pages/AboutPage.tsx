@@ -5,7 +5,6 @@ import BackButton from "@components/util/BackButton";
 import GameComponent from "@components/Game/Game";
 import BN from "bn.js";
 import "./AboutPage.scss";
-import AnimatedBackground from "../components/util/AnimatedBackground";
 
 type AboutPageProps = {
   tokenBalance: number;
@@ -17,8 +16,6 @@ const AboutPage: React.FC<AboutPageProps> = ({ tokenBalance }) => {
 
   return (
     <div className="about-page">
-      <AnimatedBackground />
-
       <MenuBar tokenBalance={tokenBalance} />
 
       <main className="about-content">

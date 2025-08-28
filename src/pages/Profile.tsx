@@ -48,7 +48,6 @@ import { SupersizeVaultClient } from "../engine/SupersizeVaultClient";
 import { getComponentMapOnChain, getComponentMapOnEphem } from "../states/gamePrograms";
 import { NavLink, useNavigate } from "react-router-dom";
 import { fetchWalletTokenBalance } from "../utils/helper";
-import AnimatedBackground from "../components/util/AnimatedBackground";
 
 type profileProps = {
   randomFood: Food[];
@@ -80,7 +79,6 @@ export default function Profile({
   const [sessionLamports, setSessionLamports] = useState<number | undefined>(0);
   return (
     <div className="profile-page">
-      <AnimatedBackground />
       <MenuBar tokenBalance={tokenBalance} />
       <div className="profile-container">
         <div className="profile-tabs">
@@ -379,7 +377,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
             engine.setTempEndpointEphemRpc(validEndpointResult);
             const newVaultClient = new SupersizeVaultClient(engine);
             setVaultClient(newVaultClient);
-            
+
             if (balancePda) {
               setGameWallet(balancePda.toString());
               const new_balance = await newVaultClient?.getGameBalance(mapComponentPda, newGameInfo.tokenMint);
@@ -491,7 +489,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
         const buyInSum = count * newGameInfo.buy_in;
         setCashoutStats({ buyInSum: buyInSum / 10 ** newGameInfo.decimals, buyInCount: count });
       };
-      
+
       const updatedGameInfo = await processGameData();
       setMyGames((prevMyGames) =>
         prevMyGames.map((game) => (game.worldId === updatedGameInfo.worldId ? updatedGameInfo : game)),
@@ -749,8 +747,17 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                                     <div>
                                       <button
                                         className="btn-copy"
-                                        style={{ marginTop: "10px", maxHeight: "40px", display:( player.playersParsedDataEphem && player.playersParsedDataEphem.map) ? "none" : "flex" }}
-                                        onClick={() => handleReinitializePlayerClick(engine, row, player.playerEntityPda)}
+                                        style={{
+                                          marginTop: "10px",
+                                          maxHeight: "40px",
+                                          display:
+                                            player.playersParsedDataEphem && player.playersParsedDataEphem.map
+                                              ? "none"
+                                              : "flex",
+                                        }}
+                                        onClick={() =>
+                                          handleReinitializePlayerClick(engine, row, player.playerEntityPda)
+                                        }
                                       >
                                         reinit
                                       </button>
@@ -968,18 +975,26 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                   justifyContent: "center",
                 }}
               >
-                <div style={{ display: "flex", flexWrap: "wrap", width: "50%", alignItems: "center", justifyContent: "center" }}>
-                <DepositInput
-                  placeholder={"new token mint"}
-                  defaultValue={resetTokenInput}
-                  onCommit={(value) => {
-                    setResetTokenInput(value);
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    width: "50%",
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
-                />
+                >
+                  <DepositInput
+                    placeholder={"new token mint"}
+                    defaultValue={resetTokenInput}
+                    onCommit={(value) => {
+                      setResetTokenInput(value);
+                    }}
+                  />
                 </div>
                 <button
                   className="btn-copy"
-                  style={{ flex: "1 1 10%", margin: "10px"}}
+                  style={{ flex: "1 1 10%", margin: "10px" }}
                   onClick={() => handleResetToken(engine, row, resetTokenInput)}
                 >
                   Reset Game Token

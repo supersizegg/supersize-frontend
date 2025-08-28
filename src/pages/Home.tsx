@@ -37,7 +37,6 @@ import NotificationService from "@components/notification/NotificationService";
 import BalanceWarning from "@components/notification/BalanceWarning";
 import SignUpBanner from "../components/util/SignUpBanner";
 import Footer from "../components/Footer/Footer";
-import AnimatedBackground from "../components/util/AnimatedBackground";
 
 type homeProps = {
   selectedGame: ActiveGame | null;
@@ -480,7 +479,6 @@ const Home = ({
   return (
     <div className="home-page">
       {/* <div className="static-background"></div> */}
-      <AnimatedBackground />
       <MenuBar tokenBalance={tokenBalance} />
 
       <div className="home-container">

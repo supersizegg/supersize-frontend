@@ -13,7 +13,7 @@ import Wishlist from "@pages/Wishlist";
 import { ActiveGame, FetchedGame, Food } from "@utils/types";
 import { useState } from "react";
 import { PublicKey } from "@solana/web3.js";
-import { activeGamesList, NETWORK } from "@utils/constants";
+import { activeGamesList, cachedTokenMetadata, NETWORK } from "@utils/constants";
 import { pingEndpoints, getRegion } from "@utils/helper";
 import { createUnloadedGame } from "@utils/game";
 import { useMagicBlockEngine } from "./engine/MagicBlockEngineProvider";
@@ -23,15 +23,11 @@ const AppRoutes = () => {
   const { engine, setEndpointEphemRpc } = useMagicBlockEngine();
   const [preferredRegion, setPreferredRegion] = useState<string>("");
   const [selectedGame, setSelectedGame] = useState<ActiveGame | null>(null);
-  const [sessionWalletInUse, setSessionWalletInUse] = useState<boolean>(true); //(NETWORK === 'mainnet' ? false : true);
+  const [sessionWalletInUse, setSessionWalletInUse] = useState<boolean>(true);
   const [username, setUsername] = useState<string>("");
   const [tokenBalance, setTokenBalance] = useState<number>(0);
-  const [isEndpointResolved, setIsEndpointResolved] = useState(false);
+  // const [isEndpointResolved, setIsEndpointResolved] = useState(false);
   const [activeGamesLoaded, setActiveGamesLoaded] = useState<FetchedGame[]>(
-    /*(NETWORK === 'mainnet' 
-      ? [...activeGamesList[NETWORK], ...activeGamesList['devnet']]
-      : [...activeGamesList[NETWORK]]
-    )*/
     [...activeGamesList[NETWORK]].map((world) =>
       createUnloadedGame(world.worldId, world.worldPda, world.endpoint, world.permissionless),
     ),
@@ -79,16 +75,11 @@ const AppRoutes = () => {
     };
 
     const getTokenBalance = async () => {
-      let balance = 0;
-      const mintStr = "AsoX43Q5Y87RPRGFkkYUvu8CSksD9JXNEqWVGVsr8UEp";
-      const mint = new PublicKey(mintStr);
-      const uiAmount = await vaultClient?.getVaultBalance(mint);
-      if (uiAmount == "wrong_server") {
-        balance = 0;
-      } else if (uiAmount && uiAmount >= 0) {
-        balance = uiAmount;
-      }
-      setTokenBalance(balance);
+      const supportedMints = Object.keys(cachedTokenMetadata).filter(
+        (mint) => cachedTokenMetadata[mint].network === NETWORK,
+      );
+      const balance = await vaultClient?.getVaultBalance(new PublicKey(supportedMints[0]));
+      setTokenBalance(balance || 0);
     };
 
     fetchGameWalletEphem();
