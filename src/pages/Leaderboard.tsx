@@ -5,7 +5,6 @@ import { API_URL, NETWORK, cachedTokenMetadata } from "@utils/constants";
 import "./Leaderboard.scss";
 import BackButton from "@components/util/BackButton";
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
-import AnimatedBackground from "../components/util/AnimatedBackground";
 
 const TOKEN_MINT = Object.keys(cachedTokenMetadata).filter((mint) => cachedTokenMetadata[mint].network === NETWORK)[0];
 
@@ -87,7 +86,6 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ engine, tokenBalance }) => {
 
   return (
     <div className="leaderboard-page">
-      <AnimatedBackground />
       <MenuBar tokenBalance={tokenBalance} />
 
       <main className="leaderboard-container">

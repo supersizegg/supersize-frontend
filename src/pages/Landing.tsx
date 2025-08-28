@@ -6,7 +6,6 @@ import GameComponent from "@components/Game/Game";
 import { MenuBar } from "@components/menu/MenuBar";
 import { useMagicBlockEngine } from "../engine/MagicBlockEngineProvider";
 import Footer from "../components/Footer/Footer";
-import AnimatedBackground from "../components/util/AnimatedBackground";
 
 type LandingProps = {
   preferredRegion: string;
@@ -19,7 +18,6 @@ const Landing = ({ preferredRegion, tokenBalance }: LandingProps) => {
 
   return (
     <div className="landing-page">
-      <AnimatedBackground />
       <MenuBar tokenBalance={tokenBalance} />
       <div className="panels-container">
         <div className="panel" onClick={() => navigate("/home")}>

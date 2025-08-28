@@ -14,7 +14,6 @@ type Props = {
   fetchWalletBalance: (mint: string) => Promise<number>;
   onClose: () => void;
   onDone: () => void;
-  handleWithdraw: (mint: string, uiAmount: number, payoutWallet: PublicKey | null) => Promise<void>;
 };
 
 const TokenTransferModal: React.FC<Props> = ({
@@ -26,7 +25,6 @@ const TokenTransferModal: React.FC<Props> = ({
   fetchWalletBalance,
   onClose,
   onDone,
-  handleWithdraw,
 }) => {
   const wallet = engine.getWalletPayer();
   const [max, setMax] = useState<number>(0);
@@ -57,23 +55,39 @@ const TokenTransferModal: React.FC<Props> = ({
       message: `submitting ${kind}...`,
       shouldExit: false,
     });
+
     try {
       if (kind === "deposit") {
-        await vaultClient.deposit(new PublicKey(token.mint), value);
+        NotificationService.updateAlert(alertId, { message: "Please sign in your wallet..." });
+        await vaultClient.executeDeposit(new PublicKey(token.mint), value);
         onDone();
       } else {
-        await handleWithdraw(token.mint, value, payoutWallet);
+        await vaultClient.executeWithdraw(new PublicKey(token.mint), value, payoutWallet);
+        onDone();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Failed to ${kind}:`, error);
-      const exitAlertId = NotificationService.addAlert({
-        type: "error",
-        message: `${kind} failed`,
-        shouldExit: false,
-      });
-      setTimeout(() => {
-        NotificationService.updateAlert(exitAlertId, { shouldExit: true });
-      }, 3000);
+
+      const isUserRejection = error.code === 4001 || error.name === "WalletSignTransactionError";
+
+      if (isUserRejection) {
+        NotificationService.addAlert({
+          type: "error",
+          message: "Transaction cancelled. Your vault may need to be re-synced.",
+          shouldExit: true,
+          timeout: 5000,
+        });
+        onClose();
+      } else {
+        const exitAlertId = NotificationService.addAlert({
+          type: "error",
+          message: `${kind} failed`,
+          shouldExit: false,
+        });
+        setTimeout(() => {
+          NotificationService.updateAlert(exitAlertId, { shouldExit: true });
+        }, 3000);
+      }
     } finally {
       NotificationService.updateAlert(alertId, { shouldExit: true });
       setIsProcessing(false);
@@ -85,40 +99,35 @@ const TokenTransferModal: React.FC<Props> = ({
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-container" onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ marginBottom: "0.5rem" }}>
-          {kind === "deposit" ? "Deposit" : "Withdraw"}
-        </h3>
+        <h3 style={{ marginBottom: "0.5rem" }}>{kind === "deposit" ? "Deposit" : "Withdraw"}</h3>
 
         <p style={{ fontSize: "0.9rem", marginBottom: "0.5rem" }}>
-          {engine?.getWalletType() === "embedded" && 
-          kind === "withdraw"
-           ?(
+          {engine?.getWalletType() === "embedded" && kind === "withdraw" ? (
             <>
-            <label htmlFor="payoutWalletInput">Payout Wallet:</label>
-            <input
-              type="text"
-              id="payoutWalletInput"
-              value={payoutWallet ? payoutWallet.toString() : ""}
-              onChange={(e) => {
-                try {
-                  const newPayoutWallet = new PublicKey(e.target.value);
-                  setPayoutWallet(newPayoutWallet);
-                } catch (error) {
-                  console.error("Invalid PublicKey format:", error);
-                }
-              }}
-              placeholder="Enter payout wallet address"
-              style={{ width: "100%", marginBottom: "0.5rem", color: "black"}}
-            />
+              <label htmlFor="payoutWalletInput">Payout Wallet:</label>
+              <input
+                type="text"
+                id="payoutWalletInput"
+                value={payoutWallet ? payoutWallet.toString() : ""}
+                onChange={(e) => {
+                  try {
+                    const newPayoutWallet = new PublicKey(e.target.value);
+                    setPayoutWallet(newPayoutWallet);
+                  } catch (error) {
+                    console.error("Invalid PublicKey format:", error);
+                  }
+                }}
+                placeholder="Enter payout wallet address"
+                style={{ width: "100%", marginBottom: "0.5rem", color: "black" }}
+              />
             </>
-           )
-           : (
+          ) : (
             <>
-              {kind === "deposit" ? "From wallet:" : "To wallet:"} {wallet.toString().slice(0, 3) + "..." + wallet.toString().slice(-3)}
+              {kind === "deposit" ? "From wallet:" : "To wallet:"}{" "}
+              {wallet.toString().slice(0, 3) + "..." + wallet.toString().slice(-3)}
             </>
-           )}
+          )}
         </p>
-
 
         <p style={{ fontSize: "0.9rem", marginBottom: "0.5rem" }}>
           Available: {max.toLocaleString(undefined, { maximumFractionDigits: 3 })}
@@ -128,15 +137,15 @@ const TokenTransferModal: React.FC<Props> = ({
           type="range"
           min={0}
           max={max}
-          step={Math.pow(10, -3)} //-token.decimals
+          step={Math.pow(10, -3)}
           value={value}
           onChange={(e) => setValue(parseFloat(e.target.value))}
           style={{ width: "100%" }}
         />
 
         <div style={{ textAlign: "center", marginTop: "0.5rem" }}>
-          {value.toLocaleString(undefined, { maximumFractionDigits: 3})} {token.symbol} ({pct.toFixed(0)} 
-          %) 
+          {value.toLocaleString(undefined, { maximumFractionDigits: 3 })} {token.symbol} ({pct.toFixed(0)}
+          %)
         </div>
 
         <button

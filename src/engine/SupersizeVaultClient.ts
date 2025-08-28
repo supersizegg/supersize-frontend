@@ -1,11 +1,16 @@
 import { BN, Idl, Program } from "@coral-xyz/anchor";
 import axios from "axios";
 import { Connection, PublicKey, SystemProgram, Transaction, TransactionInstruction } from "@solana/web3.js";
-import { getAssociatedTokenAddressSync, getMint, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
+import {
+  createAssociatedTokenAccountInstruction,
+  getAssociatedTokenAddressSync,
+  getMint,
+  TOKEN_2022_PROGRAM_ID,
+} from "@solana/spl-token";
 
 import supersizeVaultIdl from "../backend/target/idl/supersize_vault.json";
 import { SupersizeVault } from "../backend/target/types/supersize_vault";
-import { VALIDATOR_MAP, NETWORK } from "../utils/constants";
+import { VALIDATOR_MAP, NETWORK, cachedTokenMetadata } from "../utils/constants";
 import { getRegion } from "../utils/helper";
 
 const DELEGATION_PROGRAM_ID = new PublicKey("DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh");
@@ -24,6 +29,17 @@ interface RouterResponse {
   jsonrpc: "2.0";
   id: number;
   result: DelegationStatusResult;
+}
+
+export interface AccountSyncState {
+  status: "uninitialized" | "needs_sync" | "ready_to_play";
+  issues: string[];
+  gameWalletExists: boolean;
+  balancePdaExists: boolean;
+  isGwDelegated: boolean;
+  isBalanceDelegated: boolean;
+  delegationMismatch: boolean;
+  sessionKeyMismatch: boolean;
 }
 
 export class SupersizeVaultClient {
@@ -69,6 +85,12 @@ export class SupersizeVaultClient {
     )[0];
   }
 
+  async getGameWallet(): Promise<PublicKey | undefined> {
+    const walletPda = this.gameWalletPda();
+    const walletAcc = await this.program.account.gameWallet.fetchNullable(walletPda);
+    return walletAcc?.wallet;
+  }
+
   async isBalanceDelegated(mint: PublicKey): Promise<boolean> {
     if (!this.wallet) return false;
     const balancePda = this.userBalancePda(this.wallet, mint);
@@ -96,101 +118,173 @@ export class SupersizeVaultClient {
     await this.engine.processWalletTransaction("InitializeVault", initializeTx);
   }
 
-  async setupUserAccounts(mint: PublicKey, validatorOverride: PublicKey | null = null) {
-    if (!this.wallet) throw new Error("Wallet not connected to set up accounts.");
-
-    const setupTx = new Transaction();
-    const gwPda = this.gameWalletPda();
-    const balPda = this.userBalancePda(this.wallet, mint);
-
-    console.log("Vault Ephem Endpoint", this.engine.getEndpointEphemRpc());
-
-    const gwInfo = await this.mainChainConnection.getAccountInfo(gwPda);
+  async resyncAndDelegateAll() {
+    if (!this.wallet) throw new Error("Wallet not connected.");
 
     const ephemIdentity = await this.engine.getConnectionEphem().getSlotLeader();
-    const validator = validatorOverride ? validatorOverride : new PublicKey(ephemIdentity);
-    if (!gwInfo) {
-      console.log("Creating GameWallet PDA...");
-      setupTx.add(
+    const targetValidator = new PublicKey(ephemIdentity);
+    const primaryMint = new PublicKey(
+      NETWORK === "mainnet" ? Object.keys(cachedTokenMetadata)[0] : Object.keys(cachedTokenMetadata)[1],
+    );
+
+    const syncState = await this.getSyncState();
+
+    const transaction = new Transaction();
+    let requiresSessionSign = false;
+
+    if (!syncState.gameWalletExists || syncState.sessionKeyMismatch) {
+      console.log("Creating/resetting game wallet PDA");
+      if (syncState.isGwDelegated) {
+        console.log("Undelegating game wallet before reset...");
+        await this.undelegateWallet();
+      }
+
+      transaction.add(
         await this.program.methods
           .newGameWallet()
           .accounts({ user: this.wallet, gameKey: this.engine.getSessionPayer() })
           .instruction(),
       );
-      setupTx.add(await this.program.methods.delegateWallet(validator).accounts({ payer: this.wallet }).instruction());
+      requiresSessionSign = true;
     }
-    const balInfo = await this.mainChainConnection.getAccountInfo(balPda);
-    if (!balInfo) {
-      console.log("Creating Balance PDA...");
-      setupTx.add(
-        await this.program.methods.newUserBalance().accounts({ user: this.wallet, mintOfToken: mint }).instruction(),
+
+    if (!syncState.isGwDelegated || syncState.delegationMismatch || syncState.sessionKeyMismatch) {
+      console.log("Delegating Game Wallet");
+      transaction.add(
+        await this.program.methods.delegateWallet(targetValidator).accounts({ payer: this.wallet }).instruction(),
       );
-      setupTx.add(
+    }
+
+    if (!syncState.balancePdaExists) {
+      console.log("Creating and delegating new Balance PDA");
+      transaction.add(
         await this.program.methods
-          .delegateUser(validator)
-          .accounts({ payer: this.wallet, mintOfToken: mint })
+          .newUserBalance()
+          .accounts({ user: this.wallet, mintOfToken: primaryMint })
+          .instruction(),
+      );
+      transaction.add(
+        await this.program.methods
+          .delegateUser(targetValidator)
+          .accounts({ payer: this.wallet, mintOfToken: primaryMint })
+          .instruction(),
+      );
+    } else if (!syncState.isBalanceDelegated || syncState.delegationMismatch) {
+      console.log("Synchronizing balance PDA delegation");
+      if (syncState.isBalanceDelegated) {
+        await this.undelegateBalance(primaryMint);
+      }
+      transaction.add(
+        await this.program.methods
+          .delegateUser(targetValidator)
+          .accounts({ payer: this.wallet, mintOfToken: primaryMint })
           .instruction(),
       );
     }
 
-    if (setupTx.instructions.length > 0) {
-      if (!gwInfo) {
-        setupTx.feePayer = this.engine.getWalletPayer();
-        setupTx.recentBlockhash = (await this.mainChainConnection.getLatestBlockhash()).blockhash;
-        setupTx.partialSign(this.engine.getSessionKey());
-      }
-      await this.engine.processWalletTransaction("SetupUserAccounts", setupTx);
-    } else {
-      console.log("User accounts already exist.");
+    if (transaction.instructions.length === 0) {
+      console.log("No vault synchronization needed");
+      return;
     }
 
-    const checkTx = new Transaction();
-    if (!gwInfo) {
-      checkTx.add(
-        SystemProgram.transfer({
-          fromPubkey: this.engine.getSessionPayer(),
-          toPubkey: gwPda,
-          lamports: 0,
-        }),
-      );
+    if (requiresSessionSign) {
+      console.log("Transaction requires session key signature");
+      transaction.feePayer = this.engine.getWalletPayer();
+      transaction.recentBlockhash = (await this.mainChainConnection.getLatestBlockhash()).blockhash;
+      transaction.partialSign(this.engine.getSessionKey());
     }
-    if (!balInfo) {
-      checkTx.add(
-        SystemProgram.transfer({
-          fromPubkey: this.engine.getSessionPayer(),
-          toPubkey: balPda,
-          lamports: 0,
-        }),
-      );
-    }
-    if (checkTx.instructions.length > 0) {
-      await this.engine.processSessionEphemTransaction("testTx", checkTx);
+
+    console.log("Sending final synchronization transaction...");
+    await this.engine.processWalletTransaction("SynchronizeVault", transaction);
+
+    try {
+      await this.syncEphemeralBalance(primaryMint);
+    } catch (err) {
+      console.log("Ephemeral syncBalTx after resync failed:", err);
     }
   }
 
-  async delegateAll(mint: PublicKey) {
-    if (!this.wallet) throw new Error("Wallet not connected to delegate.");
+  async getSyncState(): Promise<AccountSyncState> {
+    if (!this.wallet) throw new Error("Wallet not connected.");
 
-    const ephemIdentity = await this.engine.getConnectionEphem().getSlotLeader();
-    const validator = new PublicKey(ephemIdentity);
+    const gwPda = this.gameWalletPda();
+    const primaryMint = new PublicKey(
+      NETWORK === "mainnet" ? Object.keys(cachedTokenMetadata)[0] : Object.keys(cachedTokenMetadata)[1],
+    );
+    const balancePda = this.userBalancePda(this.wallet, primaryMint);
 
-    const tx = new Transaction()
-      .add(await this.program.methods.delegateWallet(validator).accounts({ payer: this.wallet }).instruction())
-      .add(
-        await this.program.methods
-          .delegateUser(validator)
-          .accounts({ payer: this.wallet, mintOfToken: mint })
-          .instruction(),
-      );
+    const [gwAccountInfo, balanceAccountInfo, gwDelegationRes, balanceDelegationRes, storedSessionKey] =
+      await Promise.all([
+        this.mainChainConnection.getAccountInfo(gwPda),
+        this.mainChainConnection.getAccountInfo(balancePda),
+        axios.post<RouterResponse>(this.routerUrl, {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "getDelegationStatus",
+          params: [gwPda.toBase58()],
+        }),
+        axios.post<RouterResponse>(this.routerUrl, {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "getDelegationStatus",
+          params: [balancePda.toBase58()],
+        }),
+        this.getGameWallet(),
+      ]);
 
-    await this.engine.processWalletTransaction("DelegateAccounts", tx);
+    const state: AccountSyncState = {
+      status: "uninitialized",
+      issues: [],
+      gameWalletExists: !!gwAccountInfo,
+      balancePdaExists: !!balanceAccountInfo,
+      isGwDelegated: false,
+      isBalanceDelegated: false,
+      delegationMismatch: false,
+      sessionKeyMismatch: false,
+    };
+
+    if (!state.gameWalletExists) {
+      state.issues.push("Vault has not been activated.");
+      return state;
+    }
+
+    const currentSessionKey = this.engine.getSessionPayer();
+    if (storedSessionKey?.toString() !== currentSessionKey.toString()) {
+      state.sessionKeyMismatch = true;
+      state.issues.push("Session key is out of sync.");
+    }
+
+    const gwDelegation = gwDelegationRes.data.result;
+    const balanceDelegation = balanceDelegationRes.data.result;
+    state.isGwDelegated = gwDelegation.isDelegated;
+    state.isBalanceDelegated = balanceDelegation.isDelegated;
+
+    if (state.isGwDelegated && state.isBalanceDelegated) {
+      if (gwDelegation.delegationRecord?.authority !== balanceDelegation.delegationRecord?.authority) {
+        state.delegationMismatch = true;
+        state.issues.push("Accounts are delegated to different servers.");
+      }
+    } else if (!state.isGwDelegated || !state.isBalanceDelegated) {
+      if (state.balancePdaExists) {
+        state.issues.push("One or more accounts are not delegated.");
+      }
+    }
+
+    if (state.issues.length > 0) {
+      state.status = "needs_sync";
+    } else if (!state.balancePdaExists) {
+      // edge case for new mints: GW exists and is delegated, but user has never deposited
+      state.status = "needs_sync";
+      state.issues.push("Balance account needs to be created and delegated.");
+    } else {
+      state.status = "ready_to_play";
+    }
+
+    return state;
   }
 
   async ensureDelegatedForJoin(mint: PublicKey): Promise<void> {
     if (!this.wallet) throw new Error("Wallet not connected.");
-
-    //await this.setupUserAccounts(mint);
-    // there should be a notification so the user knows whats happening
 
     const [walletDelegated, userDelegated] = await Promise.all([
       this.isWalletDelegated(),
@@ -219,7 +313,6 @@ export class SupersizeVaultClient {
       if (tx.instructions.length > 0) {
         await this.engine.processWalletTransaction("DelegateAccounts", tx);
       }
-      //await this.delegateAll(mint);
     }
   }
 
@@ -314,64 +407,6 @@ export class SupersizeVaultClient {
     }
   }
 
-  async deposit(mint: PublicKey, uiAmount: number) {
-    if (!this.wallet) throw new Error("Wallet not connected.");
-
-    await this.setupUserAccounts(mint);
-
-    const { lamports } = await this.uiAmountToLamports(mint, uiAmount);
-    const userAta = getAssociatedTokenAddressSync(mint, this.wallet, true, TOKEN_2022_PROGRAM_ID);
-    const depositIx = await this.program.methods
-      .deposit(lamports)
-      .accounts({
-        mintOfToken: mint,
-        senderTokenAccount: userAta,
-        payer: this.wallet,
-        tokenProgram: TOKEN_2022_PROGRAM_ID,
-      })
-      .instruction();
-
-    const currentlyDelegated = await this.isBalanceDelegated(mint);
-    if (currentlyDelegated) {
-      const transaction = new Transaction();
-      await this.undelegateAll(mint);
-
-      const ephemIdentity = await this.engine.getConnectionEphem().getSlotLeader();
-      const validator = new PublicKey(ephemIdentity);
-
-      const delegateIx = await this.program.methods
-        .delegateUser(validator)
-        .accounts({ payer: this.wallet, mintOfToken: mint })
-        .instruction();
-
-      await this.engine.processWalletTransaction("Deposit", transaction.add(depositIx).add(delegateIx));
-    } else {
-      const ephemIdentity = await this.engine.getConnectionEphem().getSlotLeader();
-      const validator = new PublicKey(ephemIdentity);
-
-      const delegateIx = await this.program.methods
-        .delegateUser(validator)
-        .accounts({ payer: this.wallet, mintOfToken: mint })
-        .instruction();
-
-      await this.engine.processWalletTransaction("Deposit", new Transaction().add(depositIx).add(delegateIx));
-    }
-
-    const checkBalancePda = this.userBalancePda(this.wallet, mint);
-    const checkTx = new Transaction().add(
-      SystemProgram.transfer({
-        fromPubkey: this.engine.getSessionPayer(),
-        toPubkey: checkBalancePda,
-        lamports: 0,
-      }),
-    );
-    try {
-      await this.engine.processSessionEphemTransaction("testTx", checkTx);
-    } catch (err) {
-      console.log("Ephemeral syncBalTx failed:", err);
-    }
-  }
-
   private async undelegateAll(mint: PublicKey) {
     if (!this.wallet) throw new Error("Wallet not connected.");
     const undelegateTx = new Transaction();
@@ -382,38 +417,58 @@ export class SupersizeVaultClient {
         .instruction(),
     );
 
+    if (await this.isWalletDelegated()) {
+      undelegateTx.add(await this.program.methods.undelegateWallet(this.wallet).accounts({}).instruction());
+    }
+
     const signers = [this.engine.getSessionKey()];
     const signature = await this.engine.getConnectionEphem().sendTransaction(undelegateTx, signers);
     await this.engine.getConnectionEphem().confirmTransaction(signature, "confirmed");
   }
 
-  async withdraw(mint: PublicKey, uiAmount: number, payoutWallet: PublicKey | null = null) {
-    if (!this.wallet) throw new Error("Wallet not connected to withdraw.");
+  private async undelegateWallet() {
+    if (!this.wallet) throw new Error("Wallet not connected.");
+    const undelegateTx = new Transaction();
+
+    if (await this.isWalletDelegated()) {
+      undelegateTx.add(await this.program.methods.undelegateWallet(this.wallet).accounts({}).instruction());
+    }
+
+    const signers = [this.engine.getSessionKey()];
+    const signature = await this.engine.getConnectionEphem().sendTransaction(undelegateTx, signers);
+    await this.engine.getConnectionEphem().confirmTransaction(signature, "confirmed");
+  }
+
+  private async undelegateBalance(mint: PublicKey) {
+    if (!this.wallet) throw new Error("Wallet not connected.");
+    const undelegateTx = new Transaction();
+    undelegateTx.add(
+      await this.program.methods
+        .undelegateUser(this.wallet)
+        .accounts({ wallet: this.engine.getSessionPayer(), mintOfToken: mint })
+        .instruction(),
+    );
+    const signers = [this.engine.getSessionKey()];
+    const signature = await this.engine.getConnectionEphem().sendTransaction(undelegateTx, signers);
+    await this.engine.getConnectionEphem().confirmTransaction(signature, "confirmed");
+  }
+
+  public async executeDeposit(mint: PublicKey, uiAmount: number) {
+    if (!this.wallet) throw new Error("Wallet not connected.");
 
     const { lamports } = await this.uiAmountToLamports(mint, uiAmount);
+    const userAta = getAssociatedTokenAddressSync(mint, this.wallet, true, TOKEN_2022_PROGRAM_ID);
 
-    let userAta = getAssociatedTokenAddressSync(mint, this.wallet, true, TOKEN_2022_PROGRAM_ID);
-    if (payoutWallet) {
-      userAta = getAssociatedTokenAddressSync(mint, payoutWallet, true, TOKEN_2022_PROGRAM_ID);
+    const isDelegated = await this.isBalanceDelegated(mint);
+    if (isDelegated) {
+      console.log("Deposit requires undelegation of Balance PDA. Preparing account...");
+      await this.undelegateBalance(mint);
     }
 
-    const currentlyDelegated = await this.isBalanceDelegated(mint);
-    if (currentlyDelegated) {
-      console.log("Undelegating before withdrawal...");
-      await this.undelegateAll(mint);
-    }
-
-    console.log("Signing withdrawal with main wallet...");
-    const withdrawTx = new Transaction();
-    // if (!userAtaInfo) {
-    //   withdrawTx.add(ixCreateATA(this.wallet, userAta, this.wallet, mint));
-    // }
-    withdrawTx.add(
+    const transaction = new Transaction().add(
       await this.program.methods
-        .withdraw(lamports)
+        .deposit(lamports)
         .accounts({
-          // @ts-ignore
-          balance: this.userBalancePda(this.wallet, mint),
           mintOfToken: mint,
           senderTokenAccount: userAta,
           payer: this.wallet,
@@ -424,7 +479,70 @@ export class SupersizeVaultClient {
 
     const ephemIdentity = await this.engine.getConnectionEphem().getSlotLeader();
     const validator = new PublicKey(ephemIdentity);
+    transaction.add(
+      await this.program.methods
+        .delegateUser(validator)
+        .accounts({ payer: this.wallet, mintOfToken: mint })
+        .instruction(),
+    );
 
+    await this.engine.processWalletTransaction("Deposit", transaction);
+
+    try {
+      await this.syncEphemeralBalance(mint);
+    } catch (err) {
+      console.log("Ephemeral syncBalTx failed:", err);
+    }
+  }
+
+  public async executeWithdraw(mint: PublicKey, uiAmount: number, payoutWallet: PublicKey | null = null) {
+    if (!this.wallet) throw new Error("Wallet not connected.");
+
+    const recipient = payoutWallet || this.wallet;
+    if (!recipient) {
+      throw new Error("Withdrawal recipient could not be determined.");
+    }
+
+    const userAta = getAssociatedTokenAddressSync(mint, recipient, true, TOKEN_2022_PROGRAM_ID);
+    const userAtaInfo = await this.mainChainConnection.getAccountInfo(userAta);
+    const ataExists = userAtaInfo !== null;
+
+    const isDelegated = await this.isBalanceDelegated(mint);
+
+    if (isDelegated) {
+      console.log("Withdrawal requires undelegation of Balance PDA. Preparing account...");
+      await this.undelegateBalance(mint);
+    }
+
+    const { lamports } = await this.uiAmountToLamports(mint, uiAmount);
+
+    const withdrawTx = new Transaction();
+
+    if (!ataExists) {
+      console.log(`Destination ATA ${userAta.toBase58()} does not exist. Adding creation instruction.`);
+
+      withdrawTx.add(
+        createAssociatedTokenAccountInstruction(this.wallet, userAta, recipient, mint, TOKEN_2022_PROGRAM_ID),
+      );
+    }
+
+    withdrawTx.add(
+      await this.program.methods
+        .withdraw(lamports)
+        .accounts({
+          // @ts-expect-error - todo: need to table check types
+          balance: this.userBalancePda(this.wallet, mint),
+          mintOfToken: mint,
+          senderTokenAccount: userAta,
+          payer: this.wallet,
+          tokenProgram: TOKEN_2022_PROGRAM_ID,
+        })
+        .instruction(),
+    );
+
+    console.log("Adding re-delegation instruction to the transaction.");
+    const ephemIdentity = await this.engine.getConnectionEphem().getSlotLeader();
+    const validator = new PublicKey(ephemIdentity);
     withdrawTx.add(
       await this.program.methods
         .delegateUser(validator)
@@ -434,18 +552,10 @@ export class SupersizeVaultClient {
 
     await this.engine.processWalletTransaction("Withdraw", withdrawTx);
 
-    const checkBalancePda = this.userBalancePda(this.wallet, mint);
-    const checkTx = new Transaction().add(
-      SystemProgram.transfer({
-        fromPubkey: this.engine.getSessionPayer(),
-        toPubkey: checkBalancePda,
-        lamports: 0,
-      }),
-    );
     try {
-      await this.engine.processSessionEphemTransaction("testTx", checkTx);
+      await this.syncEphemeralBalance(mint);
     } catch (err) {
-      console.log("Ephemeral syncBalTx failed:", err);
+      console.log("Ephemeral syncBalTx after withdraw failed:", err);
     }
   }
 
@@ -509,6 +619,23 @@ export class SupersizeVaultClient {
     }
   }
 
+  private async syncEphemeralBalance(mint: PublicKey) {
+    if (!this.wallet) return;
+    const checkBalancePda = this.userBalancePda(this.wallet, mint);
+    const checkTx = new Transaction().add(
+      SystemProgram.transfer({
+        fromPubkey: this.engine.getSessionPayer(),
+        toPubkey: checkBalancePda,
+        lamports: 0,
+      }),
+    );
+    try {
+      await this.engine.processSessionEphemTransaction("SyncBalance", checkTx);
+    } catch (err) {
+      console.log("Ephemeral balance sync transaction failed:", err);
+    }
+  }
+
   async getGameBalance(mapComponentPda: PublicKey, mint: PublicKey): Promise<number | "wrong_server"> {
     if (!this.wallet) return 0;
 
@@ -529,29 +656,49 @@ export class SupersizeVaultClient {
     return finalnum; //Number(acc.balance) / 10 ** decimals;
   }
 
-  async getVaultBalance(mint: PublicKey): Promise<number | "wrong_server"> {
+  public async getVaultBalance(mint: PublicKey): Promise<number> {
     if (!this.wallet) return 0;
 
     const balPda = this.userBalancePda(this.wallet, mint);
-    const currentProgramEphem = this.engine.getProgramOnSpecificEphem(
-      supersizeVaultIdl as Idl,
-      this.engine.getEndpointEphemRpc(),
-    );
+    let balanceAcc: { balance: BN } | null = null;
 
-    const balanceAcc = await currentProgramEphem.account.balance.fetchNullable(balPda);
-    if (!balanceAcc) {
-      return "wrong_server";
+    try {
+      const response = await axios.post<RouterResponse>(this.routerUrl, {
+        jsonrpc: "2.0",
+        id: 1,
+        method: "getDelegationStatus",
+        params: [balPda.toBase58()],
+      });
+
+      const delegationStatus = response.data.result;
+
+      if (delegationStatus.isDelegated && delegationStatus.delegationRecord) {
+        const validator = delegationStatus.delegationRecord.authority;
+        // @ts-expect-error - TODO: fix indexing issue
+        const correctEndpoint = VALIDATOR_MAP[NETWORK][validator];
+
+        if (correctEndpoint) {
+          const ephemProgram = this.engine.getProgramOnSpecificEphem(supersizeVaultIdl as Idl, correctEndpoint);
+          balanceAcc = await ephemProgram.account.balance.fetchNullable(balPda);
+        } else {
+          console.error(`Balance PDA is delegated to an unknown validator: ${validator}`);
+          return 0;
+        }
+      } else {
+        // Fetch on solana mainnet if not delegated
+        balanceAcc = await this.program.account.balance.fetchNullable(balPda);
+      }
+    } catch (error) {
+      console.error("Router query for balance failed, falling back to mainnet check:", error);
+      balanceAcc = await this.program.account.balance.fetchNullable(balPda);
     }
 
-    const conn = this.program.provider.connection;
-    const { decimals } = await getMint(conn, mint, "confirmed", TOKEN_2022_PROGRAM_ID);
-    return Number(balanceAcc.balance) / 10 ** decimals;
-  }
+    if (!balanceAcc) {
+      return 0;
+    }
 
-  async getGameWallet(): Promise<PublicKey | undefined> {
-    const walletPda = this.gameWalletPda();
-    const walletAcc = await this.program.account.gameWallet.fetchNullable(walletPda);
-    return walletAcc?.wallet;
+    const { decimals } = await getMint(this.mainChainConnection, mint, "confirmed", TOKEN_2022_PROGRAM_ID);
+    return Number(balanceAcc.balance) / 10 ** decimals;
   }
 
   async findMyEphemEndpoint(
@@ -578,7 +725,7 @@ export class SupersizeVaultClient {
 
       if (result.isDelegated && result.delegationRecord) {
         const validatorAuthority = result.delegationRecord.authority;
-        // @ts-ignore
+        // @ts-expect-error - TODO: fix indexing issue
         const correctEndpoint = VALIDATOR_MAP[NETWORK][validatorAuthority];
 
         if (correctEndpoint) {
@@ -595,53 +742,6 @@ export class SupersizeVaultClient {
     } catch (error) {
       console.error("Failed to query Magic Block Router for delegation status:", error);
     }
-  }
-
-  async newGameWallet() {
-    if (!this.wallet) throw new Error("Wallet not connected to new game wallet.");
-
-    const ephemIdentity = await this.engine.getConnectionEphem().getSlotLeader();
-    const validator = new PublicKey(ephemIdentity);
-
-    try {
-      const walletDelegated = await this.isWalletDelegated();
-      if (walletDelegated) {
-        const undelegateTx = new Transaction().add(
-          await this.program.methods.undelegateWallet(this.wallet).accounts({}).instruction(),
-        );
-        const signers = [this.engine.getSessionKey()];
-        const signature = await this.engine.getConnectionEphem().sendTransaction(undelegateTx, signers);
-        await this.engine.getConnectionEphem().confirmTransaction(signature, "confirmed");
-      }
-    } catch (error) {
-      console.error("Error in newGameWallet:", error);
-    }
-
-    const tx = new Transaction();
-    tx.add(
-      await this.program.methods
-        .newGameWallet()
-        .accounts({ user: this.wallet, gameKey: this.engine.getSessionPayer() })
-        .instruction(),
-    );
-    //await this.engine.processWalletTransaction("NewGameWallet", tx);
-
-    //const redelegateTx = new Transaction();
-    tx.add(await this.program.methods.delegateWallet(validator).accounts({ payer: this.wallet }).instruction());
-    tx.feePayer = this.engine.getWalletPayer();
-    tx.recentBlockhash = (await this.mainChainConnection.getLatestBlockhash()).blockhash;
-    tx.partialSign(this.engine.getSessionKey());
-    await this.engine.processWalletTransaction("DelegateAccounts", tx);
-
-    const walletPda = this.gameWalletPda();
-    const checkTx = new Transaction().add(
-      SystemProgram.transfer({
-        fromPubkey: this.engine.getSessionPayer(),
-        toPubkey: walletPda,
-        lamports: 0, // 1 SOL
-      }),
-    );
-    await this.engine.processSessionEphemTransaction("testTx", checkTx);
   }
 
   private async uiAmountToLamports(mint: PublicKey, uiAmount: number) {

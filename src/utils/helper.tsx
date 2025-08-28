@@ -416,7 +416,7 @@ export async function fetchWalletTokenBalance(
 
         const balanceInfo = await connection.getTokenAccountBalance(accountInfo);
         const { decimals } = await getMint(connection, tokenMint, "confirmed", TOKEN_2022_PROGRAM_ID);
-        console.log(balanceInfo, "balanceInfo")
+        console.log(balanceInfo, "balanceInfo");
         balance = parseInt(balanceInfo.value.amount) || 0;
         denominator = 10 ** decimals;
       }
@@ -447,15 +447,7 @@ export async function fetchTokenBalance(
   try {
     if (!activeGame.tokenMint) return { tokenBalance: 0, hasInsufficientTokenBalance: true };
     const tokenMint = new PublicKey(activeGame.tokenMint);
-    let balance = 0;
-    //const mintStr = "AsoX43Q5Y87RPRGFkkYUvu8CSksD9JXNEqWVGVsr8UEp";
-    //const mint = new PublicKey(mintStr);
-    const uiAmount = await vaultClient?.getVaultBalance(tokenMint);
-    if (uiAmount == "wrong_server") {
-      balance = 0;
-    } else if (uiAmount && uiAmount >= 0) {
-      balance = uiAmount;
-    }
+    const balance = await vaultClient?.getVaultBalance(tokenMint);
 
     const denominator = 10 ** activeGame.decimals;
     if (balance < activeGame.buy_in / denominator) {
@@ -826,7 +818,6 @@ export const getMyPlayerStatus = async (
 
   const results = await Promise.all(fetchPromises);
   for (const { playersComponentPda, playersacc, playersParsedDataER, playerEntityPda } of results) {
-    
     if (!playersacc) {
       continue;
     }
@@ -836,8 +827,8 @@ export const getMyPlayerStatus = async (
         if (playersParsedDataER.circles.length > 0) {
           activeplayers += 1;
         }
-        if(playersParsedDataER.authority){
-          console.log("playersacc", playersParsedDataER.authority.toString())
+        if (playersParsedDataER.authority) {
+          console.log("playersacc", playersParsedDataER.authority.toString());
         }
       }
       if (
@@ -848,8 +839,12 @@ export const getMyPlayerStatus = async (
         newplayerEntityPda = playerEntityPda;
         playerStatus = "in_game";
       } else {
-        if (playersParsedDataER && playersParsedDataER.circles.length == 0 && 
-          !playersParsedDataER.authority && newplayerEntityPda == null) {
+        if (
+          playersParsedDataER &&
+          playersParsedDataER.circles.length == 0 &&
+          !playersParsedDataER.authority &&
+          newplayerEntityPda == null
+        ) {
           newplayerEntityPda = playerEntityPda;
           playerStatus = "new_player";
         }
@@ -949,9 +944,9 @@ export const fetchGames = async (engine: MagicBlockEngine, myGames: ActiveGame[]
         });
 
         const mapParsedData = await mapFetchOnChain(engine, mapComponentPda);
-        
+
         if (mapParsedData?.authority && mapParsedData.authority.toString() === engine.getSessionPayer().toString()) {
-          const {gameInfo: mapParsedData} = await getGameData(engine, worldId.worldId, "", {
+          const { gameInfo: mapParsedData } = await getGameData(engine, worldId.worldId, "", {
             worldId: worldId.worldId,
             worldPda: worldPda,
           } as ActiveGame);
@@ -971,7 +966,6 @@ export const fetchGames = async (engine: MagicBlockEngine, myGames: ActiveGame[]
             isLoaded: true,
             permissionless: false,
           }; */
-          
 
           newGames = newGames.some((game) => game.worldId === mapParsedData.worldId)
             ? [...newGames]

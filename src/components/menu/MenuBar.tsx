@@ -45,7 +45,7 @@ export function MenuBar({ tokenBalance }: MenuBarProps) {
 
         let newBalance = 0;
         if (parentWallet) {
-          newBalance = Number(stats.balances.p2p_vault_balance) + Number(stats.balances.f2p_earnings);
+          newBalance = Number(stats.balances.p2p_vault_balance); // + Number(stats.balances.f2p_earnings);
         } else {
           newBalance = Number(stats.balances.f2p_earnings);
         }

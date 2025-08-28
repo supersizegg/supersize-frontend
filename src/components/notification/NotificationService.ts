@@ -5,6 +5,7 @@ export interface AlertData {
   type: AlertType;
   message: string;
   shouldExit?: boolean;
+  timeout?: number;
 }
 
 type Listener = (alerts: AlertData[]) => void;
@@ -31,20 +32,18 @@ class NotificationService {
   addAlert(alert: Omit<AlertData, "id">): number {
     const id = Date.now();
     const newAlert: AlertData = { ...alert, id };
-    this.alerts = [...this.alerts, newAlert]; 
+    this.alerts = [...this.alerts, newAlert];
     this.emit();
     return id;
   }
 
   updateAlert(id: number, data: Partial<AlertData>) {
-    this.alerts = this.alerts.map((alert) =>
-      alert.id === id ? { ...alert, ...data } : alert
-    );
+    this.alerts = this.alerts.map((alert) => (alert.id === id ? { ...alert, ...data } : alert));
     this.emit();
   }
 
   removeAlert(id: number) {
-    this.alerts = this.alerts.filter((alert) => alert.id !== id); 
+    this.alerts = this.alerts.filter((alert) => alert.id !== id);
     this.emit();
   }
 
