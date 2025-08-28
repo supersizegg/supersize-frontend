@@ -23,9 +23,9 @@ import {
   TOKEN_2022_PROGRAM_ID,
 } from "@solana/spl-token";
 
-const TOKEN_NAME = "PYUSD";
-const OUTPUT_MINT = "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo";
-const OUTPUT_DECIMALS = 6;
+const TOKEN_NAME = "SLIMECOIN";
+const OUTPUT_MINT = "B1aHFyLNzm1y24gkhASHiBU7LH6xXV2V785S4MrtY777";
+const OUTPUT_DECIMALS = 9;
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
 const USD_MIN = 1;
@@ -433,7 +433,7 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
           </div>
 
           <div className="chart-container">
-            <TradingViewWidget />
+
           </div>
         </div>
 
