@@ -285,10 +285,10 @@ export const cachedTokenMetadata: Record<
     network: "mainnet",
     raydium: true,
   }, */
-  "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo": {
-    name: "PayPal USD",
-    symbol: "PYUSD",
-    image: `${process.env.PUBLIC_URL}/PYUSDLOGO.webp`,
+  "B1aHFyLNzm1y24gkhASHiBU7LH6xXV2V785S4MrtY777": {
+    name: "Slimecoin",
+    symbol: "SLIMECOIN",
+    image: `https://www.slimecoin.io/slime.png`,
     network: "mainnet",
   },
   AsoX43Q5Y87RPRGFkkYUvu8CSksD9JXNEqWVGVsr8UEp: {

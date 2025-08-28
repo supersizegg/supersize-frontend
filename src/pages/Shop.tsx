@@ -485,7 +485,7 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
             className="buy-btn"
             onClick={() =>
               tradeToken({
-                tokenMint: new PublicKey("LiGHtkg3uTa9836RaNkKLLriqTNRcMdRAhqjGWNv777"),
+                tokenMint: new PublicKey("B1aHFyLNzm1y24gkhASHiBU7LH6xXV2V785S4MrtY777"),
                 buy: true,
               })
             } //buyToken
