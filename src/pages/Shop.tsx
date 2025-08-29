@@ -367,33 +367,25 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
             slippage_bps: slippage,
           };
 
-      const quoteResp = await fetch(
-        `https://tx.api.heaven.xyz/quote/${buy ? 'buy' : 'sell'}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(quoteBody),
-        }
-      ).then((r) => r.json());
+      const quoteResp = await fetch(`https://tx.api.heaven.xyz/quote/${buy ? "buy" : "sell"}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(quoteBody),
+      }).then((r) => r.json());
 
-      const txResp = await fetch(
-        `https://tx.api.heaven.xyz/tx/${buy ? 'buy' : 'sell'}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            encoded_user_defined_event_data: '',
-            payer: engine.getWalletPayer().toBase58(),
-            quote_response: quoteResp,
-            compute_unit_limit: 200000,
-            compute_unit_price: 1,
-          }),
-        }
-      ).then((r) => r.json());
-      console.log(txResp, 'txResp');
-      const tx = VersionedTransaction.deserialize(
-        Buffer.from(txResp.tx, 'base64')
-      );
+      const txResp = await fetch(`https://tx.api.heaven.xyz/tx/${buy ? "buy" : "sell"}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          encoded_user_defined_event_data: "",
+          payer: engine.getWalletPayer().toBase58(),
+          quote_response: quoteResp,
+          compute_unit_limit: 200000,
+          compute_unit_price: 1,
+        }),
+      }).then((r) => r.json());
+      console.log(txResp, "txResp");
+      const tx = VersionedTransaction.deserialize(Buffer.from(txResp.tx, "base64"));
       tx.message.recentBlockhash = (await engine.getConnectionChain().getRecentBlockhash()).blockhash;
       //@ts-expect-error
       const walletContext: any = engine.walletContext as any;
@@ -437,7 +429,7 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
             <img src="/transaction.png" className="arrow-icon" alt="is worth" />
             <div className="ticker-section">
               <span className="price">SOL</span>
-              <img src="/Solana-logo.png" className="asset-icon" alt="SOL" />
+              <img src="/solana-logo.png" className="asset-icon" alt="SOL" />
             </div>
           </div>
 
@@ -445,40 +437,37 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
 
           </div> */}
 
-           <div className="token-info-container">
+          <div className="token-info-container">
             <div className="token-utility">
               <p>
-                SLIMECOIN is the core in-game currency for both free-to-play and competitive, high-stakes ranked matches where winners can accumulate and cash out their winnings.
+                SLIMECOIN is the core in-game currency for both free-to-play and competitive, high-stakes ranked matches
+                where winners can accumulate and cash out their winnings.
               </p>
             </div>
 
-             <div className="token-mint-address">
+            <div className="token-mint-address">
               <span className="mint-label">Token Address</span>
               <div className="mint-value-wrapper">
                 <code>{OUTPUT_MINT}</code>
                 <button onClick={handleCopy} className="copy-btn" title="Copy Address">
-                  {isCopied ? (
-                    <span className="copied-feedback">✓</span>
-                  ) : (
-                    <img src="/copy.png" alt="Copy" />
-                  )}
+                  {isCopied ? <span className="copied-feedback">✓</span> : <img src="/copy.png" alt="Copy" />}
                 </button>
               </div>
             </div>
 
             <div className="token-links">
-              <a 
-                href="https://heaven.xyz/token/B1aHFyLNzm1y24gkhASHiBU7LH6xXV2V785S4MrtY777" 
-                target="_blank" 
-                rel="noopener noreferrer" 
+              <a
+                href="https://heaven.xyz/token/B1aHFyLNzm1y24gkhASHiBU7LH6xXV2V785S4MrtY777"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="info-btn heaven"
               >
                 Trade on Heaven
               </a>
-              <a 
-                href="https://dexscreener.com/solana/9uhjvbv3wmmbqrtq6v5ujcbprc2zhnyf47bxamgm5ssh" 
-                target="_blank" 
-                rel="noopener noreferrer" 
+              <a
+                href="https://dexscreener.com/solana/9uhjvbv3wmmbqrtq6v5ujcbprc2zhnyf47bxamgm5ssh"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="info-btn dexscreener"
               >
                 View on DexScreener
