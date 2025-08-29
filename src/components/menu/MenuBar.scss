@@ -101,6 +101,21 @@
     transform: translateX(10px);
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
   }
+
+  .balance-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .user-panel-link {
