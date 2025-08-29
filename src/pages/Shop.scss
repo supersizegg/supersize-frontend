@@ -31,6 +31,141 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+
+  .token-mint-address {
+  text-align: left;
+  margin-top: 0.5rem;
+
+  .mint-label {
+    display: block;
+    font-size: 0.8rem;
+    color: #aaa;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+  }
+}
+
+.mint-value-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+
+  code {
+    font-family: "Courier New", Courier, monospace;
+    font-size: 0.9rem;
+    color: #f0f0f0;
+    word-break: break-all;
+    flex-grow: 1;
+  }
+}
+
+.copy-btn {
+  background: none;
+  border: 1px solid #555;
+  border-radius: 6px;
+  padding: 0.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  flex-shrink: 0;
+
+  img {
+    width: 16px;
+    height: 16px;
+    opacity: 0.7;
+  }
+
+  .copied-feedback {
+    color: #4fc124;
+    font-weight: bold;
+    font-size: 1.2rem;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+  }
+
+  &:hover {
+    background-color: #333;
+    img {
+      opacity: 1;
+    }
+  }
+}
+
+  .token-info-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 1.5rem;
+    height: 100%;
+  }
+
+  .token-utility {
+    text-align: left;
+
+    h3 {
+      margin-top: 0;
+      margin-bottom: 0.75rem;
+      font-size: 1.25rem;
+      color: #fff;
+    }
+
+    p {
+      margin: 0;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: #ccc;
+    }
+  }
+
+  .token-links {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: auto;
+  }
+
+  .info-btn {
+    display: block;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: 600;
+    text-decoration: none;
+    color: #fff;
+    transition:
+      transform 0.2s ease,
+      background-color 0.2s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+    }
+
+    &.heaven {
+      background-color: #a855f726;
+      border: 1px solid #c084fc;
+      &:hover {
+        background-color: #9333ea;
+      }
+    }
+
+    &.dexscreener {
+      background-color: #1e3a8a3b;
+      border: 1px solid #3b82f6;
+      &:hover {
+        background-color: #1c3276;
+      }
+    }
+  }
 }
 
 .ticker {

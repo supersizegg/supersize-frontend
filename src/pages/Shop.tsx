@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useReducer, useRef } from "react";
+import React, { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { MenuBar } from "@components/menu/MenuBar";
 import BackButton from "@components/util/BackButton";
 import TradingViewWidget from "@components/util/TradingViewWidget";
@@ -142,6 +142,7 @@ async function retry<T>(fn: (signal: AbortSignal) => Promise<T>, attempts = 3, b
 const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
   const { engine } = useMagicBlockEngine();
 
+  const [isCopied, setIsCopied] = useState(false);
   const [state, dispatch] = useReducer(reducer, {
     usd: 5,
     solPrice: null,
@@ -414,6 +415,14 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
     }
   }
 
+  const handleCopy = () => {
+    navigator.clipboard.writeText(OUTPUT_MINT);
+    setIsCopied(true);
+    setTimeout(() => {
+      setIsCopied(false);
+    }, 2000);
+  };
+
   return (
     <div className="shop-page">
       <MenuBar tokenBalance={tokenBalance} />
@@ -423,17 +432,58 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
           <div className="ticker" role="group" aria-label={`${TOKEN_NAME} price and 24 hour change`}>
             <div className="ticker-section">
               <img src="/slime.png" className="asset-icon" alt={TOKEN_NAME} />
-              <span className="ticker-amount">1 {TOKEN_NAME}</span>
+              <span className="ticker-amount">{TOKEN_NAME}</span>
             </div>
             <img src="/transaction.png" className="arrow-icon" alt="is worth" />
             <div className="ticker-section">
-              <span className="price">{state.tokenPrice != null ? formatUSD(state.tokenPrice) : "–"}</span>
-              <img src="/usdc.png" className="asset-icon" alt="USD" />
+              <span className="price">SOL</span>
+              <img src="/Solana-logo.png" className="asset-icon" alt="SOL" />
             </div>
           </div>
 
-          <div className="chart-container">
+          {/* <div className="chart-container">
 
+          </div> */}
+
+           <div className="token-info-container">
+            <div className="token-utility">
+              <p>
+                SLIMECOIN is the core in-game currency for both free-to-play and competitive, high-stakes ranked matches where winners can accumulate and cash out their winnings.
+              </p>
+            </div>
+
+             <div className="token-mint-address">
+              <span className="mint-label">Token Address</span>
+              <div className="mint-value-wrapper">
+                <code>{OUTPUT_MINT}</code>
+                <button onClick={handleCopy} className="copy-btn" title="Copy Address">
+                  {isCopied ? (
+                    <span className="copied-feedback">✓</span>
+                  ) : (
+                    <img src="/copy.png" alt="Copy" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="token-links">
+              <a 
+                href="https://heaven.xyz/token/B1aHFyLNzm1y24gkhASHiBU7LH6xXV2V785S4MrtY777" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="info-btn heaven"
+              >
+                Trade on Heaven
+              </a>
+              <a 
+                href="https://dexscreener.com/solana/9uhjvbv3wmmbqrtq6v5ujcbprc2zhnyf47bxamgm5ssh" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="info-btn dexscreener"
+              >
+                View on DexScreener
+              </a>
+            </div>
           </div>
         </div>
 
