@@ -31,7 +31,7 @@ import {
   handleUndelegatePlayer,
   handleDelegatePlayer,
   handleDeleteGame,
-  handleResetToken,
+  handleResetTokenOrBuyIn,
   handleReinitializeClick,
   countMatchingTransactions,
   gameTransfer,
@@ -290,6 +290,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
   const [foodComponentCheck, setFoodComponentCheck] = useState<string>("");
   const [depositValue, setDepositValue] = useState<string>("");
   const [resetTokenInput, setResetTokenInput] = useState<string>("");
+  const [resetBuyInInput, setResetBuyInInput] = useState<number>(0);
   const [currentFoodToAdd, setCurrentFoodToAdd] = useState<number>(0);
   const [initVaultInput, setInitVaultInput] = useState("");
   const [selectedMapComponentPda, setSelectedMapComponentPda] = useState<PublicKey | null>(null);
@@ -751,7 +752,8 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                                           marginTop: "10px",
                                           maxHeight: "40px",
                                           display:
-                                            player.playersParsedDataEphem && player.playersParsedDataEphem.map
+                                            player.playersParsedDataEphem && player.playersParsedDataEphem.map && selectedMapComponentPda
+                                            && player.playersParsedDataEphem.buy_in == row.buy_in
                                               ? "none"
                                               : "flex",
                                         }}
@@ -995,9 +997,43 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                 <button
                   className="btn-copy"
                   style={{ flex: "1 1 10%", margin: "10px" }}
-                  onClick={() => handleResetToken(engine, row, resetTokenInput)}
+                  onClick={() => handleResetTokenOrBuyIn(engine, row, resetTokenInput, 0)}
                 >
                   Reset Game Token
+                </button>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  width: "100%",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    width: "50%",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <DepositInput
+                    placeholder={"new buy in"}
+                    defaultValue={resetBuyInInput.toString()}
+                    onCommit={(value) => {
+                      setResetBuyInInput(Number(value));
+                    }}
+                  />
+                </div>
+                <button
+                  className="btn-copy"
+                  style={{ flex: "1 1 10%", margin: "10px" }}
+                  onClick={() => handleResetTokenOrBuyIn(engine, row, "", resetBuyInInput)}
+                >
+                  Reset Game Buy In 
                 </button>
               </div>
               <div

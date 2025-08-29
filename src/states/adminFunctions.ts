@@ -136,8 +136,8 @@ export const handleDelegatePlayer = async (
     }
 };
 
-export const handleResetToken = async (engine: MagicBlockEngine, gameInfo: ActiveGame, newTokenMint: string) => {
-    console.log("reset token", gameInfo.worldId.toString(), newTokenMint);
+export const handleResetTokenOrBuyIn = async (engine: MagicBlockEngine, gameInfo: ActiveGame, newTokenMint: string = "", newBuyIn: number = 0) => {
+    console.log("reset", gameInfo.worldId.toString(), newTokenMint, newBuyIn);
     const region = getRegion(gameInfo.endpoint);
     const validatorKey = getValidatorKeyForEndpoint(region);
     if (!validatorKey) {
@@ -159,16 +159,30 @@ export const handleResetToken = async (engine: MagicBlockEngine, gameInfo: Activ
     });
     await undelegateMap(engine, mapComponentPda);
 
-    const mintInfo = await engine.getConnectionChain().getParsedAccountInfo(new PublicKey(newTokenMint));
-    let decimals = 9;
-    if (mintInfo.value && "parsed" in mintInfo.value.data) {
-      decimals = mintInfo.value.data.parsed.info.decimals;
-    } else {
-      throw new Error("Invalid token mint info.");
+    let decimals = gameInfo.decimals;
+
+    let new_token_mint = gameInfo.tokenMint;
+    if (newTokenMint !== "") {
+      new_token_mint = new PublicKey(newTokenMint);
+      const mintInfo = await engine.getConnectionChain().getParsedAccountInfo(new PublicKey(newTokenMint));
+      if (mintInfo.value && "parsed" in mintInfo.value.data) {
+        decimals = mintInfo.value.data.parsed.info.decimals;
+      } else {
+        throw new Error("Invalid token mint info.");
+      }
     }
 
-    let prev_buy_in = gameInfo.buy_in / 10 ** gameInfo.decimals;
-    console.log("prev_buy_in", prev_buy_in , decimals);
+    if (!new_token_mint) {
+      throw new Error("Invalid token mint.");
+    }
+
+    let new_buy_in = gameInfo.buy_in / 10 ** gameInfo.decimals;
+    if (newBuyIn) {
+      new_buy_in = newBuyIn * 10 ** decimals;
+    }else{
+      new_buy_in = new_buy_in * 10 ** decimals;
+    }
+    console.log("new_buy_in", new_buy_in , decimals);
     const initGame = await ApplySystem({
       authority: engine.getSessionPayer(),
       world: gameInfo.worldPda,
@@ -181,8 +195,8 @@ export const handleResetToken = async (engine: MagicBlockEngine, gameInfo: Activ
       systemId: SYSTEM_INIT_MAP_ID,
       args: {
         name: gameInfo.name,
-        buy_in: prev_buy_in * 10 ** decimals,
-        token_string: newTokenMint,
+        buy_in: new_buy_in,
+        token_string: new_token_mint.toString(),
         game_type: "blob",
       },
     });
