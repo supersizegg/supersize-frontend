@@ -203,9 +203,10 @@ export const handleResetTokenOrBuyIn = async (engine: MagicBlockEngine, gameInfo
 
     await engine.processSessionChainTransaction("initmap:" + mapEntityPda, initGame.transaction);
 
-
-    const vaultClient = new SupersizeVaultClient(engine);
-    await vaultClient.setupGameWallet(mapComponentPda, new PublicKey(newTokenMint), new PublicKey(validatorKey));
+    if(newTokenMint !== ""){
+      const vaultClient = new SupersizeVaultClient(engine);
+      await vaultClient.setupGameWallet(mapComponentPda, new PublicKey(newTokenMint), new PublicKey(validatorKey));
+    }
     await delegateMap(engine, mapComponentPda, mapEntityPda);
 }
 
