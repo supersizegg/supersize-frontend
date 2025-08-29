@@ -54,7 +54,7 @@ export const FOOD_COLORS = [
 
 export const SOL_USDC_POOL_ID = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2";
 
-export const NETWORK = "mainnet"; //process.env.NODE_ENV === "production" ? "mainnet" : "devnet";
+export const NETWORK = process.env.NODE_ENV === "production" ? "mainnet" : "devnet";
 
 export const RPC_CONNECTION = {
   mainnet: "https://staked.helius-rpc.com?api-key=1bf47fbb-a652-4e8d-b35a-c07af6f60391",
@@ -292,7 +292,7 @@ export const cachedTokenMetadata: Record<
   "B1aHFyLNzm1y24gkhASHiBU7LH6xXV2V785S4MrtY777": {
     name: "Slimecoin",
     symbol: "SLIMECOIN",
-    image: `${process.env.PUBLIC_URL}/IMG_7274.PNG`,
+    image: `https://www.slimecoin.io/slime.png`,
     network: "mainnet",
   },
   AsoX43Q5Y87RPRGFkkYUvu8CSksD9JXNEqWVGVsr8UEp: {
