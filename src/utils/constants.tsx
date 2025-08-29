@@ -57,7 +57,7 @@ export const SOL_USDC_POOL_ID = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2";
 export const NETWORK = "mainnet"; //process.env.NODE_ENV === "production" ? "mainnet" : "devnet";
 
 export const RPC_CONNECTION = {
-  mainnet: "https://staked.helius-rpc.com?api-key=cba33294-aa96-414c-9a26-03d5563aa676",
+  mainnet: "https://staked.helius-rpc.com?api-key=1bf47fbb-a652-4e8d-b35a-c07af6f60391",
   devnet: "https://devnet.helius-rpc.com/?api-key=cba33294-aa96-414c-9a26-03d5563aa676",
 };
 export const HELIUS_API_KEY = "07a045b7-c535-4d6f-852b-e7290408c937";
@@ -126,17 +126,22 @@ export const activeGamesList: {
       worldPda: new PublicKey("DhdGf7YXxTDDcqW6FEt4MQwExgqFgZbxbDkPn6yErSvj"),
       endpoint: "https://supersize-mainnet-sin.magicblock.app",
     },
-    */
     {
       worldId: new anchor.BN(33),
       worldPda: new PublicKey("24McMCDi52oE4WLUPP9mNioswh2vn6h1fJvNASnfYnTi"),
       endpoint: "https://supersize-mainnet-bos.magicblock.app",
     },
-    /* {
+     {
       worldId: new anchor.BN(34),
       worldPda: new PublicKey("9TVACTb1NDtGK3rtEHoBMa1Q8iKnHpLS55uuqudVm2xd"),
       endpoint: "https://supersize-mainnet.magicblock.app",
     }, */
+    {
+      worldId: new anchor.BN(38),
+      worldPda: new PublicKey("DbXfeC37bs1MKXpKQqvL1f3NnCfTUGDoCcSXsYgJfvVw"),
+      endpoint: "https://supersize-mainnet-bos.magicblock.app",
+    },
+    /* 
     {
       worldId: new anchor.BN(35),
       worldPda: new PublicKey("12MArv4fDwYMJNFXtPjQWuWJaVmKCqLyqz8fZmDQArpd"),
@@ -147,7 +152,6 @@ export const activeGamesList: {
       worldPda: new PublicKey("J9U6W6RM8RHx9aeUnq3uwCUtkv7nUMWnSqZGmqgKCwAY"),
       endpoint: "https://supersize-mainnet-sin.magicblock.app",
     },
-    /* 
     {
       worldId: new anchor.BN(25),
       worldPda: new PublicKey("FJaojoFH7ZpZvprYVPNfDN6nQ6o8sdMwokHr9GsQUcTK"),
@@ -285,10 +289,10 @@ export const cachedTokenMetadata: Record<
     network: "mainnet",
     raydium: true,
   }, */
-  "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo": {
-    name: "PayPal USD",
-    symbol: "PYUSD",
-    image: `${process.env.PUBLIC_URL}/PYUSDLOGO.webp`,
+  "B1aHFyLNzm1y24gkhASHiBU7LH6xXV2V785S4MrtY777": {
+    name: "Slimecoin",
+    symbol: "SLIMECOIN",
+    image: `${process.env.PUBLIC_URL}/IMG_7274.PNG`,
     network: "mainnet",
   },
   AsoX43Q5Y87RPRGFkkYUvu8CSksD9JXNEqWVGVsr8UEp: {

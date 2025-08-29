@@ -11,7 +11,7 @@ import {
 import supersizeVaultIdl from "../backend/target/idl/supersize_vault.json";
 import { SupersizeVault } from "../backend/target/types/supersize_vault";
 import { VALIDATOR_MAP, NETWORK, cachedTokenMetadata } from "../utils/constants";
-import { getRegion } from "../utils/helper";
+import { getRegion, getValidatorKeyForEndpoint } from "../utils/helper";
 
 const DELEGATION_PROGRAM_ID = new PublicKey("DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh");
 
@@ -122,6 +122,8 @@ export class SupersizeVaultClient {
     if (!this.wallet) throw new Error("Wallet not connected.");
 
     const ephemIdentity = await this.engine.getConnectionEphem().getSlotLeader();
+    //const ephemIdentity = getValidatorKeyForEndpoint("america");
+    //if (!ephemIdentity) throw new Error("No validator found.");
     const targetValidator = new PublicKey(ephemIdentity);
     const primaryMint = new PublicKey(
       NETWORK === "mainnet" ? Object.keys(cachedTokenMetadata)[0] : Object.keys(cachedTokenMetadata)[1],

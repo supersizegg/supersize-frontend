@@ -17,13 +17,13 @@ export async function gameSystemJoin(
   playerName: string,
 ) {
   const isGuest = (preferredRegion == undefined || preferredRegion == "" || !engine.getWalletConnected());
-  let guestWallet = new PublicKey("39tYJK9GojqB31shcwXJL6kRQpUPAaX59iTHxYe4rY7k");
+  let guestWallet = new PublicKey("G5USW6osjZviU6QEyWaZNtj4TUFeKAwCa4nRoCU2Yheo");
   if (getRegion(engine.getConnectionEphem().rpcEndpoint) == "ameria") {
-    guestWallet = new PublicKey("39tYJK9GojqB31shcwXJL6kRQpUPAaX59iTHxYe4rY7k");
+    guestWallet = new PublicKey("G5USW6osjZviU6QEyWaZNtj4TUFeKAwCa4nRoCU2Yheo");
   } else if (getRegion(engine.getConnectionEphem().rpcEndpoint) == "asia") {
-    guestWallet = new PublicKey("8pgaMkENhPtjXjV1kkYLgAS9E7hgYH3WaCaMfA1kLZL5");
+    guestWallet = new PublicKey("DRFSeRYK35NcGStkcbaD3TpH1F9BVzm8FbW9cNnEf9RR");
   } else if (getRegion(engine.getConnectionEphem().rpcEndpoint) == "europe") {
-    guestWallet = new PublicKey("99Pb6WAtKpb5zqQkmVM4AVRYDNJjtghh25FD3nGPWoV7");
+    guestWallet = new PublicKey("7j4M4tpFeLTcKNz6XVkam1Ny7i7PZWpKRohk34yQfToY");
   }
   const parentKey = isGuest ? guestWallet : engine.getWalletPayer();
   console.log("parentKey", parentKey.toString(), "preferredRegion", preferredRegion, engine.getConnectionEphem());
