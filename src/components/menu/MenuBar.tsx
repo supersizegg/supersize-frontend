@@ -25,16 +25,42 @@ export function MenuBar({ tokenBalance }: MenuBarProps) {
   const [username, setUsername] = useState<string>(initialUser?.name || "");
   const [avatar, setAvatar] = useState<string>(initialUser?.icon || "/slimey2.png");
   const [displayBalance, setDisplayBalance] = useState<number>(0);
+  const [isBalanceLoading, setIsBalanceLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const walletConnected = engine.getWalletConnected();
-    const sessionWallet = engine.getSessionPayer()?.toString();
-    const parentWallet = walletConnected ? engine.getWalletPayer().toString() : null;
+    const isConnecting = engine.getWalletConnecting();
 
+    if (!isConnecting) {
+      return;
+    }
+
+    const connectionTimer = setTimeout(() => {
+      console.log("Timeout: aborting balance loading state");
+      setIsBalanceLoading(false);
+    }, 10000);
+
+    return () => clearTimeout(connectionTimer);
+  }, [engine.getWalletConnecting()]);
+
+  useEffect(() => {
+    const isConnecting = engine.getWalletConnecting();
+    const isConnected = engine.getWalletConnected();
+    const sessionWallet = engine.getSessionPayer()?.toString();
+
+    if (!isConnecting) {
+      setIsBalanceLoading(true);
+    }
+
+    if (isConnecting) {
+      return;
+    }
+
+    const parentWallet = isConnected ? engine.getWalletPayer().toString() : null;
     const walletToQuery = parentWallet || sessionWallet;
 
     if (!walletToQuery) {
       setDisplayBalance(0);
+      setIsBalanceLoading(false);
       return;
     }
 
@@ -42,26 +68,20 @@ export function MenuBar({ tokenBalance }: MenuBarProps) {
       try {
         const response = await axios.get<PlayerStats>(`${API_URL}/api/v1/players/stats?wallet=${walletToQuery}`);
         const stats = response.data;
-
-        let newBalance = 0;
-        if (parentWallet) {
-          newBalance = Number(stats.balances.p2p_vault_balance); // + Number(stats.balances.f2p_earnings);
-        } else {
-          newBalance = Number(stats.balances.f2p_earnings);
-        }
+        const newBalance = parentWallet
+          ? Number(stats.balances.p2p_vault_balance)
+          : Number(stats.balances.f2p_earnings);
         setDisplayBalance(newBalance);
       } catch (error) {
         console.error("Failed to fetch player balance:", error);
         setDisplayBalance(0);
+      } finally {
+        setIsBalanceLoading(false);
       }
     };
 
     fetchPlayerBalance();
-
-    // const intervalId = setInterval(fetchPlayerBalance, 30000);
-
-    // return () => clearInterval(intervalId);
-  }, [engine, engine.getWalletConnected()]);
+  }, [engine, engine.getWalletConnecting(), engine.getWalletConnected()]);
 
   useEffect(() => {
     if (!engine.getWalletConnected()) {
@@ -111,7 +131,13 @@ export function MenuBar({ tokenBalance }: MenuBarProps) {
             <div className="coin-icon">
               <img src="/slime.png" alt="Game Token" />
             </div>
-            <span className="coin-balance">{formatBuyIn(displayBalance)}</span>
+            {isBalanceLoading ? (
+              <span className="coin-balance">
+                <div className="balance-spinner" />
+              </span>
+            ) : (
+              <span className="coin-balance">{formatBuyIn(displayBalance)}</span>
+            )}
           </div>
           <div className="utility-column">
             <NavLink to="/leaderboard" className="utility-btn">
