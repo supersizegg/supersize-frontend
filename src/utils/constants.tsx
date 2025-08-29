@@ -54,7 +54,7 @@ export const FOOD_COLORS = [
 
 export const SOL_USDC_POOL_ID = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2";
 
-export const NETWORK = process.env.NODE_ENV === "production" ? "mainnet" : "devnet";
+export const NETWORK = "mainnet"; //process.env.NODE_ENV === "production" ? "mainnet" : "devnet";
 
 export const RPC_CONNECTION = {
   mainnet: "https://staked.helius-rpc.com?api-key=1bf47fbb-a652-4e8d-b35a-c07af6f60391",
@@ -145,6 +145,11 @@ export const activeGamesList: {
       worldId: new anchor.BN(39),
       worldPda: new PublicKey("Bq8dd8YEBSsSDq6tg9pKpeeEZWp54zHtePbCSZ7SmjCj"),
       endpoint: "https://supersize-mainnet.magicblock.app",
+    },
+    {
+      worldId: new anchor.BN(40),
+      worldPda: new PublicKey("93uVwXBfQaE15j7VnHz4q2XWt5Vi6Dj4NjabKMipLs4n"),
+      endpoint: "https://supersize-mainnet-sin.magicblock.app",
     },
     /* 
     {
