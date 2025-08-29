@@ -141,6 +141,11 @@ export const activeGamesList: {
       worldPda: new PublicKey("DbXfeC37bs1MKXpKQqvL1f3NnCfTUGDoCcSXsYgJfvVw"),
       endpoint: "https://supersize-mainnet-bos.magicblock.app",
     },
+    {
+      worldId: new anchor.BN(39),
+      worldPda: new PublicKey("Bq8dd8YEBSsSDq6tg9pKpeeEZWp54zHtePbCSZ7SmjCj"),
+      endpoint: "https://supersize-mainnet.magicblock.app",
+    },
     /* 
     {
       worldId: new anchor.BN(35),
