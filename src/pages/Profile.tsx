@@ -752,8 +752,8 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                                           marginTop: "10px",
                                           maxHeight: "40px",
                                           display:
-                                            player.playersParsedDataEphem && player.playersParsedDataEphem.map && selectedMapComponentPda
-                                            && player.playersParsedDataEphem.buy_in == row.buy_in
+                                            player.playersParsedDataEphem && player.playersParsedDataEphem.map 
+                                            && player.playersParsedDataEphem.buyIn == row.buy_in
                                               ? "none"
                                               : "flex",
                                         }}
@@ -1022,7 +1022,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                 >
                   <DepositInput
                     placeholder={"new buy in"}
-                    defaultValue={resetBuyInInput.toString()}
+                    defaultValue={""}
                     onCommit={(value) => {
                       setResetBuyInInput(Number(value));
                     }}
