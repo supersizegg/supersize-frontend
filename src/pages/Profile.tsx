@@ -1022,7 +1022,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                   }}
                 >
                   <DepositInput
-                    placeholder={"new token mint"}
+                    placeholder={"new game name"}
                     defaultValue={""}
                     onCommit={(value) => {
                       setResetNameInput(value);
