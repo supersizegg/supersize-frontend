@@ -175,7 +175,7 @@ const GameComponent: React.FC<GameComponentProps> = ({
       if (player_speed <= 6.3) {
         const ratio = size / 10;
         if (ratio > 0) {
-          const val = Math.log(ratio) / 1.504 - 0.531;
+          const val = Math.log(ratio) * 0.38 - 0.11;
           slow_down = Math.max(val, 0.1); // clamp to avoid zero/negative
         }
       }
