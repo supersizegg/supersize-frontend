@@ -136,7 +136,7 @@ export const handleDelegatePlayer = async (
     }
 };
 
-export const handleResetTokenOrBuyIn = async (engine: MagicBlockEngine, gameInfo: ActiveGame, newTokenMint: string = "", newBuyIn: number = 0) => {
+export const handleResetMapInfo= async (engine: MagicBlockEngine, gameInfo: ActiveGame, newTokenMint: string = "", newBuyIn: number = 0, newName: string = "") => {
     console.log("reset", gameInfo.worldId.toString(), newTokenMint, newBuyIn);
     const region = getRegion(gameInfo.endpoint);
     const validatorKey = getValidatorKeyForEndpoint(region);
@@ -182,7 +182,12 @@ export const handleResetTokenOrBuyIn = async (engine: MagicBlockEngine, gameInfo
     }else{
       new_buy_in = new_buy_in * 10 ** decimals;
     }
-    console.log("new_buy_in", new_buy_in , decimals);
+
+    let new_name = gameInfo.name;
+    if (newName !== "") {
+      new_name = newName;
+    }
+    console.log("new_buy_in", new_buy_in , decimals, new_name);
     const initGame = await ApplySystem({
       authority: engine.getSessionPayer(),
       world: gameInfo.worldPda,
@@ -194,7 +199,7 @@ export const handleResetTokenOrBuyIn = async (engine: MagicBlockEngine, gameInfo
       ],
       systemId: SYSTEM_INIT_MAP_ID,
       args: {
-        name: gameInfo.name,
+        name: new_name,
         buy_in: new_buy_in,
         token_string: new_token_mint.toString(),
         game_type: "blob",

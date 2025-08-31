@@ -31,7 +31,7 @@ import {
   handleUndelegatePlayer,
   handleDelegatePlayer,
   handleDeleteGame,
-  handleResetTokenOrBuyIn,
+  handleResetMapInfo,
   handleReinitializeClick,
   countMatchingTransactions,
   gameTransfer,
@@ -291,6 +291,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
   const [depositValue, setDepositValue] = useState<string>("");
   const [resetTokenInput, setResetTokenInput] = useState<string>("");
   const [resetBuyInInput, setResetBuyInInput] = useState<number>(0);
+  const [resetNameInput, setResetNameInput] = useState<string>("");
   const [currentFoodToAdd, setCurrentFoodToAdd] = useState<number>(0);
   const [initVaultInput, setInitVaultInput] = useState("");
   const [selectedMapComponentPda, setSelectedMapComponentPda] = useState<PublicKey | null>(null);
@@ -997,9 +998,43 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                 <button
                   className="btn-copy"
                   style={{ flex: "1 1 10%", margin: "10px" }}
-                  onClick={() => handleResetTokenOrBuyIn(engine, row, resetTokenInput, 0)}
+                  onClick={() => handleResetMapInfo(engine, row, resetTokenInput, 0, "")}
                 >
                   Reset Game Token
+                </button>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  width: "100%",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    width: "50%",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <DepositInput
+                    placeholder={"new token mint"}
+                    defaultValue={""}
+                    onCommit={(value) => {
+                      setResetNameInput(value);
+                    }}
+                  />
+                </div>
+                <button
+                  className="btn-copy"
+                  style={{ flex: "1 1 10%", margin: "10px" }}
+                  onClick={() => handleResetMapInfo(engine, row, "", 0, resetNameInput)}
+                >
+                  Reset Game Name
                 </button>
               </div>
               <div
@@ -1031,7 +1066,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                 <button
                   className="btn-copy"
                   style={{ flex: "1 1 10%", margin: "10px" }}
-                  onClick={() => handleResetTokenOrBuyIn(engine, row, "", resetBuyInInput)}
+                  onClick={() => handleResetMapInfo(engine, row, "", resetBuyInInput, "")}
                 >
                   Reset Game Buy In 
                 </button>
