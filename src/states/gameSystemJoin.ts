@@ -89,7 +89,7 @@ export async function gameSystemJoin(
     ],
     systemId: SYSTEM_BUY_IN_ID,
     args: {
-      name: playerName,
+      name: playerName ? playerName : engine.getSessionPayer().toBase58().substring(0, 6),
     },
     extraAccounts: [
       {

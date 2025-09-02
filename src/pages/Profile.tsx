@@ -57,8 +57,6 @@ type profileProps = {
   setSessionWalletInUse: (sessionWalletInUse: boolean) => void;
   preferredRegion: string;
   setPreferredRegion: (region: string) => void;
-  tokenBalance: number;
-  setTokenBalance: (tokenBalance: number) => void;
 };
 
 export default function Profile({
@@ -68,9 +66,7 @@ export default function Profile({
   sessionWalletInUse,
   setSessionWalletInUse,
   preferredRegion,
-  setPreferredRegion,
-  tokenBalance,
-  setTokenBalance,
+  setPreferredRegion
 }: profileProps) {
   const { engine, setEndpointEphemRpc } = useMagicBlockEngine();
   const [activeTab, setActiveTab] = useState<"wallet" | "profile" | "admin">("wallet");
@@ -79,7 +75,7 @@ export default function Profile({
   const [sessionLamports, setSessionLamports] = useState<number | undefined>(0);
   return (
     <div className="profile-page">
-      <MenuBar tokenBalance={tokenBalance} />
+      <MenuBar />
       <div className="profile-container">
         <div className="profile-tabs">
           <button className={activeTab === "wallet" ? "active" : ""} onClick={() => setActiveTab("wallet")}>
@@ -99,18 +95,7 @@ export default function Profile({
 
         <div className="profile-content">
           {activeTab === "wallet" && (
-            <GeneralTab
-              engine={engine}
-              sessionWalletInUse={sessionWalletInUse}
-              username={username}
-              setSessionWalletInUse={setSessionWalletInUse}
-              setIsDepositModalOpen={setIsDepositModalOpen}
-              setIsWithdrawalModalOpen={setIsWithdrawalModalOpen}
-              setSessionLamports={setSessionLamports}
-              sessionLamports={sessionLamports}
-              setPreferredRegion={setPreferredRegion}
-              setTokenBalance={setTokenBalance}
-            />
+            <GeneralTab setPreferredRegion={setPreferredRegion} />
           )}
           {activeTab === "profile" && (
             <ProfileTab
@@ -144,43 +129,14 @@ export default function Profile({
 }
 
 type GeneralTabProps = {
-  engine: MagicBlockEngine;
-  sessionWalletInUse: boolean;
-  username: string;
-  sessionLamports: number | undefined;
-  setSessionWalletInUse: (sessionWalletInUse: boolean) => void;
-  setIsDepositModalOpen: (isDepositModalOpen: boolean) => void;
-  setIsWithdrawalModalOpen: (isWithdrawalModalOpen: boolean) => void;
-  setSessionLamports: (sessionLamports: number | undefined) => void;
   setPreferredRegion: (region: string) => void;
-  setTokenBalance: (tokenBalance: number) => void;
 };
 
-function GeneralTab({
-  engine,
-  sessionWalletInUse,
-  username,
-  sessionLamports,
-  setSessionWalletInUse,
-  setIsDepositModalOpen,
-  setIsWithdrawalModalOpen,
-  setSessionLamports,
-  setPreferredRegion,
-  setTokenBalance,
-}: GeneralTabProps) {
+function GeneralTab({ setPreferredRegion }: GeneralTabProps) {
   return (
     <div className="general-tab">
       <MenuWallet setPreferredRegion={setPreferredRegion} />
-      <MenuSession
-        setTokenBalance={setTokenBalance}
-        //username={username}
-        //sessionWalletInUse={sessionWalletInUse}
-        //setSessionWalletInUse={setSessionWalletInUse}
-        //setIsDepositModalOpen={setIsDepositModalOpen}
-        //setIsWithdrawalModalOpen={setIsWithdrawalModalOpen}
-        //setSessionLamports={setSessionLamports}
-        //sessionLamports={sessionLamports}
-      />
+      <MenuSession />
     </div>
   );
 }

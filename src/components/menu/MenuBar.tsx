@@ -1,87 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
-import axios from "axios";
 import "./MenuBar.scss";
 import { useMagicBlockEngine } from "../../engine/MagicBlockEngineProvider";
 import { formatBuyIn } from "../../utils/helper";
-import { API_URL } from "@utils/constants";
+import { useBalance } from "../../context/BalanceContext";
 
-interface PlayerStats {
-  balances: {
-    f2p_earnings: number;
-    p2p_vault_balance: number;
-  };
-}
-
-type MenuBarProps = {
-  tokenBalance: number;
-};
-
-export function MenuBar({ tokenBalance }: MenuBarProps) {
+export function MenuBar() {
   const { engine } = useMagicBlockEngine();
+  const { p2pBalance, f2pBalance, isBalanceLoading } = useBalance();
+
   const stored = localStorage.getItem("user");
   const initialUser = stored ? JSON.parse(stored) : null;
 
   const [username, setUsername] = useState<string>(initialUser?.name || "");
   const [avatar, setAvatar] = useState<string>(initialUser?.icon || "/slimey2.png");
-  const [displayBalance, setDisplayBalance] = useState<number>(0);
-  const [isBalanceLoading, setIsBalanceLoading] = useState<boolean>(true);
-
-  useEffect(() => {
-    const isConnecting = engine.getWalletConnecting();
-
-    if (!isConnecting) {
-      return;
-    }
-
-    const connectionTimer = setTimeout(() => {
-      console.log("Timeout: aborting balance loading state");
-      setIsBalanceLoading(false);
-    }, 10000);
-
-    return () => clearTimeout(connectionTimer);
-  }, [engine.getWalletConnecting()]);
-
-  useEffect(() => {
-    const isConnecting = engine.getWalletConnecting();
-    const isConnected = engine.getWalletConnected();
-    const sessionWallet = engine.getSessionPayer()?.toString();
-
-    if (!isConnecting) {
-      setIsBalanceLoading(true);
-    }
-
-    if (isConnecting) {
-      return;
-    }
-
-    const parentWallet = isConnected ? engine.getWalletPayer().toString() : null;
-    const walletToQuery = parentWallet || sessionWallet;
-
-    if (!walletToQuery) {
-      setDisplayBalance(0);
-      setIsBalanceLoading(false);
-      return;
-    }
-
-    const fetchPlayerBalance = async () => {
-      try {
-        const response = await axios.get<PlayerStats>(`${API_URL}/api/v1/players/stats?wallet=${walletToQuery}`);
-        const stats = response.data;
-        const newBalance = parentWallet
-          ? Number(stats.balances.p2p_vault_balance)
-          : Number(stats.balances.f2p_earnings);
-        setDisplayBalance(newBalance);
-      } catch (error) {
-        console.error("Failed to fetch player balance:", error);
-        setDisplayBalance(0);
-      } finally {
-        setIsBalanceLoading(false);
-      }
-    };
-
-    fetchPlayerBalance();
-  }, [engine, engine.getWalletConnecting(), engine.getWalletConnected()]);
 
   useEffect(() => {
     if (!engine.getWalletConnected()) {
@@ -114,6 +46,8 @@ export function MenuBar({ tokenBalance }: MenuBarProps) {
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, [engine, engine.getWalletConnected()]);
+
+  const displayBalance = engine.getWalletConnected() ? p2pBalance : f2pBalance;
 
   return (
     <header className="menu-bar">

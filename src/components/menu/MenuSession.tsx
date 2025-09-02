@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import { PublicKey, Connection } from "@solana/web3.js";
+import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import { useMagicBlockEngine } from "../../engine/MagicBlockEngineProvider";
 import { SupersizeVaultClient, AccountSyncState } from "../../engine/SupersizeVaultClient";
+import { useBalance } from "../../context/BalanceContext";
 import { cachedTokenMetadata, NETWORK, API_URL, VALIDATOR_MAP } from "../../utils/constants";
 import TokenTransferModal from "../TokenTransferModal/TokenTransferModal";
-import "./MenuSession.scss";
 import NotificationService from "@components/notification/NotificationService";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
 import { formatBuyIn, getRegion } from "../../utils/helper";
-import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
+
+import "./MenuSession.scss";
+
 const SESSION_LOCAL_STORAGE = "magicblock-session-key";
 
 export interface TokenBalance {
@@ -23,10 +26,6 @@ interface PlayerStats {
     p2p_vault_balance: number;
   };
 }
-
-type MenuSessionProps = {
-  setTokenBalance: (tokenBalance: number) => void;
-};
 
 interface DelegationStatusResult {
   isDelegated: boolean;
@@ -44,11 +43,12 @@ interface RouterResponse {
   result: DelegationStatusResult;
 }
 
-export function MenuSession({ setTokenBalance }: MenuSessionProps) {
+export function MenuSession() {
   const { engine } = useMagicBlockEngine();
+  const { p2pBalance, refreshBalance } = useBalance();
 
   const [vaultClient, setVaultClient] = useState<SupersizeVaultClient | null>(null);
-  const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
+  const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([{mint: "B1aHFyLNzm1y24gkhASHiBU7LH6xXV2V785S4MrtY777", uiAmount: 0}]);
   const [unclaimedBalance, setUnclaimedBalance] = useState<number>(0);
   const [dialog, setDialog] = useState<null | {
     type: "deposit" | "withdraw";
@@ -108,14 +108,11 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
     for (const mintStr of supportedMints) {
       const uiAmount = await vaultClient.getVaultBalance(new PublicKey(mintStr));
 
-      // if (mintStr === PRIMARY_MINT[NETWORK]) {
-      //   setTokenBalance(uiAmount);
-      // }
       balances.push({ mint: mintStr, uiAmount });
     }
     console.log("balances", balances);
     setTokenBalances(balances);
-  }, [vaultClient, setTokenBalance]);
+  }, [vaultClient]);
 
   const getDelegationInfo = useCallback(
     async (pda: PublicKey): Promise<string> => {
@@ -250,19 +247,15 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
       await fetchUnclaimedBalance();
       const state = await vaultClient.getSyncState();
       setSyncState(state);
-
-      //if (state.status === "ready_to_play") {
-      await refreshVaultBalances();
-      //}
     } catch (e) {
       console.error("Failed to analyze account state:", e);
       setSyncState(null);
     } finally {
       setIsRefreshing(false);
     }
-  }, [vaultClient, fetchUnclaimedBalance, refreshVaultBalances]);
+  }, [vaultClient, fetchUnclaimedBalance]);
 
-  useEffect(() => {
+   useEffect(() => {
     if (isMounted.current && vaultClient && engine.getWalletConnected()) {
       analyzeAccountState().finally(() => setIsInitializing(false));
     } else if (!engine.getWalletConnected()) {
@@ -277,6 +270,12 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
     }
   }, [syncState, fetchDebugInfo, isInitializing]);
 
+  const handleActionComplete = async () => {
+    setDialog(null);
+    await refreshBalance();
+    await analyzeAccountState();
+  };
+
   const handleSynchronizeVault = async () => {
     if (!vaultClient) return;
     setIsSyncing(true);
@@ -289,6 +288,7 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
     try {
       await vaultClient.resyncAndDelegateAll();
       NotificationService.updateAlert(alertId, { message: "Vault is ready!", shouldExit: true, timeout: 3000 });
+      await handleActionComplete();
     } catch (error) {
       console.error("Failed to synchronize vault:", error);
       NotificationService.updateAlert(alertId, {
@@ -297,8 +297,8 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
         shouldExit: true,
         timeout: 4000,
       });
+      await handleActionComplete();
     } finally {
-      await analyzeAccountState();
       setIsSyncing(false);
     }
   };
@@ -381,14 +381,14 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
                     {meta.image && <img src={meta.image} alt={symbol} />}
                     {symbol}
                   </td>
-                  <td className="balance-cell">{formatBuyIn(Math.round(uiAmount * 1000) / 1000)}</td>
+                  <td className="balance-cell">{formatBuyIn(Math.round(p2pBalance * 1000) / 1000)}</td>
                   <td className="desktop-only">
                     <button
                       className="table-btn"
                       onClick={() =>
                         setDialog({
                           type: "deposit",
-                          token: { mint, uiAmount, symbol, decimals: meta.decimals ?? 0 },
+                          token: { mint, uiAmount: p2pBalance, symbol, decimals: meta.decimals ?? 0 },
                         })
                       }
                     >
@@ -398,11 +398,11 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
                   <td className="desktop-only">
                     <button
                       className="table-btn outline"
-                      disabled={uiAmount === 0}
+                      disabled={p2pBalance === 0}
                       onClick={() =>
                         setDialog({
                           type: "withdraw",
-                          token: { mint, uiAmount, symbol, decimals: meta.decimals ?? 0 },
+                          token: { mint, uiAmount: p2pBalance, symbol, decimals: meta.decimals ?? 0 },
                         })
                       }
                     >
@@ -531,7 +531,7 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
               shouldExit: true,
               timeout: 3000,
             });
-            await analyzeAccountState();
+            await handleActionComplete();
           }}
         />
       )}
