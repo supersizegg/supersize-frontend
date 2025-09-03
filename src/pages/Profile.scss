@@ -198,7 +198,6 @@
     cursor: pointer;
     font-weight: 500;
     transition: background 0.2s;
-    margin-bottom: 1rem;
 
     &:hover {
       background: #0040cc;
@@ -235,5 +234,172 @@
 
   .game-details p {
     color: #000;
+  }
+}
+
+.vault-debug {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 16px;
+  color: #fff;
+
+  .vd-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+
+    h3 {
+      margin: 0;
+      font-size: 1.1rem;
+    }
+    .vd-sub {
+      margin: 0;
+      opacity: 0.8;
+      font-size: 0.9rem;
+    }
+  }
+
+  .vd-input {
+    margin-bottom: 10px;
+  }
+
+  .vd-error {
+    background: rgba(255, 62, 62, 0.12);
+    border: 1px solid rgba(255, 62, 62, 0.3);
+    color: #ff8f8f;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    margin-bottom: 10px;
+  }
+
+  .vd-results {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .vd-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 12px;
+  }
+
+  .vd-card {
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    padding: 12px;
+
+    .vd-card-title {
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #e6e6e6;
+    }
+    .vd-card-body {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .vd-card-footer {
+      margin-top: 8px;
+      display: flex;
+      justify-content: flex-end;
+    }
+  }
+
+  .vd-link {
+    color: #7ab7ff;
+    text-decoration: underline;
+    font-size: 0.9rem;
+  }
+
+  .vd-kv {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 0.95rem;
+
+    span:first-child {
+      opacity: 0.8;
+    }
+  }
+
+  .vd-meta {
+    opacity: 0.85;
+    font-size: 0.88rem;
+    a {
+      color: #a9d4ff;
+    }
+    &.mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border-radius: 999px;
+    letter-spacing: 0.2px;
+    width: fit-content;
+
+    &.ok {
+      background: rgba(21, 189, 18, 0.18);
+      color: #9eff9b;
+      border: 1px solid rgba(21, 189, 18, 0.35);
+    }
+    &.warn {
+      background: rgba(255, 204, 0, 0.15);
+      color: #ffe88a;
+      border: 1px solid rgba(255, 204, 0, 0.35);
+    }
+    &.bad {
+      background: rgba(255, 67, 67, 0.15);
+      color: #ffaaaa;
+      border: 1px solid rgba(255, 67, 67, 0.35);
+    }
+  }
+
+  .vd-balance {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 8px;
+  }
+
+  .vd-bubble {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    text-decoration: none;
+
+    &.ok {
+      background: rgba(21, 189, 18, 0.12);
+      border-color: rgba(21, 189, 18, 0.25);
+    }
+    &.muted {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .vd-bubble-label {
+      opacity: 0.8;
+      font-size: 0.9rem;
+    }
+    .vd-bubble-value {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #fff;
+    }
   }
 }

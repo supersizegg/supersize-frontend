@@ -66,7 +66,7 @@ export default function Profile({
   sessionWalletInUse,
   setSessionWalletInUse,
   preferredRegion,
-  setPreferredRegion
+  setPreferredRegion,
 }: profileProps) {
   const { engine, setEndpointEphemRpc } = useMagicBlockEngine();
   const [activeTab, setActiveTab] = useState<"wallet" | "profile" | "admin">("wallet");
@@ -94,9 +94,7 @@ export default function Profile({
         </div>
 
         <div className="profile-content">
-          {activeTab === "wallet" && (
-            <GeneralTab setPreferredRegion={setPreferredRegion} />
-          )}
+          {activeTab === "wallet" && <GeneralTab setPreferredRegion={setPreferredRegion} />}
           {activeTab === "profile" && (
             <ProfileTab
               engine={engine}
@@ -273,6 +271,76 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
       playerWalletEphem: string;
     }[]
   >([]);
+
+  type DelegationDetails = {
+    authority: string;
+    endpointName: string | null;
+    endpointUrl: string | null;
+    delegationSlot: number;
+    lamports: number;
+  } | null;
+
+  type PdaStatus = {
+    address: string;
+    existsOnMainnet: boolean;
+    delegated: { isDelegated: boolean; details: DelegationDetails };
+    ownerProgram: string | null;
+    isOwnedByDelegationProgram: boolean;
+  };
+
+  type RollupBalance = { name: string; url: string; balance: number | null };
+
+  type DebugVaultResponse = {
+    wallet: string;
+    tokenMint: { address: string; decimals: number };
+    pda: { wallet: PdaStatus; balance: PdaStatus };
+    balances: { mainnet: number | null; byRollup: RollupBalance[] };
+    summary: {
+      vaultInitialized: boolean;
+      rollupsChecked: string[];
+      hasSyncDiscrepancy: boolean;
+      minObserved: number | null;
+      maxObserved: number | null;
+    };
+  };
+
+  const [debugWallet, setDebugWallet] = useState("");
+  const [debugLoading, setDebugLoading] = useState(false);
+  const [debugError, setDebugError] = useState<string | null>(null);
+  const [debugData, setDebugData] = useState<DebugVaultResponse | null>(null);
+
+  const apiBase = "https://supersize.miso.one/api/v1/debug/vault";
+
+  const fetchDebugVault = async () => {
+    setDebugError(null);
+    setDebugData(null);
+    if (!debugWallet) {
+      setDebugError("Enter a wallet address.");
+      return;
+    }
+    setDebugLoading(true);
+    try {
+      const url = `${apiBase}?wallet=${encodeURIComponent(debugWallet)}`;
+      const r = await fetch(url);
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        throw new Error(j.error || `Request failed (${r.status})`);
+      }
+      const data: DebugVaultResponse = await r.json();
+      setDebugData(data);
+    } catch (e: any) {
+      setDebugError(e.message || "Failed to fetch debug info.");
+    } finally {
+      setDebugLoading(false);
+    }
+  };
+
+  const fmt = (n: number | null | undefined) =>
+    typeof n === "number" ? n.toLocaleString(undefined, { maximumFractionDigits: 6 }) : "—";
+
+  const StatusBadge = ({ ok, warn = false, label }: { ok: boolean; warn?: boolean; label: string }) => (
+    <span className={`status-badge ${ok ? "ok" : warn ? "warn" : "bad"}`}>{label}</span>
+  );
 
   useEffect(() => {
     const runFetchGames = async () => {
@@ -460,7 +528,187 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
 
   return (
     <div className="admin-tab">
-      <button className="btn-create-game" onClick={() => navigate("/create-game")}>
+      <div className="vault-debug">
+        <div className="vd-header">
+          <h4>Fetch player info</h4>
+        </div>
+
+        <div className="row-inline input-group vd-input">
+          <input
+            className="input-field rounded-lg p-2 font-weight-500"
+            style={{ color: "white" }}
+            type="text"
+            placeholder="Wallet address"
+            value={debugWallet}
+            onChange={(e) => setDebugWallet(e.target.value)}
+          />
+          <button className="btn-create-game" onClick={fetchDebugVault} disabled={debugLoading}>
+            <span>{debugLoading ? "Checking…" : "Check PDAs"}</span>
+          </button>
+        </div>
+
+        {debugError && <div className="vd-error">{debugError}</div>}
+
+        {debugData && (
+          <div className="vd-results">
+            <div className="vd-row">
+              <div className="vd-card">
+                <div className="vd-card-title">Vault status</div>
+                <div className="vd-card-body">
+                  <StatusBadge
+                    ok={debugData.summary.vaultInitialized}
+                    label={debugData.summary.vaultInitialized ? "Initialized" : "Not initialized"}
+                  />
+                  <div className="vd-meta">
+                    Wallet:&nbsp;
+                    <a href={`https://solscan.io/account/${debugData.wallet}`} target="_blank" rel="noreferrer">
+                      {debugData.wallet.slice(0, 4)}…{debugData.wallet.slice(-4)}
+                    </a>
+                  </div>
+                  <div className="vd-meta">
+                    Token:&nbsp;
+                    <a
+                      href={`https://solscan.io/account/${debugData.tokenMint.address}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {debugData.tokenMint.address.slice(0, 4)}…{debugData.tokenMint.address.slice(-4)}
+                    </a>
+                  </div>
+                </div>
+                <div className="vd-card-footer">
+                  <a
+                    className="vd-link"
+                    href={`${apiBase}?wallet=${encodeURIComponent(debugData.wallet)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    View raw JSON
+                  </a>
+                </div>
+              </div>
+
+              <div className="vd-card">
+                <div className="vd-card-title">Balance sync</div>
+                <div className="vd-card-body">
+                  {debugData.summary.minObserved === null ? (
+                    <div className="vd-kv">
+                      <span>Balances:</span> <span>—</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="vd-kv">
+                        <span>Min observed:</span> <span>{fmt(debugData.summary.minObserved)}</span>
+                      </div>
+                      <div className="vd-kv">
+                        <span>Max observed:</span> <span>{fmt(debugData.summary.maxObserved)}</span>
+                      </div>
+                      <div style={{ marginTop: 8 }}>
+                        <StatusBadge
+                          ok={!debugData.summary.hasSyncDiscrepancy}
+                          warn={false}
+                          label={debugData.summary.hasSyncDiscrepancy ? "Difference detected" : "In sync"}
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="vd-row">
+              <div className="vd-card">
+                <div className="vd-card-title">Game Wallet PDA</div>
+                <div className="vd-card-body">
+                  <div className="vd-kv">
+                    <span>Exists on mainnet:</span>
+                    <StatusBadge
+                      ok={debugData.pda.wallet.existsOnMainnet}
+                      label={debugData.pda.wallet.existsOnMainnet ? "OK" : "Missing"}
+                    />
+                  </div>
+                  <div className="vd-kv">
+                    <span>Delegated:</span>
+                    {debugData.pda.wallet.delegated.isDelegated ? (
+                      <StatusBadge
+                        ok={true}
+                        label={`Yes → ${debugData.pda.wallet.delegated.details?.endpointName || "Unknown"}`}
+                      />
+                    ) : (
+                      <StatusBadge ok={false} label="No" />
+                    )}
+                  </div>
+                  <div className="vd-meta mono">
+                    {debugData.pda.wallet.address.slice(0, 8)}…{debugData.pda.wallet.address.slice(-8)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="vd-card">
+                <div className="vd-card-title">Balance PDA</div>
+                <div className="vd-card-body">
+                  <div className="vd-kv">
+                    <span>Exists on mainnet:</span>
+                    <StatusBadge
+                      ok={debugData.pda.balance.existsOnMainnet}
+                      label={debugData.pda.balance.existsOnMainnet ? "OK" : "Missing"}
+                    />
+                  </div>
+                  <div className="vd-kv">
+                    <span>Delegated:</span>
+                    {debugData.pda.balance.delegated.isDelegated ? (
+                      <StatusBadge
+                        ok={true}
+                        label={`Yes → ${debugData.pda.balance.delegated.details?.endpointName || "Unknown"}`}
+                      />
+                    ) : (
+                      <StatusBadge ok={false} label="No" />
+                    )}
+                  </div>
+                  <div className="vd-meta mono">
+                    {debugData.pda.balance.address.slice(0, 8)}…{debugData.pda.balance.address.slice(-8)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="vd-row">
+              <div className="vd-card">
+                <div className="vd-card-title">Mainnet Balance</div>
+                <div className="vd-card-body vd-balance">
+                  <div className={`vd-bubble ${debugData.balances.mainnet != null ? "ok" : "muted"}`}>
+                    <div className="vd-bubble-label">Mainnet</div>
+                    <div className="vd-bubble-value">{fmt(debugData.balances.mainnet)}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="vd-card">
+                <div className="vd-card-title">Rollup Balances</div>
+                <div className="vd-card-body vd-balance">
+                  {debugData.balances.byRollup.map((r) => (
+                    <a
+                      key={r.name}
+                      className={`vd-bubble ${r.balance != null ? "ok" : "muted"}`}
+                      href={r.url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <div className="vd-bubble-label">{r.name}</div>
+                      <div className="vd-bubble-value">{fmt(r.balance)}</div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      <button
+        className="btn-create-game"
+        style={{ width: "100%", margin: "10px 0" }}
+        onClick={() => navigate("/create-game")}
+      >
         <span>+ Create Game</span>
       </button>
       <div
@@ -709,8 +957,9 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                                           marginTop: "10px",
                                           maxHeight: "40px",
                                           display:
-                                            player.playersParsedDataEphem && player.playersParsedDataEphem.map 
-                                            && player.playersParsedDataEphem.buyIn == row.buy_in
+                                            player.playersParsedDataEphem &&
+                                            player.playersParsedDataEphem.map &&
+                                            player.playersParsedDataEphem.buyIn == row.buy_in
                                               ? "none"
                                               : "flex",
                                         }}
@@ -1024,7 +1273,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                   style={{ flex: "1 1 10%", margin: "10px" }}
                   onClick={() => handleResetMapInfo(engine, row, "", resetBuyInInput, "")}
                 >
-                  Reset Game Buy In 
+                  Reset Game Buy In
                 </button>
               </div>
               <div

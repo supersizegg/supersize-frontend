@@ -14,7 +14,7 @@ export async function gameSystemExit(
   currentPlayerEntity: PublicKey,
   entityMatch: PublicKey,
 ) {
-  const isGuest = (preferredRegion == undefined || preferredRegion == "" || !engine.getWalletConnected());
+  const isGuest = preferredRegion == undefined || preferredRegion == "" || !engine.getWalletConnected();
   let guestWallet = new PublicKey("G5USW6osjZviU6QEyWaZNtj4TUFeKAwCa4nRoCU2Yheo");
   if (preferredRegion == "ameria") {
     guestWallet = new PublicKey("G5USW6osjZviU6QEyWaZNtj4TUFeKAwCa4nRoCU2Yheo");
@@ -79,7 +79,7 @@ export async function gameSystemExit(
     ],
     systemId: SYSTEM_EXIT_GAME_ID,
     args: {
-      do_payout: !isGuest,  
+      do_payout: !isGuest,
       timestamp: performance.now(),
     },
     extraAccounts: [
