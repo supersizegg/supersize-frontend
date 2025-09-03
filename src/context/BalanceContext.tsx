@@ -1,10 +1,12 @@
-import React, { createContext, useState, useContext, ReactNode } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useCallback, useRef } from "react";
 
 interface BalanceContextType {
   p2pBalance: number;
   f2pBalance: number;
   isBalanceLoading: boolean;
-  refreshBalance: () => Promise<void>; 
+
+  refreshBalance: () => Promise<void>;
+  registerRefreshBalance: (impl: () => Promise<void>) => void;
   setP2PBalance: (balance: number) => void;
   setF2PBalance: (balance: number) => void;
   setIsBalanceLoading: (isLoading: boolean) => void;
@@ -17,11 +19,26 @@ export const BalanceProvider = ({ children }: { children: ReactNode }) => {
   const [f2pBalance, setF2PBalance] = useState(0);
   const [isBalanceLoading, setIsBalanceLoading] = useState(true);
 
-  const value = {
+  const refreshImplRef = useRef<(() => Promise<void>) | null>(null);
+
+  const registerRefreshBalance = useCallback((impl: () => Promise<void>) => {
+    refreshImplRef.current = impl;
+  }, []);
+
+  const refreshBalance = useCallback(async () => {
+    if (refreshImplRef.current) {
+      await refreshImplRef.current();
+    } else {
+      console.error("refreshBalance called before it was implemented");
+    }
+  }, []);
+
+  const value: BalanceContextType = {
     p2pBalance,
     f2pBalance,
     isBalanceLoading,
-    refreshBalance: async () => { console.error("refreshBalance called before it was implemented"); },
+    refreshBalance,
+    registerRefreshBalance,
     setP2PBalance,
     setF2PBalance,
     setIsBalanceLoading,
@@ -32,8 +49,8 @@ export const BalanceProvider = ({ children }: { children: ReactNode }) => {
 
 export const useBalance = () => {
   const context = useContext(BalanceContext);
-  if (context === undefined) {
-    throw new Error('useBalance must be used within a BalanceProvider');
+  if (!context) {
+    throw new Error("useBalance must be used within a BalanceProvider");
   }
   return context;
 };

@@ -47,7 +47,7 @@ export function MenuBar() {
     return () => window.removeEventListener("storage", onStorage);
   }, [engine, engine.getWalletConnected()]);
 
-  const displayBalance = engine.getWalletConnected() ? p2pBalance : f2pBalance;
+  const displayBalance = engine.getWalletConnected() && p2pBalance > 0 ? p2pBalance : f2pBalance;
 
   return (
     <header className="menu-bar">

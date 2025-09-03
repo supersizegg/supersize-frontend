@@ -48,7 +48,9 @@ export function MenuSession() {
   const { p2pBalance, refreshBalance } = useBalance();
 
   const [vaultClient, setVaultClient] = useState<SupersizeVaultClient | null>(null);
-  const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([{mint: "B1aHFyLNzm1y24gkhASHiBU7LH6xXV2V785S4MrtY777", uiAmount: 0}]);
+  const [tokenBalances] = useState<TokenBalance[]>([
+    { mint: "B1aHFyLNzm1y24gkhASHiBU7LH6xXV2V785S4MrtY777", uiAmount: 0 },
+  ]);
   const [unclaimedBalance, setUnclaimedBalance] = useState<number>(0);
   const [dialog, setDialog] = useState<null | {
     type: "deposit" | "withdraw";
@@ -96,24 +98,6 @@ export function MenuSession() {
     }
   }, [engine]);
 
-  const refreshVaultBalances = useCallback(async () => {
-    if (!vaultClient) return;
-
-    const supportedMints = Object.keys(cachedTokenMetadata).filter(
-      (mint) => cachedTokenMetadata[mint].network === NETWORK,
-    );
-
-    const balances: TokenBalance[] = [];
-
-    for (const mintStr of supportedMints) {
-      const uiAmount = await vaultClient.getVaultBalance(new PublicKey(mintStr));
-
-      balances.push({ mint: mintStr, uiAmount });
-    }
-    console.log("balances", balances);
-    setTokenBalances(balances);
-  }, [vaultClient]);
-
   const getDelegationInfo = useCallback(
     async (pda: PublicKey): Promise<string> => {
       if (!engine || !vaultClient) return "Client not initialized.";
@@ -131,8 +115,8 @@ export function MenuSession() {
 
         if (result.isDelegated && result.delegationRecord) {
           const validatorAuthority = result.delegationRecord.authority;
-          // @ts-ignore
-          const correctEndpoint = VALIDATOR_MAP[NETWORK][validatorAuthority];
+          const correctEndpoint =
+            VALIDATOR_MAP[NETWORK][validatorAuthority as keyof (typeof VALIDATOR_MAP)[typeof NETWORK]];
           if (correctEndpoint) {
             return `Delegated to ${getRegion(correctEndpoint)} server (${validatorAuthority.substring(0, 3)})`;
           } else {
@@ -143,13 +127,12 @@ export function MenuSession() {
           if (!accountInfo) {
             return "❌ Does not exist.";
           }
-          // @ts-ignore
           if (accountInfo.owner.equals(vaultClient.program.programId)) {
             return "On mainnet (not delegated).";
           }
           return "Exists, but not delegated.";
         }
-      } catch (error) {
+      } catch {
         const accountInfo = await engine.getConnectionChain().getAccountInfo(pda);
         if (!accountInfo) {
           return "❌ Does not exist (router query failed).";
@@ -245,6 +228,7 @@ export function MenuSession() {
     setIsRefreshing(true);
     try {
       await fetchUnclaimedBalance();
+      await refreshBalance();
       const state = await vaultClient.getSyncState();
       setSyncState(state);
     } catch (e) {
@@ -255,7 +239,7 @@ export function MenuSession() {
     }
   }, [vaultClient, fetchUnclaimedBalance]);
 
-   useEffect(() => {
+  useEffect(() => {
     if (isMounted.current && vaultClient && engine.getWalletConnected()) {
       analyzeAccountState().finally(() => setIsInitializing(false));
     } else if (!engine.getWalletConnected()) {
@@ -366,48 +350,50 @@ export function MenuSession() {
           <thead>
             <tr>
               <th>Token</th>
-              <th style={{ textAlign: "right" }}>Balance</th>
-              <th colSpan={2} style={{ width: "160px" }} className="desktop-only" />
+              <th>Balance</th>
+              <th className="desktop-only" style={{ whiteSpace: "nowrap" }}></th>
             </tr>
           </thead>
           <tbody>
-            {tokenBalances.map(({ mint, uiAmount }) => {
+            {tokenBalances.map(({ mint }) => {
               let meta = cachedTokenMetadata[mint];
               if (!meta || meta.network !== NETWORK) return null;
               const symbol = meta.symbol ?? mint.slice(0, 4) + "…";
               return (
                 <tr key={mint}>
                   <td className="token-cell">
-                    {meta.image && <img src={meta.image} alt={symbol} />}
-                    {symbol}
+                    <div className="token-info">
+                      {meta.image && <img src={meta.image} alt={symbol} />}
+                      <span>{symbol}</span>
+                    </div>
                   </td>
-                  <td className="balance-cell">{formatBuyIn(Math.round(p2pBalance * 1000) / 1000)}</td>
-                  <td className="desktop-only">
-                    <button
-                      className="table-btn"
-                      onClick={() =>
-                        setDialog({
-                          type: "deposit",
-                          token: { mint, uiAmount: p2pBalance, symbol, decimals: meta.decimals ?? 0 },
-                        })
-                      }
-                    >
-                      Deposit
-                    </button>
-                  </td>
-                  <td className="desktop-only">
-                    <button
-                      className="table-btn outline"
-                      disabled={p2pBalance === 0}
-                      onClick={() =>
-                        setDialog({
-                          type: "withdraw",
-                          token: { mint, uiAmount: p2pBalance, symbol, decimals: meta.decimals ?? 0 },
-                        })
-                      }
-                    >
-                      Withdraw
-                    </button>
+                  <td className="balance-cell">{formatBuyIn(p2pBalance)}</td>
+                  <td className="desktop-only actions-cell">
+                    <div className="actions-container">
+                      <button
+                        className="table-btn primary"
+                        onClick={() =>
+                          setDialog({
+                            type: "deposit",
+                            token: { mint, uiAmount: p2pBalance, symbol, decimals: meta.decimals ?? 0 },
+                          })
+                        }
+                      >
+                        Deposit
+                      </button>
+                      <button
+                        className="table-btn outline"
+                        disabled={p2pBalance === 0}
+                        onClick={() =>
+                          setDialog({
+                            type: "withdraw",
+                            token: { mint, uiAmount: p2pBalance, symbol, decimals: meta.decimals ?? 0 },
+                          })
+                        }
+                      >
+                        Withdraw
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );
@@ -505,7 +491,7 @@ export function MenuSession() {
             <strong>{formatBuyIn(unclaimedBalance)}</strong>
           </div>
           <button className="btn-claim" disabled>
-            Claim
+            Coming soon
           </button>
         </div>
       )}
@@ -516,15 +502,14 @@ export function MenuSession() {
 
       {dialog && vaultClient && (
         <TokenTransferModal
-          engine={engine}
+          // engine={engine}
           vaultClient={vaultClient}
           kind={dialog.type}
           token={dialog.token}
           sessionBalance={dialog.token.uiAmount}
           fetchWalletBalance={fetchUserWalletUiAmount}
-          onClose={() => setDialog(null)}
+          onClose={async () => await handleActionComplete()}
           onDone={async () => {
-            setDialog(null);
             NotificationService.addAlert({
               type: "success",
               message: `${dialog.type} successful`,
