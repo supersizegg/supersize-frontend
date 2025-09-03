@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import { PublicKey, Connection } from "@solana/web3.js";
+import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import { useMagicBlockEngine } from "../../engine/MagicBlockEngineProvider";
 import { SupersizeVaultClient, AccountSyncState } from "../../engine/SupersizeVaultClient";
+import { useBalance } from "../../context/BalanceContext";
 import { cachedTokenMetadata, NETWORK, API_URL, VALIDATOR_MAP } from "../../utils/constants";
 import TokenTransferModal from "../TokenTransferModal/TokenTransferModal";
-import "./MenuSession.scss";
 import NotificationService from "@components/notification/NotificationService";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
 import { formatBuyIn, getRegion } from "../../utils/helper";
-import { TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
+
+import "./MenuSession.scss";
+
 const SESSION_LOCAL_STORAGE = "magicblock-session-key";
 
 export interface TokenBalance {
@@ -23,10 +26,6 @@ interface PlayerStats {
     p2p_vault_balance: number;
   };
 }
-
-type MenuSessionProps = {
-  setTokenBalance: (tokenBalance: number) => void;
-};
 
 interface DelegationStatusResult {
   isDelegated: boolean;
@@ -44,11 +43,14 @@ interface RouterResponse {
   result: DelegationStatusResult;
 }
 
-export function MenuSession({ setTokenBalance }: MenuSessionProps) {
+export function MenuSession() {
   const { engine } = useMagicBlockEngine();
+  const { p2pBalance, refreshBalance } = useBalance();
 
   const [vaultClient, setVaultClient] = useState<SupersizeVaultClient | null>(null);
-  const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
+  const [tokenBalances] = useState<TokenBalance[]>([
+    { mint: "B1aHFyLNzm1y24gkhASHiBU7LH6xXV2V785S4MrtY777", uiAmount: 0 },
+  ]);
   const [unclaimedBalance, setUnclaimedBalance] = useState<number>(0);
   const [dialog, setDialog] = useState<null | {
     type: "deposit" | "withdraw";
@@ -96,27 +98,6 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
     }
   }, [engine]);
 
-  const refreshVaultBalances = useCallback(async () => {
-    if (!vaultClient) return;
-
-    const supportedMints = Object.keys(cachedTokenMetadata).filter(
-      (mint) => cachedTokenMetadata[mint].network === NETWORK,
-    );
-
-    const balances: TokenBalance[] = [];
-
-    for (const mintStr of supportedMints) {
-      const uiAmount = await vaultClient.getVaultBalance(new PublicKey(mintStr));
-
-      // if (mintStr === PRIMARY_MINT[NETWORK]) {
-      //   setTokenBalance(uiAmount);
-      // }
-      balances.push({ mint: mintStr, uiAmount });
-    }
-    console.log("balances", balances);
-    setTokenBalances(balances);
-  }, [vaultClient, setTokenBalance]);
-
   const getDelegationInfo = useCallback(
     async (pda: PublicKey): Promise<string> => {
       if (!engine || !vaultClient) return "Client not initialized.";
@@ -134,8 +115,8 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
 
         if (result.isDelegated && result.delegationRecord) {
           const validatorAuthority = result.delegationRecord.authority;
-          // @ts-ignore
-          const correctEndpoint = VALIDATOR_MAP[NETWORK][validatorAuthority];
+          const correctEndpoint =
+            VALIDATOR_MAP[NETWORK][validatorAuthority as keyof (typeof VALIDATOR_MAP)[typeof NETWORK]];
           if (correctEndpoint) {
             return `Delegated to ${getRegion(correctEndpoint)} server (${validatorAuthority.substring(0, 3)})`;
           } else {
@@ -146,13 +127,12 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
           if (!accountInfo) {
             return "❌ Does not exist.";
           }
-          // @ts-ignore
           if (accountInfo.owner.equals(vaultClient.program.programId)) {
             return "On mainnet (not delegated).";
           }
           return "Exists, but not delegated.";
         }
-      } catch (error) {
+      } catch {
         const accountInfo = await engine.getConnectionChain().getAccountInfo(pda);
         if (!accountInfo) {
           return "❌ Does not exist (router query failed).";
@@ -248,19 +228,16 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
     setIsRefreshing(true);
     try {
       await fetchUnclaimedBalance();
+      await refreshBalance();
       const state = await vaultClient.getSyncState();
       setSyncState(state);
-
-      //if (state.status === "ready_to_play") {
-      await refreshVaultBalances();
-      //}
     } catch (e) {
       console.error("Failed to analyze account state:", e);
       setSyncState(null);
     } finally {
       setIsRefreshing(false);
     }
-  }, [vaultClient, fetchUnclaimedBalance, refreshVaultBalances]);
+  }, [vaultClient, fetchUnclaimedBalance]);
 
   useEffect(() => {
     if (isMounted.current && vaultClient && engine.getWalletConnected()) {
@@ -277,6 +254,12 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
     }
   }, [syncState, fetchDebugInfo, isInitializing]);
 
+  const handleActionComplete = async () => {
+    setDialog(null);
+    await refreshBalance();
+    await analyzeAccountState();
+  };
+
   const handleSynchronizeVault = async () => {
     if (!vaultClient) return;
     setIsSyncing(true);
@@ -289,6 +272,7 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
     try {
       await vaultClient.resyncAndDelegateAll();
       NotificationService.updateAlert(alertId, { message: "Vault is ready!", shouldExit: true, timeout: 3000 });
+      await handleActionComplete();
     } catch (error) {
       console.error("Failed to synchronize vault:", error);
       NotificationService.updateAlert(alertId, {
@@ -297,8 +281,8 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
         shouldExit: true,
         timeout: 4000,
       });
+      await handleActionComplete();
     } finally {
-      await analyzeAccountState();
       setIsSyncing(false);
     }
   };
@@ -366,48 +350,50 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
           <thead>
             <tr>
               <th>Token</th>
-              <th style={{ textAlign: "right" }}>Balance</th>
-              <th colSpan={2} style={{ width: "160px" }} className="desktop-only" />
+              <th>Balance</th>
+              <th className="desktop-only" style={{ whiteSpace: "nowrap" }}></th>
             </tr>
           </thead>
           <tbody>
-            {tokenBalances.map(({ mint, uiAmount }) => {
+            {tokenBalances.map(({ mint }) => {
               let meta = cachedTokenMetadata[mint];
               if (!meta || meta.network !== NETWORK) return null;
               const symbol = meta.symbol ?? mint.slice(0, 4) + "…";
               return (
                 <tr key={mint}>
                   <td className="token-cell">
-                    {meta.image && <img src={meta.image} alt={symbol} />}
-                    {symbol}
+                    <div className="token-info">
+                      {meta.image && <img src={meta.image} alt={symbol} />}
+                      <span>{symbol}</span>
+                    </div>
                   </td>
-                  <td className="balance-cell">{formatBuyIn(Math.round(uiAmount * 1000) / 1000)}</td>
-                  <td className="desktop-only">
-                    <button
-                      className="table-btn"
-                      onClick={() =>
-                        setDialog({
-                          type: "deposit",
-                          token: { mint, uiAmount, symbol, decimals: meta.decimals ?? 0 },
-                        })
-                      }
-                    >
-                      Deposit
-                    </button>
-                  </td>
-                  <td className="desktop-only">
-                    <button
-                      className="table-btn outline"
-                      disabled={uiAmount === 0}
-                      onClick={() =>
-                        setDialog({
-                          type: "withdraw",
-                          token: { mint, uiAmount, symbol, decimals: meta.decimals ?? 0 },
-                        })
-                      }
-                    >
-                      Withdraw
-                    </button>
+                  <td className="balance-cell">{formatBuyIn(p2pBalance)}</td>
+                  <td className="desktop-only actions-cell">
+                    <div className="actions-container">
+                      <button
+                        className="table-btn primary"
+                        onClick={() =>
+                          setDialog({
+                            type: "deposit",
+                            token: { mint, uiAmount: p2pBalance, symbol, decimals: meta.decimals ?? 0 },
+                          })
+                        }
+                      >
+                        Deposit
+                      </button>
+                      <button
+                        className="table-btn outline"
+                        disabled={p2pBalance === 0}
+                        onClick={() =>
+                          setDialog({
+                            type: "withdraw",
+                            token: { mint, uiAmount: p2pBalance, symbol, decimals: meta.decimals ?? 0 },
+                          })
+                        }
+                      >
+                        Withdraw
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );
@@ -505,7 +491,7 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
             <strong>{formatBuyIn(unclaimedBalance)}</strong>
           </div>
           <button className="btn-claim" disabled>
-            Claim
+            Coming soon
           </button>
         </div>
       )}
@@ -516,22 +502,21 @@ export function MenuSession({ setTokenBalance }: MenuSessionProps) {
 
       {dialog && vaultClient && (
         <TokenTransferModal
-          engine={engine}
+          // engine={engine}
           vaultClient={vaultClient}
           kind={dialog.type}
           token={dialog.token}
           sessionBalance={dialog.token.uiAmount}
           fetchWalletBalance={fetchUserWalletUiAmount}
-          onClose={() => setDialog(null)}
+          onClose={async () => await handleActionComplete()}
           onDone={async () => {
-            setDialog(null);
             NotificationService.addAlert({
               type: "success",
               message: `${dialog.type} successful`,
               shouldExit: true,
               timeout: 3000,
             });
-            await analyzeAccountState();
+            await handleActionComplete();
           }}
         />
       )}

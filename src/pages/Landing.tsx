@@ -1,24 +1,14 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import "./Landing.scss";
-import { BN } from "@coral-xyz/anchor";
-import GameComponent from "@components/Game/Game";
 import { MenuBar } from "@components/menu/MenuBar";
-import { useMagicBlockEngine } from "../engine/MagicBlockEngineProvider";
-import Footer from "../components/Footer/Footer";
+import "./Landing.scss";
 
-type LandingProps = {
-  preferredRegion: string;
-  tokenBalance: number;
-};
-
-const Landing = ({ preferredRegion, tokenBalance }: LandingProps) => {
-  const { engine } = useMagicBlockEngine();
+const Landing = () => {
   const navigate = useNavigate();
 
   return (
     <div className="landing-page">
-      <MenuBar tokenBalance={tokenBalance} />
+      <MenuBar />
       <div className="panels-container">
         <div className="panel" onClick={() => navigate("/home")}>
           <div className="inner-panel">
@@ -38,7 +28,6 @@ const Landing = ({ preferredRegion, tokenBalance }: LandingProps) => {
         </div>
       </div>
 
-      {/* <Footer engine={engine} preferredRegion={preferredRegion} /> */}
     </div>
   );
 };

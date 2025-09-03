@@ -2,21 +2,15 @@ import React from "react";
 import { useLocation } from "react-router-dom";
 import { MenuBar } from "@components/menu/MenuBar";
 import BackButton from "@components/util/BackButton";
-import GameComponent from "@components/Game/Game";
-import BN from "bn.js";
 import "./AboutPage.scss";
 
-type AboutPageProps = {
-  tokenBalance: number;
-};
-
-const AboutPage: React.FC<AboutPageProps> = ({ tokenBalance }) => {
+const AboutPage: React.FC = () => {
   const location = useLocation();
   const section = new URLSearchParams(location.search).get("section");
 
   return (
     <div className="about-page">
-      <MenuBar tokenBalance={tokenBalance} />
+      <MenuBar />
 
       <main className="about-content">
         <h1 className="about-title">How to Play</h1>

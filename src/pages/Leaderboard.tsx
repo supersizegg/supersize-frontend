@@ -2,9 +2,9 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { MenuBar } from "@components/menu/MenuBar";
 import { API_URL, NETWORK, cachedTokenMetadata } from "@utils/constants";
-import "./Leaderboard.scss";
 import BackButton from "@components/util/BackButton";
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
+import "./Leaderboard.scss";
 
 const TOKEN_MINT = Object.keys(cachedTokenMetadata).filter((mint) => cachedTokenMetadata[mint].network === NETWORK)[0];
 
@@ -32,10 +32,9 @@ interface PlayerStats {
 
 type LeaderboardProps = {
   engine: MagicBlockEngine;
-  tokenBalance: number;
 };
 
-const Leaderboard: React.FC<LeaderboardProps> = ({ engine, tokenBalance }) => {
+const Leaderboard: React.FC<LeaderboardProps> = ({ engine }) => {
   const [leaderboardType, setLeaderboardType] = useState<"casual" | "ranked">("casual");
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardPlayer[]>([]);
   const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null);
@@ -86,7 +85,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ engine, tokenBalance }) => {
 
   return (
     <div className="leaderboard-page">
-      <MenuBar tokenBalance={tokenBalance} />
+      <MenuBar />
 
       <main className="leaderboard-container">
         <header className="leaderboard-header">

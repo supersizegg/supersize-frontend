@@ -47,10 +47,6 @@ const RAY_PRIORITY_FEE = `${API_URLS.BASE_HOST}${API_URLS.PRIORITY_FEE}`;
 const SLIPPAGE_BPS = 100;
 const TX_VERSION = "V0";
 
-interface ShopProps {
-  tokenBalance: number;
-}
-
 type State = {
   usd: number;
   solPrice: number | null;
@@ -139,7 +135,7 @@ async function retry<T>(fn: (signal: AbortSignal) => Promise<T>, attempts = 3, b
   }
 }
 
-const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
+const Shop: React.FC = () => {
   const { engine } = useMagicBlockEngine();
 
   const [isCopied, setIsCopied] = useState(false);
@@ -417,7 +413,7 @@ const Shop: React.FC<ShopProps> = ({ tokenBalance }) => {
 
   return (
     <div className="shop-page">
-      <MenuBar tokenBalance={tokenBalance} />
+      <MenuBar />
 
       <main className="shop-container">
         <div className="chart-column">

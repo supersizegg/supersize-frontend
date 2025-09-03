@@ -25,7 +25,6 @@ const AppRoutes = () => {
   const [selectedGame, setSelectedGame] = useState<ActiveGame | null>(null);
   const [sessionWalletInUse, setSessionWalletInUse] = useState<boolean>(true);
   const [username, setUsername] = useState<string>("");
-  const [tokenBalance, setTokenBalance] = useState<number>(0);
   // const [isEndpointResolved, setIsEndpointResolved] = useState(false);
   const [activeGamesLoaded, setActiveGamesLoaded] = useState<FetchedGame[]>(
     [...activeGamesList[NETWORK]].map((world) =>
@@ -74,21 +73,12 @@ const AppRoutes = () => {
       }
     };
 
-    const getTokenBalance = async () => {
-      const supportedMints = Object.keys(cachedTokenMetadata).filter(
-        (mint) => cachedTokenMetadata[mint].network === NETWORK,
-      );
-      const balance = await vaultClient?.getVaultBalance(new PublicKey(supportedMints[0]));
-      setTokenBalance(balance || 0);
-    };
-
     fetchGameWalletEphem();
-    getTokenBalance();
   }, [engine]);
 
   return (
     <Routes>
-      <Route index element={<Landing preferredRegion={preferredRegion} tokenBalance={tokenBalance} />} />
+      <Route index element={<Landing />} />
       <Route
         path="/home"
         element={
@@ -98,25 +88,15 @@ const AppRoutes = () => {
             setMyPlayerEntityPda={setMyPlayerEntityPda}
             activeGamesLoaded={activeGamesLoaded}
             setActiveGamesLoaded={setActiveGamesLoaded}
-            randomFood={randomFood}
             sessionWalletInUse={sessionWalletInUse}
             username={username}
             preferredRegion={preferredRegion}
-            tokenBalance={tokenBalance}
-            setTokenBalance={setTokenBalance}
           />
         }
       />
       <Route
         path="/create-game"
-        element={
-          <CreateGame
-            activeGamesLoaded={activeGamesLoaded}
-            setActiveGamesLoaded={setActiveGamesLoaded}
-            randomFood={randomFood}
-            tokenBalance={tokenBalance}
-          />
-        }
+        element={<CreateGame activeGamesLoaded={activeGamesLoaded} setActiveGamesLoaded={setActiveGamesLoaded} />}
       />
       {selectedGame && (
         <Route
@@ -131,10 +111,10 @@ const AppRoutes = () => {
           }
         />
       )}
-      <Route path="/leaderboard" element={<Leaderboard engine={engine} tokenBalance={tokenBalance} />} />
-      <Route path="/about" element={<AboutPage tokenBalance={tokenBalance} />} />
-      <Route path="/shop" element={<Shop tokenBalance={tokenBalance} />} />
-      <Route path="/wishlist" element={<Wishlist tokenBalance={tokenBalance} />} />
+      <Route path="/leaderboard" element={<Leaderboard engine={engine} />} />
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/shop" element={<Shop />} />
+      <Route path="/wishlist" element={<Wishlist />} />
       <Route
         path="/profile"
         element={
@@ -146,8 +126,6 @@ const AppRoutes = () => {
             setSessionWalletInUse={setSessionWalletInUse}
             preferredRegion={preferredRegion}
             setPreferredRegion={setPreferredRegion}
-            tokenBalance={tokenBalance}
-            setTokenBalance={setTokenBalance}
           />
         }
       />

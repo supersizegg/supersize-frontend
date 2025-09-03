@@ -44,7 +44,7 @@ export interface AccountSyncState {
 
 export class SupersizeVaultClient {
   private readonly engine: any;
-  private readonly program: Program<SupersizeVault>;
+  public readonly program: Program<SupersizeVault>;
   private readonly programEphem: Program<SupersizeVault>;
   private readonly wallet: PublicKey | null;
   private readonly mainChainConnection: Connection;

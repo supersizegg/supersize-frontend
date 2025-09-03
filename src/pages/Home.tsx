@@ -44,12 +44,9 @@ type homeProps = {
   setMyPlayerEntityPda: (pda: PublicKey | null) => void;
   activeGamesLoaded: FetchedGame[];
   setActiveGamesLoaded: (games: FetchedGame[]) => void;
-  randomFood: Food[];
   sessionWalletInUse: boolean;
   username: string;
   preferredRegion: string;
-  tokenBalance: number;
-  setTokenBalance: (tokenBalance: number) => void;
 };
 
 const Home = ({
@@ -58,12 +55,9 @@ const Home = ({
   setMyPlayerEntityPda,
   activeGamesLoaded,
   setActiveGamesLoaded,
-  randomFood,
   sessionWalletInUse,
   username,
-  preferredRegion,
-  tokenBalance,
-  setTokenBalance,
+  preferredRegion
 }: homeProps) => {
   const navigate = useNavigate();
   const { engine, setEndpointEphemRpc } = useMagicBlockEngine();
@@ -80,8 +74,8 @@ const Home = ({
   const checkActiveGamesLoadedCallCount = useRef(0);
   const checkActiveGamesLoadedWait = useRef(500);
   const [numberOfGamesInEndpoint, setNumberOfGamesInEndpoint] = useState<null | number>(null);
+  const [tokenBalance, setTokenBalance] = useState(0);
   const [hasInsufficientTokenBalance, setHasInsufficientTokenBalance] = useState(false);
-  //const [tokenBalance, setTokenBalance] = useState(-1);
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(event.target.value);
@@ -337,8 +331,7 @@ const Home = ({
         newplayerEntityPda: updatedPlayerInfo.newPlayerEntityPda,
       };
       if (!game.activeGame.is_free) {
-        const { tokenBalance, hasInsufficientTokenBalance } = await fetchTokenBalance(engine, game.activeGame);
-        setTokenBalance(tokenBalance);
+        const { hasInsufficientTokenBalance } = await fetchTokenBalance(engine, game.activeGame);
         setHasInsufficientTokenBalance(hasInsufficientTokenBalance);
       }
       const result = await gameExecuteJoin(
@@ -478,8 +471,7 @@ const Home = ({
 
   return (
     <div className="home-page">
-      {/* <div className="static-background"></div> */}
-      <MenuBar tokenBalance={tokenBalance} />
+      <MenuBar />
 
       <div className="home-container">
         {/* <div className="mobile-only mobile-alert">For the best experience, use a desktop or laptop.</div> */}

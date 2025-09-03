@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { PublicKey } from "@solana/web3.js";
 import { SupersizeVaultClient } from "@engine/SupersizeVaultClient";
-import { MagicBlockEngine } from "@engine/MagicBlockEngine";
-import "./Modal.css";
 import NotificationService from "@components/notification/NotificationService";
+import { formatBuyIn } from "../../utils/helper";
+import { cachedTokenMetadata } from "../../utils/constants";
+import "./Modal.scss";
 
 type Props = {
-  engine: MagicBlockEngine;
   vaultClient: SupersizeVaultClient;
   kind: "deposit" | "withdraw";
   token: { mint: string; symbol: string; decimals: number };
@@ -17,7 +17,6 @@ type Props = {
 };
 
 const TokenTransferModal: React.FC<Props> = ({
-  engine,
   vaultClient,
   kind,
   token,
@@ -26,132 +25,134 @@ const TokenTransferModal: React.FC<Props> = ({
   onClose,
   onDone,
 }) => {
-  const wallet = engine.getWalletPayer();
-  const [max, setMax] = useState<number>(0);
-  const [value, setValue] = useState<number>(0);
+  const [maxAmount, setMaxAmount] = useState<number>(0);
+  const [inputValue, setInputValue] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [payoutWallet, setPayoutWallet] = useState<PublicKey | null>(null);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    let mounted = true;
+    if (kind !== "deposit") return;
+
+    let cancelled = false;
+
     (async () => {
-      const m = kind === "deposit" ? await fetchWalletBalance(token.mint) : sessionBalance;
-      if (mounted) {
-        setMax(m);
-        setValue(0);
-      }
+      const amount = await fetchWalletBalance(token.mint);
+      if (!cancelled) setMaxAmount(amount);
     })();
+
     return () => {
-      mounted = false;
+      cancelled = true;
     };
-  }, [kind, token.mint, sessionBalance, fetchWalletBalance]);
+  }, [kind, token.mint, fetchWalletBalance]);
+
+  useEffect(() => {
+    if (kind !== "withdraw") return;
+    setMaxAmount(sessionBalance);
+  }, [kind, sessionBalance]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (/^\d*\.?\d*$/.test(value)) {
+      setInputValue(value);
+    }
+  };
+
+  const setAmount = (fraction: number) => {
+    const value = maxAmount * fraction;
+    setInputValue(value.toFixed(token.decimals > 0 ? 2 : 0));
+  };
 
   const handleConfirm = async () => {
-    if (value === 0 || isProcessing) return;
+    const numericValue = parseFloat(inputValue);
+    if (isNaN(numericValue) || numericValue <= 0 || numericValue > maxAmount || isProcessing) {
+      return;
+    }
 
     setIsProcessing(true);
     const alertId = NotificationService.addAlert({
       type: "success",
-      message: `submitting ${kind}...`,
+      message: `Submitting ${kind}... Please check your wallet.`,
       shouldExit: false,
     });
 
     try {
       if (kind === "deposit") {
-        NotificationService.updateAlert(alertId, { message: "Please sign in your wallet..." });
-        await vaultClient.executeDeposit(new PublicKey(token.mint), value);
-        onDone();
+        await vaultClient.executeDeposit(new PublicKey(token.mint), numericValue);
       } else {
-        await vaultClient.executeWithdraw(new PublicKey(token.mint), value, payoutWallet);
-        onDone();
+        await vaultClient.executeWithdraw(new PublicKey(token.mint), numericValue);
       }
+      onDone();
     } catch (error: any) {
-      console.error(`Failed to ${kind}:`, error);
-
       const isUserRejection = error.code === 4001 || error.name === "WalletSignTransactionError";
-
       if (isUserRejection) {
         NotificationService.addAlert({
-          type: "error",
-          message: "Transaction cancelled. Your vault may need to be re-synced.",
+          type: "success",
+          message: "Transaction cancelled.",
           shouldExit: true,
-          timeout: 5000,
+          timeout: 4000,
         });
         onClose();
       } else {
-        const exitAlertId = NotificationService.addAlert({
+        NotificationService.addAlert({
           type: "error",
-          message: `${kind} failed`,
-          shouldExit: false,
+          message: `${kind} failed. Please try again.`,
+          shouldExit: true,
+          timeout: 4000,
         });
-        setTimeout(() => {
-          NotificationService.updateAlert(exitAlertId, { shouldExit: true });
-        }, 3000);
       }
     } finally {
       NotificationService.updateAlert(alertId, { shouldExit: true });
-      setIsProcessing(false);
+      if (mountedRef.current) {
+        setIsProcessing(false);
+      }
     }
   };
 
-  const pct = max === 0 ? 0 : (value / max) * 100;
+  const numericValue = parseFloat(inputValue) || 0;
+  const isInvalid = numericValue > maxAmount || numericValue <= 0;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-container" onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ marginBottom: "0.5rem" }}>{kind === "deposit" ? "Deposit" : "Withdraw"}</h3>
+        {/* 
+        <button className="close-button" onClick={onClose}>
+          &times;
+        </button>
 
-        <p style={{ fontSize: "0.9rem", marginBottom: "0.5rem" }}>
-          {engine?.getWalletType() === "embedded" && kind === "withdraw" ? (
-            <>
-              <label htmlFor="payoutWalletInput">Payout Wallet:</label>
-              <input
-                type="text"
-                id="payoutWalletInput"
-                value={payoutWallet ? payoutWallet.toString() : ""}
-                onChange={(e) => {
-                  try {
-                    const newPayoutWallet = new PublicKey(e.target.value);
-                    setPayoutWallet(newPayoutWallet);
-                  } catch (error) {
-                    console.error("Invalid PublicKey format:", error);
-                  }
-                }}
-                placeholder="Enter payout wallet address"
-                style={{ width: "100%", marginBottom: "0.5rem", color: "black" }}
-              />
-            </>
-          ) : (
-            <>
-              {kind === "deposit" ? "From wallet:" : "To wallet:"}{" "}
-              {wallet.toString().slice(0, 3) + "..." + wallet.toString().slice(-3)}
-            </>
-          )}
-        </p>
+        <div className="modal-header">
+          <img src={cachedTokenMetadata[token.mint]?.image || ""} alt={token.symbol} className="token-icon" />
+          <h3>
+            {kind === "deposit" ? "Deposit" : "Withdraw"} {token.symbol}
+          </h3>
+        </div> */}
 
-        <p style={{ fontSize: "0.9rem", marginBottom: "0.5rem" }}>
-          Available: {max.toLocaleString(undefined, { maximumFractionDigits: 3 })}
-        </p>
+        <div className="balance-info">
+          <span>Available Balance</span>
+          <strong>{Math.floor(maxAmount)}</strong>
+        </div>
 
-        <input
-          type="range"
-          min={0}
-          max={max}
-          step={Math.pow(10, -3)}
-          value={value}
-          onChange={(e) => setValue(parseFloat(e.target.value))}
-          style={{ width: "100%" }}
-        />
+        <div className="input-group">
+          <input
+            type="text"
+            value={inputValue}
+            onChange={handleInputChange}
+            placeholder="0.00"
+            className={`amount-input ${isInvalid && inputValue !== "" ? "invalid" : ""}`}
+          />
+          <span className="token-symbol-in-input">{token.symbol}</span>
+        </div>
+        {isInvalid && inputValue !== "" && <p className="error-message">Amount exceeds your available balance</p>}
 
-        <div style={{ textAlign: "center", marginTop: "0.5rem" }}>
-          {value.toLocaleString(undefined, { maximumFractionDigits: 3 })} {token.symbol} ({pct.toFixed(0)}
-          %)
+        <div className="quick-select-buttons">
+          <button onClick={() => setAmount(0.25)}>25%</button>
+          <button onClick={() => setAmount(0.5)}>50%</button>
+          <button onClick={() => setAmount(0.75)}>75%</button>
+          <button onClick={() => setAmount(1)}>Max</button>
         </div>
 
         <button
           className="submit-button"
-          style={{ marginTop: "1rem" }}
-          disabled={value === 0 || isProcessing || value > max}
+          disabled={isInvalid || isProcessing || inputValue === ""}
           onClick={handleConfirm}
         >
           {isProcessing ? "Processing..." : `Confirm ${kind === "deposit" ? "Deposit" : "Withdraw"}`}
