@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { PublicKey } from "@solana/web3.js";
 import { SupersizeVaultClient } from "@engine/SupersizeVaultClient";
 import NotificationService from "@components/notification/NotificationService";
@@ -7,6 +7,7 @@ import { cachedTokenMetadata } from "../../utils/constants";
 import "./Modal.scss";
 
 type Props = {
+  engine?: { getWalletType: () => string | undefined };
   vaultClient: SupersizeVaultClient;
   kind: "deposit" | "withdraw";
   token: { mint: string; symbol: string; decimals: number };
@@ -17,6 +18,7 @@ type Props = {
 };
 
 const TokenTransferModal: React.FC<Props> = ({
+  engine,
   vaultClient,
   kind,
   token,
@@ -28,6 +30,9 @@ const TokenTransferModal: React.FC<Props> = ({
   const [maxAmount, setMaxAmount] = useState<number>(0);
   const [inputValue, setInputValue] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [recipient, setRecipient] = useState<string>("");
+  const [addrTouched, setAddrTouched] = useState(false);
+
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -50,6 +55,23 @@ const TokenTransferModal: React.FC<Props> = ({
     setMaxAmount(sessionBalance);
   }, [kind, sessionBalance]);
 
+  const allowCustomRecipient = useMemo(() => {
+    try {
+      return kind === "withdraw" && engine?.getWalletType?.() === "embedded";
+    } catch {
+      return false;
+    }
+  }, [engine, kind]);
+
+  const isValidSolanaAddress = (addr: string) => {
+    try {
+      new PublicKey(addr);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     if (/^\d*\.?\d*$/.test(value)) {
@@ -59,7 +81,7 @@ const TokenTransferModal: React.FC<Props> = ({
 
   const setAmount = (fraction: number) => {
     const value = maxAmount * fraction;
-    setInputValue(value.toFixed(token.decimals > 0 ? 2 : 0));
+    setInputValue(Math.floor(value).toFixed(0));
   };
 
   const handleConfirm = async () => {
@@ -79,7 +101,8 @@ const TokenTransferModal: React.FC<Props> = ({
       if (kind === "deposit") {
         await vaultClient.executeDeposit(new PublicKey(token.mint), numericValue);
       } else {
-        await vaultClient.executeWithdraw(new PublicKey(token.mint), numericValue);
+        const payoutWalletKey = allowCustomRecipient ? new PublicKey(recipient) : null;
+        await vaultClient.executeWithdraw(new PublicKey(token.mint), numericValue, payoutWalletKey);
       }
       onDone();
     } catch (error: any) {
@@ -110,21 +133,30 @@ const TokenTransferModal: React.FC<Props> = ({
 
   const numericValue = parseFloat(inputValue) || 0;
   const isInvalid = numericValue > maxAmount || numericValue <= 0;
+  const recipientInvalid = allowCustomRecipient ? !recipient || !isValidSolanaAddress(recipient) : false;
+  const disableSubmit = isInvalid || isProcessing || inputValue === "" || recipientInvalid;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-container" onClick={(e) => e.stopPropagation()}>
-        {/* 
-        <button className="close-button" onClick={onClose}>
-          &times;
-        </button>
-
-        <div className="modal-header">
-          <img src={cachedTokenMetadata[token.mint]?.image || ""} alt={token.symbol} className="token-icon" />
-          <h3>
-            {kind === "deposit" ? "Deposit" : "Withdraw"} {token.symbol}
-          </h3>
-        </div> */}
+        {allowCustomRecipient && (
+          <>
+            <div className="input-group">
+              <input
+                type="text"
+                value={recipient}
+                onChange={(e) => setRecipient(e.target.value.trim())}
+                onBlur={() => setAddrTouched(true)}
+                placeholder="Wallet address"
+                className={`address-input ${addrTouched && recipientInvalid ? "invalid" : ""}`}
+                spellCheck={false}
+                autoCapitalize="off"
+                autoCorrect="off"
+              />
+            </div>
+            {addrTouched && recipientInvalid && <p className="error-message">Enter a valid Solana address</p>}
+          </>
+        )}
 
         <div className="balance-info">
           <span>Available Balance</span>
@@ -150,11 +182,7 @@ const TokenTransferModal: React.FC<Props> = ({
           <button onClick={() => setAmount(1)}>Max</button>
         </div>
 
-        <button
-          className="submit-button"
-          disabled={isInvalid || isProcessing || inputValue === ""}
-          onClick={handleConfirm}
-        >
+        <button className="submit-button" disabled={disableSubmit} onClick={handleConfirm}>
           {isProcessing ? "Processing..." : `Confirm ${kind === "deposit" ? "Deposit" : "Withdraw"}`}
         </button>
       </div>

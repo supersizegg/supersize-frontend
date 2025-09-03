@@ -639,7 +639,13 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                     )}
                   </div>
                   <div className="vd-meta mono">
-                    {debugData.pda.wallet.address.slice(0, 8)}…{debugData.pda.wallet.address.slice(-8)}
+                    <a
+                      href={`https://explorer.solana.com/account/${debugData.pda.wallet.address}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {debugData.pda.wallet.address.slice(0, 8)}…{debugData.pda.wallet.address.slice(-8)}
+                    </a>
                   </div>
                 </div>
               </div>
@@ -666,7 +672,13 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                     )}
                   </div>
                   <div className="vd-meta mono">
-                    {debugData.pda.balance.address.slice(0, 8)}…{debugData.pda.balance.address.slice(-8)}
+                    <a
+                      href={`https://explorer.solana.com/account/${debugData.pda.balance.address}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {debugData.pda.balance.address.slice(0, 8)}…{debugData.pda.balance.address.slice(-8)}
+                    </a>
                   </div>
                 </div>
               </div>

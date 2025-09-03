@@ -502,7 +502,7 @@ export function MenuSession() {
 
       {dialog && vaultClient && (
         <TokenTransferModal
-          // engine={engine}
+          engine={engine}
           vaultClient={vaultClient}
           kind={dialog.type}
           token={dialog.token}

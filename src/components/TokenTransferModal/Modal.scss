@@ -106,6 +106,26 @@
 .input-group {
   position: relative;
 
+  .address-input {
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 0.9rem 1rem;
+    color: #fff;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+    &:focus {
+      outline: none;
+      border-color: #4fc124;
+      box-shadow: 0 0 10px rgba(79, 193, 36, 0.5);
+    }
+    &.invalid {
+      border-color: #e53e3e;
+      box-shadow: 0 0 10px rgba(229, 62, 62, 0.5);
+    }
+  }
+
   .amount-input {
     width: 100%;
     background-color: rgba(0, 0, 0, 0.3);
