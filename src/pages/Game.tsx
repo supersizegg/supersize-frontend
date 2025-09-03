@@ -145,7 +145,6 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse, preferredRegion
     let startTime = Date.now();
 
     const checkRemovalTime = setInterval(() => {
-      console.log("checkRemovalTime", playerRemovalTimeRef.current);
       if (playerRemovalTimeRef.current && !playerRemovalTimeRef.current.isZero()) {
         startTime = playerRemovalTimeRef.current.toNumber() * 1000;
         clearInterval(checkRemovalTime);
@@ -165,7 +164,6 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse, preferredRegion
             if (!entityMatch.current) {
               return;
             }
-            console.log("5 seconds have passed");
             try {
               gameSystemExit(preferredRegion, engine, gameInfo, currentPlayerEntity.current, entityMatch.current).then(
                 (exitTx) => {
@@ -182,8 +180,6 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse, preferredRegion
               }
             });
             //clearInterval(interval);
-          } else {
-            console.log("Waiting...", elapsedTime);
           }
         }, 100);
       }
