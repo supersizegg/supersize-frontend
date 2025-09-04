@@ -1,0 +1,134 @@
+$radius: 14px;
+$shadow: 0 12px 30px rgba(0,0,0,0.25);
+$bg-glass: rgba(18, 18, 22, 0.85);
+$border-glass: 1px solid rgba(255,255,255,0.08);
+$text: #eaeaea;
+
+$success: #42d77d;
+$error:   #ff6b6b;
+$info:    #5aa7ff;
+$warning: #ffbf47;
+
+.notification-container {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: none;
+
+  @media (max-width: 640px) {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+  }
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+
+  padding: 12px 14px;
+  min-width: 260px;
+  max-width: 420px;
+
+  color: $text;
+  background: $bg-glass;
+  border: $border-glass;
+  backdrop-filter: blur(10px);
+  border-radius: $radius;
+  box-shadow: $shadow;
+
+  transform: translateX(0);
+  opacity: 1;
+  transition: transform 240ms ease, opacity 240ms ease;
+
+  @media (max-width: 640px) {
+    width: 100%;
+    min-width: unset;
+    max-width: unset;
+  }
+
+  &--enter {
+    transform: translateX(16px);
+    opacity: 0;
+  }
+
+  &--exit {
+    transform: translateX(16px);
+    opacity: 0;
+  }
+
+  &__icon {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
+    margin-top: 2px;
+    color: currentColor;
+    opacity: 0.95;
+  }
+
+  &__body {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+    width: 100%;
+  }
+
+  &__message {
+    font-size: 14px;
+    line-height: 1.35;
+    word-break: break-word;
+  }
+
+  &__progress {
+    position: relative;
+    height: 3px;
+    border-radius: 3px;
+    overflow: hidden;
+    background: rgba(255,255,255,0.08);
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: currentColor;
+      transform-origin: right center;
+      transform: scaleX(1);
+    }
+
+    &--running::after {
+      animation: toast-progress var(--toast-duration, 4000ms) linear forwards;
+    }
+  }
+
+  &__close {
+    margin-left: 6px;
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: rgba(255,255,255,0.6);
+    padding: 2px;
+    border-radius: 8px;
+    cursor: pointer;
+
+    svg { width: 18px; height: 18px; }
+
+    &:hover { color: rgba(255,255,255,0.9); background: rgba(255,255,255,0.06); }
+  }
+
+  &--success { color: $success; }
+  &--error   { color: $error; }
+  &--info    { color: $info; }
+  &--warning { color: $warning; }
+}
+
+@keyframes toast-progress {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
