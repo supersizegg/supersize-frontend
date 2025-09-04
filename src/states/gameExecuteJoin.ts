@@ -1,9 +1,9 @@
 import { PublicKey } from "@solana/web3.js";
-import { ApplySystem, createUndelegateInstruction, FindComponentPda, FindEntityPda } from "@magicblock-labs/bolt-sdk";
+import { ApplySystem, FindEntityPda } from "@magicblock-labs/bolt-sdk";
 import { ActiveGame } from "@utils/types";
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
 import { gameSystemJoin } from "./gameSystemJoin";
-import { COMPONENT_PLAYER_ID, COMPONENT_MAP_ID, COMPONENT_SECTION_ID, SYSTEM_MOVE_BLOB_ID } from "./gamePrograms";
+import { COMPONENT_PLAYER_ID, COMPONENT_MAP_ID, SYSTEM_MOVE_BLOB_ID } from "./gamePrograms";
 import * as anchor from "@coral-xyz/anchor";
 import { stringToUint8Array } from "@utils/helper";
 
@@ -46,11 +46,6 @@ export async function gameExecuteJoin(
   if (!newplayerEntityPda) {
     return { success: false, error: "No available player slots in this game", message: "error" };
   }
-
-  const playerComponentPda = FindComponentPda({
-    componentId: COMPONENT_PLAYER_ID,
-    entity: newplayerEntityPda,
-  });
   
   try {
     let buyInResult = await gameSystemJoin(preferredRegion, engine, selectGameId, newplayerEntityPda, mapEntityPda, playerName);
@@ -61,7 +56,7 @@ export async function gameExecuteJoin(
     console.error("Buy-in error:", buyInError);
     return {
       success: false,
-      error: `Buy-in transaction failed: ${(buyInError as Error)?.message}`,
+      error: `${(buyInError as Error)?.message}`,
       message: "buyin_failed",
     };
   }

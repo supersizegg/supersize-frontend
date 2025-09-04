@@ -18,6 +18,7 @@ import { endpoints } from "@utils/constants";
 import { createUnloadedGame } from "@utils/game";
 import { getRegion, getGameData, updatePlayerInfo } from "@utils/helper";
 import { MagicBlockEngine } from "@engine/MagicBlockEngine";
+import { SupersizeVaultClient } from "../engine/SupersizeVaultClient";
 import NotificationContainer from "@components/notification/NotificationContainer";
 import NotificationService from "@components/notification/NotificationService";
 import BalanceWarning from "@components/notification/BalanceWarning";
@@ -43,7 +44,7 @@ const Home = ({
   username,
 }: homeProps) => {
   const navigate = useNavigate();
-  const { engine, preferredRegion, endpointReady } = useMagicBlockEngine();
+  const { engine, preferredRegion, endpointReady, invalidateEndpointCache } = useMagicBlockEngine();
   const activeGamesRef = useRef<FetchedGame[]>(activeGamesLoaded);
   const [inputValue, setInputValue] = useState<string>("");
   const pingResultsRef = useRef<{ endpoint: string; pingTime: number; region: string }[]>(
@@ -273,17 +274,47 @@ const Home = ({
   const handlePlayButtonClick = async (game: FetchedGame) => {
     let networkType = getNetwork(game.activeGame.endpoint);
     engine.setChain(networkType);
-    // setEndpointEphemRpc(game.activeGame.endpoint);
     setSelectedGame(game.activeGame);
+
+    const isFree = !!game.activeGame.is_free;
+
+    if (engine.getWalletConnected()) {
+      let fixingId;
+      try {
+        const vault = new SupersizeVaultClient(engine);
+        fixingId = NotificationService.addAlert({
+          type: "success",
+          message: "Checking your vault delegation…",
+          shouldExit: false,
+        });
+        const fix = await vault.ensureConsistentDelegationForJoin(game.activeGame.tokenMint!);
+        NotificationService.updateAlert(fixingId, {
+          type: "success",
+          message: fix.changed ? "Vault delegation fixed. Continuing…" : "Vault looks good. Continuing…",
+          shouldExit: true,
+          timeout: 2000,
+        });
+      } catch (e) {
+        if (fixingId) NotificationService.updateAlert(fixingId, {shouldExit: true});
+        NotificationService.addAlert({
+          type: "error",
+          message: "Couldn't prepare your vault. Please try in profile.",
+          // shouldExit: true,
+          timeout: 4000,
+        });
+        return;
+      }
+    }
 
     if (game.playerInfo.playerStatus === "new_player") {
       const alertId = NotificationService.addAlert({
         type: "success",
-        message: "submitting buy in...",
+        message: "Submitting buy-in…",
         shouldExit: false,
       });
-      let max_players = getMaxPlayers(game.activeGame.size);
-      let updatedPlayerInfo = await updatePlayerInfo(
+
+      const max_players = getMaxPlayers(game.activeGame.size);
+      const updatedPlayerInfo = await updatePlayerInfo(
         engine,
         game.activeGame.worldId,
         max_players,
@@ -292,12 +323,9 @@ const Home = ({
         game.activeGame.active_players,
         game.activeGame.endpoint,
       );
-      const myplayerComponent = FindComponentPda({
-        componentId: COMPONENT_PLAYER_ID,
-        entity: updatedPlayerInfo.newPlayerEntityPda,
-      });
-      console.log("updatedPlayerInfo", updatedPlayerInfo.newPlayerEntityPda.toString(), myplayerComponent.toString());
-      if (updatedPlayerInfo.playerStatus == "Game Full" || updatedPlayerInfo.playerStatus == "error") {
+
+      if (updatedPlayerInfo.playerStatus === "Game Full" || updatedPlayerInfo.playerStatus === "error") {
+        NotificationService.updateAlert(alertId, { shouldExit: true });
         const exitAlertId = NotificationService.addAlert({
           type: "error",
           message: updatedPlayerInfo.playerStatus,
@@ -306,15 +334,31 @@ const Home = ({
         setTimeout(() => {
           NotificationService.updateAlert(exitAlertId, { shouldExit: true });
         }, 3000);
+        return;
       }
+
       game.playerInfo = {
         playerStatus: updatedPlayerInfo.playerStatus,
         newplayerEntityPda: updatedPlayerInfo.newPlayerEntityPda,
       };
-      if (!game.activeGame.is_free) {
-        const { hasInsufficientTokenBalance } = await fetchTokenBalance(engine, game.activeGame);
-        setHasInsufficientTokenBalance(hasInsufficientTokenBalance);
+
+      if (!isFree) {
+        try {
+          const vault = new SupersizeVaultClient(engine);
+          const balance = await vault.getVaultBalance(game.activeGame.tokenMint!);
+          setTokenBalance(balance);
+          const insufficientBalance = balance < game.activeGame.buy_in / game.activeGame.decimals;
+          setHasInsufficientTokenBalance(insufficientBalance);
+          if (insufficientBalance) {
+            NotificationService.updateAlert(alertId, { shouldExit: true });
+            return;
+          }
+        } catch (error) {
+          console.log("Error fetching token balance:", error);
+          setHasInsufficientTokenBalance(false);
+        }
       }
+
       const result = await gameExecuteJoin(
         preferredRegion,
         engine,
@@ -325,26 +369,26 @@ const Home = ({
         networkType == "devnet" || sessionWalletInUse,
         setMyPlayerEntityPda,
       );
+
+      NotificationService.updateAlert(alertId, { shouldExit: true });
+
       if (result.success) {
         navigate("/game");
       } else {
         const exitAlertId = NotificationService.addAlert({
           type: "error",
-          message: result.error || "Error submitting buy in",
+          message: result.error || "Error submitting buyin",
           shouldExit: false,
         });
         setTimeout(() => {
           NotificationService.updateAlert(exitAlertId, { shouldExit: true });
         }, 3000);
       }
-      NotificationService.updateAlert(alertId, { shouldExit: true });
     }
+
     if (game.playerInfo.playerStatus === "in_game") {
       setMyPlayerEntityPda(game.playerInfo.newplayerEntityPda);
       navigate(`/game`);
-    }
-    if (game.playerInfo.playerStatus === "error") {
-      console.log("error joining game");
     }
   };
 
@@ -606,10 +650,8 @@ const Home = ({
       </div>
       {selectedGame && hasInsufficientTokenBalance && (
         <BalanceWarning
-          activeGame={selectedGame}
           tokenBalance={tokenBalance}
           setHasInsufficientTokenBalance={setHasInsufficientTokenBalance}
-          setTokenBalance={setTokenBalance}
         />
       )}
       <NotificationContainer />

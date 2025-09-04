@@ -5,7 +5,7 @@ import { FindComponentPda } from "@magicblock-labs/bolt-sdk";
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
 import { COMPONENT_PLAYER_ID, COMPONENT_MAP_ID, SYSTEM_BUY_IN_ID, SUPERSIZE_VAULT_PROGRAM_ID } from "./gamePrograms";
 import { ActiveGame } from "@utils/types";
-import { SupersizeVaultClient } from "../engine/SupersizeVaultClient";
+// import { SupersizeVaultClient } from "../engine/SupersizeVaultClient";
 import { getRegion } from "../utils/helper";
 
 export async function gameSystemJoin(
@@ -18,7 +18,7 @@ export async function gameSystemJoin(
 ) {
   const isGuest = (preferredRegion == undefined || preferredRegion == "" || !engine.getWalletConnected());
   let guestWallet = new PublicKey("G5USW6osjZviU6QEyWaZNtj4TUFeKAwCa4nRoCU2Yheo");
-  if (getRegion(engine.getConnectionEphem().rpcEndpoint) == "ameria") {
+  if (getRegion(engine.getConnectionEphem().rpcEndpoint) == "america") {
     guestWallet = new PublicKey("G5USW6osjZviU6QEyWaZNtj4TUFeKAwCa4nRoCU2Yheo");
   } else if (getRegion(engine.getConnectionEphem().rpcEndpoint) == "asia") {
     guestWallet = new PublicKey("DRFSeRYK35NcGStkcbaD3TpH1F9BVzm8FbW9cNnEf9RR");
@@ -27,9 +27,6 @@ export async function gameSystemJoin(
   }
   const parentKey = isGuest ? guestWallet : engine.getWalletPayer();
   console.log("parentKey", parentKey.toString(), "preferredRegion", preferredRegion, engine.getConnectionEphem());
-  /* if (!parentKey) {
-    throw new Error("User wallet is not connected.");
-  } */
 
   if (isGuest && !gameInfo.is_free) {
     throw new Error("Guest players cannot join paid games.");
@@ -38,10 +35,10 @@ export async function gameSystemJoin(
   const sessionWallet = engine.getSessionPayer();
   const mintOfToken = gameInfo.tokenMint!;
 
-  if (!isGuest) {
-    const vault = new SupersizeVaultClient(engine);
-    await vault.ensureDelegatedForJoin(mintOfToken);
-  }
+  // if (!isGuest) {
+  //   const vault = new SupersizeVaultClient(engine);
+  //   await vault.ensureDelegatedForJoin(mintOfToken);
+  // }
 
   const mapComponentPda = FindComponentPda({
     componentId: COMPONENT_MAP_ID,
@@ -72,7 +69,6 @@ export async function gameSystemJoin(
   console.log("gameWalletPda", gameWalletPda.toString());
   console.log("userBalancePda", userBalancePda.toString());
   console.log("gameBalancePda", gameBalancePda.toString());
-  console.log("mintOfToken", mintOfToken.toString());
 
   const applyJoinSystem = await ApplySystem({
     authority: sessionWallet,

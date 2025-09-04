@@ -42,6 +42,13 @@ export interface AccountSyncState {
   sessionKeyMismatch: boolean;
 }
 
+export type DelegationFixResult = {
+  ok: boolean;
+  changed?: boolean;
+  reason?: string;
+  details?: AccountSyncState;
+};
+
 export class SupersizeVaultClient {
   private readonly engine: any;
   public readonly program: Program<SupersizeVault>;
@@ -285,6 +292,36 @@ export class SupersizeVaultClient {
     return state;
   }
 
+  public async ensureConsistentDelegationForJoin(mint: PublicKey): Promise<DelegationFixResult> {
+    if (!this.wallet) throw new Error("Wallet not connected.");
+
+    const state = await this.getSyncState();
+
+    const needsFix =
+      !state.gameWalletExists ||
+      !state.balancePdaExists ||
+      state.sessionKeyMismatch ||
+      !state.isGwDelegated ||
+      !state.isBalanceDelegated ||
+      state.delegationMismatch;
+
+    if (!needsFix) {
+      return { ok: true, changed: false, reason: "Already consistent", details: state };
+    }
+
+    const why = state.delegationMismatch
+      ? "Accounts delegated to different rollups. Fixing…"
+      : "Accounts not fully delegated or out of sync. Fixing…";
+
+    await this.resyncAndDelegateAll();
+
+    await this.syncEphemeralBalance(mint);
+
+    return { ok: true, changed: true, reason: why, details: state };
+  }
+
+  /* // replaced by ensureConsistentDelegationForJoin
+  
   async ensureDelegatedForJoin(mint: PublicKey): Promise<void> {
     if (!this.wallet) throw new Error("Wallet not connected.");
 
@@ -317,6 +354,7 @@ export class SupersizeVaultClient {
       }
     }
   }
+  */
 
   async gameTranfer(mint: PublicKey, uiAmount: number, mapComponentPda: PublicKey, deposit: boolean = true) {
     if (!this.wallet) throw new Error("Wallet not connected.");
