@@ -50,7 +50,6 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { fetchWalletTokenBalance } from "../utils/helper";
 
 type profileProps = {
-  randomFood: Food[];
   username: string;
   setUsername: (username: string) => void;
   sessionWalletInUse: boolean;
@@ -60,7 +59,6 @@ type profileProps = {
 };
 
 export default function Profile({
-  randomFood,
   username,
   setUsername,
   sessionWalletInUse,

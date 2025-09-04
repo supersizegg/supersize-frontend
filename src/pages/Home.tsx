@@ -1,24 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Home.scss";
-import { ActiveGame, Food } from "@utils/types";
-import { cachedTokenMetadata, NETWORK, options } from "@utils/constants";
-import {
-  formatBuyIn,
-  fetchTokenBalance,
-  pingEndpointsStream,
-  pingSpecificEndpoint,
-  getMaxPlayers,
-  getNetwork,
-} from "@utils/helper";
-import {
-  FindEntityPda,
-  FindComponentPda,
-  FindWorldPda,
-  createDelegateInstruction,
-  BN,
-} from "@magicblock-labs/bolt-sdk";
-import { PublicKey, Transaction } from "@solana/web3.js";
+import { ActiveGame } from "@utils/types";
+import { NETWORK } from "@utils/constants";
+import { formatBuyIn, fetchTokenBalance, pingSpecificEndpoint, getMaxPlayers, getNetwork } from "@utils/helper";
+import { FindComponentPda, FindWorldPda } from "@magicblock-labs/bolt-sdk";
+import { PublicKey } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import { Tooltip } from "react-tooltip";
 import { MenuBar } from "@components/menu/MenuBar";
@@ -29,13 +16,11 @@ import { FetchedGame, PlayerInfo } from "@utils/types";
 import { useMagicBlockEngine } from "../engine/MagicBlockEngineProvider";
 import { endpoints } from "@utils/constants";
 import { createUnloadedGame } from "@utils/game";
-import { stringToUint8Array, getRegion, getGameData, updatePlayerInfo, getPingColor } from "@utils/helper";
+import { getRegion, getGameData, updatePlayerInfo } from "@utils/helper";
 import { MagicBlockEngine } from "@engine/MagicBlockEngine";
-import GameComponent from "@components/Game/Game";
 import NotificationContainer from "@components/notification/NotificationContainer";
 import NotificationService from "@components/notification/NotificationService";
 import BalanceWarning from "@components/notification/BalanceWarning";
-import SignUpBanner from "../components/util/SignUpBanner";
 import Footer from "../components/Footer/Footer";
 
 type homeProps = {
@@ -46,7 +31,6 @@ type homeProps = {
   setActiveGamesLoaded: (games: FetchedGame[]) => void;
   sessionWalletInUse: boolean;
   username: string;
-  preferredRegion: string;
 };
 
 const Home = ({
@@ -57,10 +41,9 @@ const Home = ({
   setActiveGamesLoaded,
   sessionWalletInUse,
   username,
-  preferredRegion
 }: homeProps) => {
   const navigate = useNavigate();
-  const { engine, setEndpointEphemRpc } = useMagicBlockEngine();
+  const { engine, preferredRegion, endpointReady } = useMagicBlockEngine();
   const activeGamesRef = useRef<FetchedGame[]>(activeGamesLoaded);
   const [inputValue, setInputValue] = useState<string>("");
   const pingResultsRef = useRef<{ endpoint: string; pingTime: number; region: string }[]>(
@@ -88,7 +71,7 @@ const Home = ({
 
   const handleEnterKeyPress = async (inputValue: string) => {
     console.log("Searching game", inputValue);
-    const thisEndpoint = engine.getEndpointEphemRpc(); // endpoints[NETWORK][options.indexOf(selectedServer.current)];
+    const thisEndpoint = engine.getEndpointEphemRpc();
     if (inputValue.trim() !== "") {
       isSearchingGame.current = true;
       try {
@@ -220,7 +203,6 @@ const Home = ({
       result.endpoint === server ? { ...result, pingTime: pingTime } : result,
     );
     let filteredGames = [...activeGames];
-    const serverIndex = endpoints[NETWORK].indexOf(server);
     for (let i = 0; i < filteredGames.length; i++) {
       //if not on server, set isloaded to false
       const preNewGame: FetchedGame = {
@@ -234,7 +216,6 @@ const Home = ({
         } as PlayerInfo,
       };
       const preMergedGames = [...filteredGames];
-      //if(!(server === filteredGames[i].activeGame.endpoint || filteredGames[i].activeGame.endpoint === endpoints["devnet"][serverIndex])){
       if (server !== filteredGames[i].activeGame.endpoint) {
         preNewGame.activeGame.isLoaded = false;
         preMergedGames[i] = preNewGame;
@@ -292,7 +273,7 @@ const Home = ({
   const handlePlayButtonClick = async (game: FetchedGame) => {
     let networkType = getNetwork(game.activeGame.endpoint);
     engine.setChain(networkType);
-    setEndpointEphemRpc(game.activeGame.endpoint);
+    // setEndpointEphemRpc(game.activeGame.endpoint);
     setSelectedGame(game.activeGame);
 
     if (game.playerInfo.playerStatus === "new_player") {
@@ -375,36 +356,18 @@ const Home = ({
   };
 
   useEffect(() => {
-    const fetchPingData = async () => {
-      setIsLoadingCurrentGames(true);
-      //let stored = localStorage.getItem("preferredRegion");
-      console.log("Preferred region:", preferredRegion);
-      let stored = preferredRegion;
-      if (stored) {
-        selectedServer.current = stored;
-        const server_index = options.map((option) => option.toLowerCase()).indexOf(stored.toLowerCase());
-        setSelectedEndpoint(endpoints[NETWORK][server_index]);
-        setIsLoadingCurrentGames(false);
-        return;
-      }
+    if (!endpointReady) return;
 
-      await pingEndpointsStream((result) => {
-        pingResultsRef.current = pingResultsRef.current.map((r) => (r.endpoint === result.endpoint ? result : r));
-        if (!selectedServer.current) {
-          selectedServer.current = result.region;
-          setSelectedEndpoint(result.endpoint);
-          //localStorage.setItem("preferredRegion", result.region);
-        }
-      });
-      setIsLoadingCurrentGames(false);
-    };
+    const endpoint = engine.getEndpointEphemRpc();
+    const region = preferredRegion || getRegion(endpoint);
 
-    fetchPingData();
-  }, []);
+    selectedServer.current = region;
+    setSelectedEndpoint(endpoint);
+    setIsLoadingCurrentGames(false);
+  }, [endpointReady, engine, preferredRegion]);
 
   const checkActiveGamesLoaded = async (thisServer: string) => {
     if (checkActiveGamesLoadedCallCount.current >= 5) {
-      console.error("checkActiveGamesLoaded called too many times.");
       setIsLoadingCurrentGames(false);
       return;
     }
@@ -415,7 +378,7 @@ const Home = ({
       checkActiveGamesLoadedCallCount.current++;
       checkActiveGamesLoadedWait.current *= 2;
 
-      setTimeout(checkActiveGamesLoaded, checkActiveGamesLoadedWait.current);
+      setTimeout(() => checkActiveGamesLoaded(selectedEndpoint), checkActiveGamesLoadedWait.current);
     } else {
       setIsLoadingCurrentGames(false);
       checkActiveGamesLoadedCallCount.current = 0;
@@ -455,7 +418,7 @@ const Home = ({
       try {
         setIsLoadingCurrentGames(true);
         await fetchAndLogMapData(engine, activeGamesRef.current, selectedEndpoint);
-        setTimeout(checkActiveGamesLoaded, checkActiveGamesLoadedWait.current, selectedEndpoint);
+        setTimeout(() => checkActiveGamesLoaded(selectedEndpoint), checkActiveGamesLoadedWait.current);
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -638,7 +601,7 @@ const Home = ({
           </table>
         </div>
         <div className="desktop-only mobile-status-bar">
-          Playing Blob Battle | Connected to {selectedServer.current}
+          Playing Blob Battle | Connected to {selectedServer.current || preferredRegion}
         </div>
       </div>
       {selectedGame && hasInsufficientTokenBalance && (

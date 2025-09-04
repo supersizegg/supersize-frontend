@@ -746,6 +746,39 @@ export class SupersizeVaultClient {
     }
   }
 
+  async findDelegatedEphemEndpoint(): Promise<{ endpoint: string; region: string } | null> {
+    if (!this.wallet) {
+      return null;
+    }
+
+    const gwPda = this.gameWalletPda();
+
+    try {
+      const response = await axios.post<RouterResponse>(this.routerUrl, {
+        jsonrpc: "2.0",
+        id: 1,
+        method: "getDelegationStatus",
+        params: [gwPda.toBase58()],
+      });
+      const { result } = response.data;
+
+      if (result.isDelegated && result.delegationRecord) {
+        const validatorAuthority = result.delegationRecord.authority;
+        // @ts-expect-error
+        const correctEndpoint = VALIDATOR_MAP[NETWORK][validatorAuthority];
+
+        if (correctEndpoint) {
+          const region = getRegion(correctEndpoint);
+          return { endpoint: correctEndpoint, region: region };
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error("Failed to query Magic Block Router for delegation status:", error);
+      return null;
+    }
+  }
+
   private async uiAmountToLamports(mint: PublicKey, uiAmount: number) {
     const mintInfo = await getMint(this.mainChainConnection, mint, "confirmed", TOKEN_2022_PROGRAM_ID);
     const factor = 10 ** mintInfo.decimals;

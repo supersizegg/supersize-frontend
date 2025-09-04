@@ -10,35 +10,24 @@ import Profile from "@pages/Profile";
 import AboutPage from "@pages/AboutPage";
 import Shop from "@pages/Shop";
 import Wishlist from "@pages/Wishlist";
-import { ActiveGame, FetchedGame, Food } from "@utils/types";
+import { ActiveGame, FetchedGame } from "@utils/types";
 import { useState } from "react";
 import { PublicKey } from "@solana/web3.js";
-import { activeGamesList, cachedTokenMetadata, NETWORK } from "@utils/constants";
-import { pingEndpoints, getRegion } from "@utils/helper";
+import { activeGamesList, NETWORK } from "@utils/constants";
 import { createUnloadedGame } from "@utils/game";
 import { useMagicBlockEngine } from "./engine/MagicBlockEngineProvider";
-import { SupersizeVaultClient } from "./engine/SupersizeVaultClient";
 
 const AppRoutes = () => {
-  const { engine, setEndpointEphemRpc } = useMagicBlockEngine();
-  const [preferredRegion, setPreferredRegion] = useState<string>("");
+  const { engine, preferredRegion } = useMagicBlockEngine();
   const [selectedGame, setSelectedGame] = useState<ActiveGame | null>(null);
   const [sessionWalletInUse, setSessionWalletInUse] = useState<boolean>(true);
   const [username, setUsername] = useState<string>("");
-  // const [isEndpointResolved, setIsEndpointResolved] = useState(false);
   const [activeGamesLoaded, setActiveGamesLoaded] = useState<FetchedGame[]>(
     [...activeGamesList[NETWORK]].map((world) =>
       createUnloadedGame(world.worldId, world.worldPda, world.endpoint, world.permissionless),
     ),
   );
   const [myPlayerEntityPda, setMyPlayerEntityPda] = useState<PublicKey | null>(null);
-  const [randomFood] = useState<Food[]>(
-    Array.from({ length: 100 }, () => ({
-      x: Math.floor(Math.random() * 4500) + 1000,
-      y: Math.floor(Math.random() * 4500) + 1000,
-      food_value: Math.floor(Math.random() * 10),
-    })),
-  );
 
   useEffect(() => {
     const retrievedUser = localStorage.getItem("user");
@@ -51,30 +40,6 @@ const AppRoutes = () => {
       setUsername(myusername);
     }
   }, []);
-
-  useEffect(() => {
-    let vaultClient: SupersizeVaultClient | null = null;
-    if (engine && engine.getWalletConnected()) {
-      vaultClient = new SupersizeVaultClient(engine);
-    }
-    const fetchGameWalletEphem = async () => {
-      if (vaultClient) {
-        if (preferredRegion == "") {
-          await vaultClient.findMyEphemEndpoint(setEndpointEphemRpc, setPreferredRegion);
-        }
-      } else {
-        const pingResults = await pingEndpoints();
-        console.log("Vault is not initialized, fallback pinging endpoints", pingResults);
-        if (pingResults.lowestPingEndpoint) {
-          //setPreferredRegion(getRegion(pingResults.lowestPingEndpoint.region));
-          setEndpointEphemRpc(pingResults.lowestPingEndpoint.endpoint);
-          console.log("Set ephem endpoint to", pingResults.lowestPingEndpoint.endpoint);
-        }
-      }
-    };
-
-    fetchGameWalletEphem();
-  }, [engine]);
 
   return (
     <Routes>
@@ -90,7 +55,6 @@ const AppRoutes = () => {
             setActiveGamesLoaded={setActiveGamesLoaded}
             sessionWalletInUse={sessionWalletInUse}
             username={username}
-            preferredRegion={preferredRegion}
           />
         }
       />
@@ -119,13 +83,12 @@ const AppRoutes = () => {
         path="/profile"
         element={
           <Profile
-            randomFood={randomFood}
             username={username}
             setUsername={setUsername}
             sessionWalletInUse={sessionWalletInUse}
             setSessionWalletInUse={setSessionWalletInUse}
             preferredRegion={preferredRegion}
-            setPreferredRegion={setPreferredRegion}
+            setPreferredRegion={() => {}}
           />
         }
       />
