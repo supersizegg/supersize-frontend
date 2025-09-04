@@ -295,7 +295,7 @@ const Home = ({
           timeout: 2000,
         });
       } catch (e) {
-        if (fixingId) NotificationService.updateAlert(fixingId, {shouldExit: true});
+        if (fixingId) NotificationService.updateAlert(fixingId, { shouldExit: true });
         NotificationService.addAlert({
           type: "error",
           message: "Couldn't prepare your vault. Please try in profile.",
@@ -347,7 +347,7 @@ const Home = ({
           const vault = new SupersizeVaultClient(engine);
           const balance = await vault.getVaultBalance(game.activeGame.tokenMint!);
           setTokenBalance(balance);
-          const insufficientBalance = balance < game.activeGame.buy_in / game.activeGame.decimals;
+          const insufficientBalance = balance < game.activeGame.buy_in / 10 ** game.activeGame.decimals;
           setHasInsufficientTokenBalance(insufficientBalance);
           if (insufficientBalance) {
             NotificationService.updateAlert(alertId, { shouldExit: true });
@@ -649,10 +649,7 @@ const Home = ({
         </div>
       </div>
       {selectedGame && hasInsufficientTokenBalance && (
-        <BalanceWarning
-          tokenBalance={tokenBalance}
-          setHasInsufficientTokenBalance={setHasInsufficientTokenBalance}
-        />
+        <BalanceWarning tokenBalance={tokenBalance} setHasInsufficientTokenBalance={setHasInsufficientTokenBalance} />
       )}
       <NotificationContainer />
 
