@@ -163,7 +163,6 @@ export function hashCode(str: string): number {
 export function getOpponentColor(authority: PublicKey | null, name: string): string {
   const identifier = authority ? authority.toString() : name;
   const index = hashCode(identifier) % OPPONENT_COLORS.length;
-  //console.log("id", authority ? authority.toString() : name, OPPONENT_COLORS[index])
 
   return OPPONENT_COLORS[index];
 }

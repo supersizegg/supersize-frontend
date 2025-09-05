@@ -77,8 +77,23 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse, preferredRegion
   const playersRef = useRef<Blob[]>([]);
   const currentGameSizeRef = useRef(gameInfo.size);
   const gameEndedRef = useRef(false);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const { playBoostSound } = useSoundManager(soundEnabled);
+
+  function readMusicEnabled(): boolean {
+    try {
+      const raw = localStorage.getItem("user");
+      if (!raw) return true;
+      const parsed = JSON.parse(raw);
+      return typeof parsed.musicEnabled === "boolean" ? parsed.musicEnabled : true;
+    } catch {
+      return true;
+    }
+  }
+
+  useEffect(() => {
+    setSoundEnabled(readMusicEnabled());
+  }, []);
 
   useEffect(() => {
     allplayersRef.current = allplayers;
