@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { FOOD_COLORS } from "@utils/constants";
-import { getOpponentColor } from "@utils/helper";
+import { getOpponentColor, hashCode } from "@utils/helper";
 import { Blob, Food, Circle } from "@utils/types";
 
 interface GameComponentProps {
@@ -29,8 +29,12 @@ const GLOW_RANGE = 8;
 const PREY_RGB = [80, 255, 170] as const;
 const EVEN_RGB = [255, 255, 255] as const;
 const DANGER_RGB = [255, 90, 90] as const;
+const ICONS = ["/slimey2.png", "/ggoat.png", "/grhino.png", "/gsnake.png", "/gpig.png", "/gcroc.png"];
 
+const avatarCache = new Map<string, HTMLImageElement>();
+const tintCache = new Map<string, HTMLCanvasElement>();
 const rgba = (rgb: readonly [number, number, number], a: number) => `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${a})`;
+const PALETTE = [0, 40, 80, 160, 200, 260, 300, 340];
 
 function clamp(v: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, v));
@@ -53,6 +57,50 @@ function distanceFactor(dx: number, dy: number, halfW: number, halfH: number) {
   const diag = Math.hypot(halfW, halfH);
   const t = 1 - clamp(dist / (1.25 * diag), 0, 1);
   return t;
+}
+
+function loadImageOnce(src: string): HTMLImageElement {
+  if (avatarCache.has(src)) return avatarCache.get(src)!;
+  const img = new Image();
+  img.src = src;
+  avatarCache.set(src, img);
+  return img;
+}
+
+function pickHueForBlob(authority_or_name: string): number {
+  const str = authority_or_name || "";
+  const hash = hashCode(str);
+  return PALETTE[hash % PALETTE.length];
+}
+
+function stableIconForOpponent(authority: string | null, name: string): string {
+  const id = authority || name || "";
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+  const idx = Math.abs(h) % ICONS.length;
+  return ICONS[idx];
+}
+
+function getHueShiftedAvatar(
+  img: HTMLImageElement,
+  hueDeg: number,
+  saturate = 1.0,
+  brightness = 1.0,
+): HTMLCanvasElement {
+  const key = `${img.src}|hr:${hueDeg}|s:${saturate}|b:${brightness}`;
+  const cached = tintCache.get(key);
+  if (cached) return cached;
+
+  const c = document.createElement("canvas");
+  c.width = img.naturalWidth;
+  c.height = img.naturalHeight;
+  const ctx = c.getContext("2d")!;
+  ctx.filter = `hue-rotate(${hueDeg}deg) saturate(${saturate}) brightness(${brightness})`;
+  ctx.drawImage(img, 0, 0);
+  ctx.filter = "none";
+
+  tintCache.set(key, c);
+  return c;
 }
 
 const GameComponent: React.FC<GameComponentProps> = ({
@@ -567,34 +615,69 @@ const GameComponent: React.FC<GameComponentProps> = ({
     });
   }, []);
 
-  const drawOpponentPlayer = (ctx: CanvasRenderingContext2D, blob: Blob) => {
-    for (const circle of blob.circles) {
-      const circle_x = circle.x;
-      const circle_y = circle.y;
-
-      const color = getOpponentColor(blob.authority, blob.name);
-
-      const time = performance.now() / 1000;
-      const pulse = 10 + 10 * Math.abs(Math.sin(time * 2));
-
-      ctx.save();
-
-      ctx.shadowBlur = pulse;
-      ctx.shadowColor = color;
-
-      ctx.beginPath();
-      ctx.arc(circle_x, circle_y, circle.radius, 0, 2 * Math.PI);
-      ctx.fillStyle = color;
-      ctx.fill();
-
-      ctx.fillStyle = color;
-      ctx.font = "24px Arial";
-      ctx.textAlign = "center";
-      ctx.fillText(`${blob.name}`, circle_x, circle_y - circle.radius - 20);
+  function drawAvatarCircle(
+    ctx: CanvasRenderingContext2D,
+    img: HTMLImageElement,
+    cx: number,
+    cy: number,
+    radius: number,
+    authority_or_name?: string | null,
+  ) {
+    if (!img.complete || img.naturalWidth === 0) {
+      return false;
     }
 
+    const iw = img.naturalWidth;
+    const ih = img.naturalHeight;
+    const side = Math.min(iw, ih);
+    const sx = (iw - side) / 2;
+    const sy = (ih - side) / 2;
+
+    ctx.save();
+
+    // ctx.beginPath();
+    // ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    // ctx.closePath();
+    // ctx.clip();
+
+    const source: CanvasImageSource = authority_or_name
+      ? getHueShiftedAvatar(img, pickHueForBlob(authority_or_name || ""))
+      : img;
+    ctx.drawImage(source, sx, sy, side, side, cx - radius, cy - radius, radius * 2, radius * 2);
+
     ctx.restore();
-  };
+    return true;
+  }
+
+  function drawOpponentPlayer(ctx: CanvasRenderingContext2D, blob: Blob) {
+    const iconPath = stableIconForOpponent(blob.authority?.toString() ?? null, blob.name ?? "");
+    const img = loadImageOnce(iconPath);
+
+    for (const circle of blob.circles) {
+      const { x, y, radius } = circle;
+
+      const drawn = drawAvatarCircle(ctx, img, x, y, radius, blob.authority?.toBase58() || blob.name || "");
+      if (!drawn) {
+        const color = getOpponentColor(blob.authority, blob.name);
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.restore();
+      }
+
+      if (blob.name) {
+        ctx.save();
+        ctx.fillStyle = "white";
+        ctx.font = "600 16px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.fillText(blob.name, x, y - radius - 8);
+        ctx.restore();
+      }
+    }
+  }
 
   function interpolateCircles(prev: Circle[], curr: Circle[], alpha: number): Circle[] {
     const out: Circle[] = new Array(curr.length);
@@ -648,38 +731,34 @@ const GameComponent: React.FC<GameComponentProps> = ({
     return out;
   }
 
-  const drawMyPlayer = (
+  function drawMyPlayer(
     ctx: CanvasRenderingContext2D,
     blob: Blob,
     currentblob: Blob,
     buyIn: number,
     screenSize: { width: number; height: number },
-  ) => {
+  ) {
+    const user = localStorage.getItem("user");
+    let myIconPath = (user ? (JSON.parse(user).icon as string | undefined) : undefined) || "/slimey2.png";
+    const img = loadImageOnce(myIconPath);
+
     for (const circle of currentblob.circles) {
-      const circle_x = circle.x - currentblob.x + screenSize.width / 2;
-      const circle_y = circle.y - currentblob.y + screenSize.height / 2;
+      const cx = circle.x - currentblob.x + screenSize.width / 2;
+      const cy = circle.y - currentblob.y + screenSize.height / 2;
+      const r = circle.radius;
 
-      const color = getOpponentColor(blob.authority, blob.name);
-
-      const time = performance.now() / 1000;
-      const pulse = 10 + 10 * Math.abs(Math.sin(time * 2));
-
-      ctx.save();
-
-      ctx.shadowBlur = pulse;
-      ctx.shadowColor = color;
-
-      ctx.beginPath();
-      ctx.arc(circle_x, circle_y, circle.radius, 0, 2 * Math.PI);
-      ctx.fillStyle = color;
-      ctx.fill();
-
-      ctx.fillStyle = color;
-      ctx.font = "24px Arial";
-      ctx.textAlign = "center";
-      ctx.fillText(`${blob.name}`, circle_x, circle_y - circle.radius - 20);
+      const drawn = drawAvatarCircle(ctx, img, cx, cy, r);
+      if (!drawn) {
+        const color = getOpponentColor(blob.authority, blob.name);
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.restore();
+      }
     }
-  };
+  }
 
   const drawFood = (ctx: CanvasRenderingContext2D, food: Food) => {
     let diameter = 20;
