@@ -18,6 +18,7 @@ import {
   getRoundedAmount,
   getValidEndpoint,
   stringToUint8Array,
+  updatePlayerInfo,
 } from "@utils/helper";
 import { PublicKey } from "@solana/web3.js";
 import { getAccount } from "@solana/spl-token";
@@ -238,6 +239,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
   const [gameTokenAccount, setGameTokenAccount] = useState<string>("");
   const [userTokenBalance, setUserTokenBalance] = useState<number>(0);
   const [activePlayers, setActivePlayers] = useState<number>(0);
+  const [resetActivePlayers, setResetActivePlayers] = useState<boolean>(false);
   const [valueOnMap, setValueOnMap] = useState<number>(0);
   const [foodComponentCheck, setFoodComponentCheck] = useState<string>("");
   const [depositValue, setDepositValue] = useState<string>("");
@@ -364,6 +366,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
     // Reset states
     setUserTokenBalance(0);
     setActivePlayers(0);
+    setResetActivePlayers(false);
     setValueOnMap(0);
     setPlayers([]);
     setFoodComponentCheck("");
@@ -420,7 +423,15 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
           if (mapInfo) {
             valueOnMap = mapInfo.valueOnMap.toNumber() / 10 ** newGameInfo.decimals;
             setValueOnMap(valueOnMap);
-            const new_activePlayers = mapInfo.activePlayers;
+            let new_activePlayers = mapInfo.activePlayers;
+
+            const updatedPlayerInfo = await updatePlayerInfo(engine, newGameInfo.worldId, newGameInfo.max_players, "new_player", new PublicKey(0), new_activePlayers, newGameInfo.endpoint);
+            const check_activePlayers = updatedPlayerInfo.activeplayers;
+            if (check_activePlayers !== new_activePlayers) {
+              new_activePlayers = check_activePlayers;
+              setResetActivePlayers(true);
+            }
+
             setActivePlayers(new_activePlayers);
             if (mapInfo.authority) {
               setGameOwner(mapInfo.authority.toString());
@@ -875,6 +886,20 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                   Total Plays (30D): {cashoutStats.buyInCount ? cashoutStats.buyInCount : "Loading"}
                 </p>
                 <p style={{ flex: "1 1 50%" }}>Active Players: {activePlayers}</p>
+                <div style={{ flex: "1 1 50%" , display: !resetActivePlayers  ? "none" : "flex"}}>
+                  <button
+                    className="btn-copy"
+                    style={{
+                      marginTop: "10px",
+                      maxHeight: "40px",
+                    }}
+                    onClick={() =>
+                      handleResetMapInfo(engine, row, "", 0, "", activePlayers)
+                    }
+                  >
+                    resync active players
+                  </button>
+                </div>
                 <p style={{ flex: "1 1 50%" }}>Tokens on Map: {valueOnMap}</p>
               </div>
 
@@ -969,7 +994,8 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                                           display:
                                             player.playersParsedDataEphem &&
                                             player.playersParsedDataEphem.map &&
-                                            player.playersParsedDataEphem.buyIn == row.buy_in
+                                            player.playersParsedDataEphem.buyIn == row.buy_in &&
+                                            player.playersParsedDataEphem.score == 0
                                               ? "none"
                                               : "flex",
                                         }}
@@ -977,7 +1003,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                                           handleReinitializePlayerClick(engine, row, player.playerEntityPda)
                                         }
                                       >
-                                        reinit
+                                        { player.playersParsedDataEphem.score == 0 ? "reinit needed" : "force clear" }
                                       </button>
                                     </div>
                                   </div>
@@ -1213,7 +1239,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                 <button
                   className="btn-copy"
                   style={{ flex: "1 1 10%", margin: "10px" }}
-                  onClick={() => handleResetMapInfo(engine, row, resetTokenInput, 0, "")}
+                  onClick={() => handleResetMapInfo(engine, row, resetTokenInput, 0, "", activePlayers)}
                 >
                   Reset Game Token
                 </button>
@@ -1247,7 +1273,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                 <button
                   className="btn-copy"
                   style={{ flex: "1 1 10%", margin: "10px" }}
-                  onClick={() => handleResetMapInfo(engine, row, "", 0, resetNameInput)}
+                  onClick={() => handleResetMapInfo(engine, row, "", 0, resetNameInput, activePlayers)}
                 >
                   Reset Game Name
                 </button>
@@ -1281,7 +1307,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                 <button
                   className="btn-copy"
                   style={{ flex: "1 1 10%", margin: "10px" }}
-                  onClick={() => handleResetMapInfo(engine, row, "", resetBuyInInput, "")}
+                  onClick={() => handleResetMapInfo(engine, row, "", resetBuyInInput, "", activePlayers)}
                 >
                   Reset Game Buy In
                 </button>

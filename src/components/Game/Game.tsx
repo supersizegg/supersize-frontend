@@ -213,7 +213,7 @@ const GameComponent: React.FC<GameComponentProps> = ({
   };
 
   const loop = (time: number) => {
-    if(gameEndedRef.current != 0) {
+    if(gameEndedRef.current != 0 && gameEndedRef.current != 4) {
       return;
     }
     

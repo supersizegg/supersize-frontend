@@ -66,6 +66,44 @@
       "returns": {
         "vec": "bytes"
       }
+    },
+    {
+      "name": "init_extra_accounts",
+      "discriminator": [
+        58,
+        71,
+        119,
+        115,
+        48,
+        174,
+        40,
+        177
+      ],
+      "accounts": [
+        {
+          "name": "game_balance",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "map"
+              },
+              {
+                "kind": "account",
+                "path": "mint_of_token"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint_of_token"
+        },
+        {
+          "name": "map"
+        }
+      ],
+      "args": []
     }
   ],
   "accounts": [

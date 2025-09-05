@@ -12,6 +12,7 @@ export async function gameSystemInitMap(
   buy_in: number,
   token_string: string,
   decimals: number,
+  active_players: number = 0,
 ) {
   const initGame = await ApplySystem({
     authority: engine.getSessionPayer(),
@@ -28,6 +29,7 @@ export async function gameSystemInitMap(
       buy_in: buy_in * 10 ** decimals,
       token_string: token_string,
       game_type: "blob",
+      active_players: active_players,
     },
   });
 

@@ -72,6 +72,44 @@ export type SpawnFood = {
       "returns": {
         "vec": "bytes"
       }
+    },
+    {
+      "name": "initExtraAccounts",
+      "discriminator": [
+        58,
+        71,
+        119,
+        115,
+        48,
+        174,
+        40,
+        177
+      ],
+      "accounts": [
+        {
+          "name": "gameBalance",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "map"
+              },
+              {
+                "kind": "account",
+                "path": "mintOfToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mintOfToken"
+        },
+        {
+          "name": "map"
+        }
+      ],
+      "args": []
     }
   ],
   "accounts": [

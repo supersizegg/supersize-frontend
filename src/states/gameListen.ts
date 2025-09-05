@@ -76,6 +76,9 @@ export function updateMyPlayer(
         setGameEnded(1);
       }
     }
+    else if (player.circles.length == 0 && player.score != 0) {
+      setGameEnded(4);
+    }
     else {
       const result = averageCircleCoordinates(player.circles);
       setCurrentPlayer({

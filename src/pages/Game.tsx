@@ -352,10 +352,13 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse, preferredRegion
   };
 
   useEffect(() => {
-    if (gameEnded != 0) {
+    if (gameEnded != 0 && gameEnded != 4) {
       gameEndedRef.current = true;
+      endGame();
     }
-    endGame();
+    if (gameEnded == 4) {
+      handleExitClick();
+    }
   }, [gameEnded]);
 
   useEffect(() => {
@@ -548,7 +551,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse, preferredRegion
       <GameLeaderboard gameInfo={gameInfo} leaderboard={leaderboard} currentPlayer={currentPlayer} />
 
       <div className="game-hud top-center">
-        {gameEnded === 0 && (
+        {(gameEnded === 0 || gameEnded == 4) && (
           <div
             className="cash-out-panel"
             onClick={handleExitClick}
@@ -643,7 +646,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse, preferredRegion
         />
       </div>
 
-      {gameEnded !== 0 && (
+      {(gameEnded !== 0 && gameEnded !== 4) && (
         <div className="game-over-backdrop">
           {gameEnded === 1 && (
             <div className="game-over-panel is-loss">
