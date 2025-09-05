@@ -89,7 +89,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse, preferredRegion
       playerRemovalTimeRef.current = currentPlayer.removal;
     }
     currentPlayerRef.current = currentPlayer;
-    if (currentPlayer?.circles[0].radius) {
+    if (currentPlayer?.circles[0]?.radius) {
       let scoreSum = 0;
       for (let i = 0; i < currentPlayer.circles.length; i++) {
         scoreSum += currentPlayer.circles[i].size;
@@ -636,6 +636,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse, preferredRegion
       <div className="game-canvas-container">
         <GameComponent
           players={playersRef.current}
+          allPlayers={allplayersRef.current}
           visibleFood={visibleFood.flat()}
           currentPlayer={currentPlayer}
           screenSize={screenSize}
