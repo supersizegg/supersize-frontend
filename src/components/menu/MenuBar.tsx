@@ -43,8 +43,8 @@ export function MenuBar() {
       }
     };
 
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    window.addEventListener("user:updated", onStorage);
+    return () => window.removeEventListener("user:updated", onStorage);
   }, [engine, engine.getWalletConnected()]);
 
   const displayBalance = engine.getWalletConnected() && p2pBalance > 0 ? p2pBalance : f2pBalance;

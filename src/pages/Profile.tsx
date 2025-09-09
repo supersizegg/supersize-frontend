@@ -149,6 +149,14 @@ type ProfileTabProps = {
   setPreferredRegion: (region: string) => void;
 };
 
+function safeParseUser(json: string | null): any {
+  try {
+    return json ? JSON.parse(json) : null;
+  } catch {
+    return null;
+  }
+}
+
 function ProfileTab({
   engine,
   username,
@@ -160,35 +168,43 @@ function ProfileTab({
   const [input, setInput] = useState(username);
   const icons = ["/slimey2.png", "/ggoat.png", "/grhino.png", "/gsnake.png", "/gpig.png", "/gcroc.png"];
   const [selectedIcon, setSelectedIcon] = useState("/slimey2.png");
+  const [musicEnabled, setMusicEnabled] = useState<boolean>(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem("user");
+    const stored = safeParseUser(localStorage.getItem("user"));
     if (engine.getWalletConnected()) {
-      let username = engine.getWalletPayer().toString().slice(0, 7);
+      let uname = engine.getWalletPayer().toString().slice(0, 7);
       if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed.icon) setSelectedIcon(parsed.icon);
-        if (parsed.name) username = parsed.name;
+        if (stored.icon) setSelectedIcon(stored.icon);
+        if (stored.name) uname = stored.name;
+        if (typeof stored.musicEnabled === "boolean") setMusicEnabled(stored.musicEnabled);
       }
-      setInput(username);
+      setInput(uname);
     }
   }, []);
 
+  const writeUser = (patch: Record<string, any>) => {
+    const prev = safeParseUser(localStorage.getItem("user")) ?? {};
+    const next = { ...prev, ...patch };
+    localStorage.setItem("user", JSON.stringify(next));
+    window.dispatchEvent(new CustomEvent("user:updated", { detail: { key: "user", value: next } }));
+  };
+
   const handleSave = () => {
     if (!engine.getWalletConnected()) return;
-    const user = { name: input, use_session: sessionWalletInUse, icon: selectedIcon };
-    localStorage.setItem("user", JSON.stringify(user));
-    window.dispatchEvent(new Event("storage"));
+    writeUser({ name: input, use_session: sessionWalletInUse, icon: selectedIcon });
     setUsername(input);
   };
 
   const handleSelectIcon = (icon: string) => {
     if (!engine.getWalletConnected()) return;
     setSelectedIcon(icon);
-    const stored = localStorage.getItem("user");
-    const parsed = stored ? JSON.parse(stored) : {};
-    localStorage.setItem("user", JSON.stringify({ ...parsed, icon }));
-    window.dispatchEvent(new Event("storage"));
+    writeUser({ icon });
+  };
+
+  const handleToggleMusic = (checked: boolean) => {
+    setMusicEnabled(checked);
+    writeUser({ musicEnabled: checked });
   };
 
   return (
@@ -217,6 +233,26 @@ function ProfileTab({
             onClick={() => handleSelectIcon(icon)}
           />
         ))}
+      </div>
+      <div className="sound-control">
+        <div className="sc-left">
+          <div className="sc-title">Background music</div>
+          <div className="sc-sub">Chill tracks while you play</div>
+        </div>
+
+        <label
+          className={`switch ${!engine.getWalletConnected() ? "disabled" : ""}`}
+          aria-label="Toggle background music"
+        >
+          <input
+            type="checkbox"
+            checked={musicEnabled}
+            onChange={(e) => handleToggleMusic(e.target.checked)}
+            disabled={!engine.getWalletConnected()}
+          />
+          <span className="track" />
+          <span className="thumb" />
+        </label>
       </div>
       <div>
         <RegionSelector preferredRegion={preferredRegion} setPreferredRegion={setPreferredRegion} engine={engine} />
@@ -437,7 +473,15 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
             setValueOnMap(valueOnMap);
             let new_activePlayers = mapInfo.activePlayers;
 
-            const updatedPlayerInfo = await updatePlayerInfo(engine, newGameInfo.worldId, newGameInfo.max_players, "new_player", new PublicKey(0), new_activePlayers, newGameInfo.endpoint);
+            const updatedPlayerInfo = await updatePlayerInfo(
+              engine,
+              newGameInfo.worldId,
+              newGameInfo.max_players,
+              "new_player",
+              new PublicKey(0),
+              new_activePlayers,
+              newGameInfo.endpoint,
+            );
             const check_activePlayers = updatedPlayerInfo.activeplayers;
             if (check_activePlayers !== new_activePlayers) {
               new_activePlayers = check_activePlayers;
@@ -898,16 +942,14 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                   Total Plays (30D): {cashoutStats.buyInCount ? cashoutStats.buyInCount : "Loading"}
                 </p>
                 <p style={{ flex: "1 1 50%" }}>Active Players: {activePlayers}</p>
-                <div style={{ flex: "1 1 50%" , display: !resetActivePlayers  ? "none" : "flex"}}>
+                <div style={{ flex: "1 1 50%", display: !resetActivePlayers ? "none" : "flex" }}>
                   <button
                     className="btn-copy"
                     style={{
                       marginTop: "10px",
                       maxHeight: "40px",
                     }}
-                    onClick={() =>
-                      handleResetMapInfo(engine, row, "", 0, "", activePlayers)
-                    }
+                    onClick={() => handleResetMapInfo(engine, row, "", 0, "", activePlayers)}
                   >
                     resync active players
                   </button>
@@ -1015,7 +1057,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                                           handleReinitializePlayerClick(engine, row, player.playerEntityPda)
                                         }
                                       >
-                                        { player.playersParsedDataEphem.score == 0 ? "reinit needed" : "force clear" }
+                                        {player.playersParsedDataEphem.score == 0 ? "reinit needed" : "force clear"}
                                       </button>
                                     </div>
                                   </div>

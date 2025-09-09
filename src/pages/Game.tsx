@@ -77,8 +77,23 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse, preferredRegion
   const playersRef = useRef<Blob[]>([]);
   const currentGameSizeRef = useRef(gameInfo.size);
   const gameEndedRef = useRef(false);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const { playBoostSound } = useSoundManager(soundEnabled);
+
+  function readMusicEnabled(): boolean {
+    try {
+      const raw = localStorage.getItem("user");
+      if (!raw) return true;
+      const parsed = JSON.parse(raw);
+      return typeof parsed.musicEnabled === "boolean" ? parsed.musicEnabled : true;
+    } catch {
+      return true;
+    }
+  }
+
+  useEffect(() => {
+    setSoundEnabled(readMusicEnabled());
+  }, []);
 
   useEffect(() => {
     allplayersRef.current = allplayers;
@@ -89,7 +104,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse, preferredRegion
       playerRemovalTimeRef.current = currentPlayer.removal;
     }
     currentPlayerRef.current = currentPlayer;
-    if (currentPlayer?.circles[0].radius) {
+    if (currentPlayer?.circles[0]?.radius) {
       let scoreSum = 0;
       for (let i = 0; i < currentPlayer.circles.length; i++) {
         scoreSum += currentPlayer.circles[i].size;
@@ -636,6 +651,7 @@ const Game = ({ gameInfo, myPlayerEntityPda, sessionWalletInUse, preferredRegion
       <div className="game-canvas-container">
         <GameComponent
           players={playersRef.current}
+          allPlayers={allplayersRef.current}
           visibleFood={visibleFood.flat()}
           currentPlayer={currentPlayer}
           screenSize={screenSize}

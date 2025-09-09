@@ -44,7 +44,7 @@ const RegionSelector: React.FC<Props> = ({ preferredRegion, setPreferredRegion, 
 
   return (
     <div className="region-selector">
-      <label className="input-label">Preferred Server Region</label>
+      {/* <label className="input-label">Preferred Ephemeral Rollup Region</label> */}
       <div className="region-grid">
         {pingResults.map((item) => (
           <button
