@@ -66,30 +66,30 @@ export function MenuSession() {
   const [debugInfo, setDebugInfo] = useState<string>("");
   const [showDebugInfo, setShowDebugInfo] = useState<boolean>(false);
 
+  const savePlayerAddress = async () => {
+    const sessionWalletAddress = engine.getSessionPayer().toString();
+    const parentWalletAddress = engine.getWalletPayer().toString();
+
+    if (sessionWalletAddress && parentWalletAddress) {
+      try {
+        await fetch("https://supersize.miso.one/api/v1/players", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            parent_wallet: parentWalletAddress,
+          }),
+        });
+      } catch (error) {
+        console.error("Failed to save player address:", error);
+      }
+    }
+  };
+
   useEffect(() => {
     if (engine && engine.getWalletConnected()) {
       setVaultClient(new SupersizeVaultClient(engine));
-
-      const savePlayerAddress = async () => {
-        const sessionWalletAddress = engine.getSessionPayer().toString();
-        const parentWalletAddress = engine.getWalletPayer().toString();
-
-        if (sessionWalletAddress && parentWalletAddress) {
-          try {
-            await fetch("https://supersize.miso.one/api/v1/players", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                parent_wallet: parentWalletAddress,
-              }),
-            });
-          } catch (error) {
-            console.error("Failed to save player address:", error);
-          }
-        }
-      };
 
       savePlayerAddress();
     } else {
@@ -271,6 +271,18 @@ export function MenuSession() {
 
     try {
       await vaultClient.resyncAndDelegateAll();
+
+      try {
+        const gwPda = vaultClient.gameWalletPda();
+        const appeared = await pollForAccount(engine.getConnectionChain(), gwPda, 30000, 1000);
+        await savePlayerAddress();
+        if (!appeared) {
+          console.warn("Polling timed out waiting for GameWallet PDA to appear.");
+        }
+      } catch (pollErr) {
+        console.warn("Polling for GameWallet PDA failed:", pollErr);
+      }
+
       NotificationService.updateAlert(alertId, { message: "Vault is ready!", shouldExit: true, timeout: 3000 });
       await handleActionComplete();
     } catch (error) {
