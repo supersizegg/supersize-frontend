@@ -651,36 +651,11 @@ export const isGamePaused = async (engine: MagicBlockEngine, mapComponentPda: Pu
   }
 }
 
-export function areHighStakesGamesOpen(openTime: number, timeZone: string) {
-  const date = new Date(Date.now());
-  let timeZoneString = "";
-  if (timeZone === "america") {
-    timeZoneString = "America/New_York";
-  }
-  if (timeZone === "asia") {
-    timeZoneString = "Asia/Tokyo";
-  }
-  if (timeZone === "europe") {
-    timeZoneString = "Europe/London";
-  }
-  const hourRegion = parseInt(new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: timeZoneString }).format(date), 10);
-  return hourRegion === openTime;
-}
+const WINDOW_HOURS = 3;
 
-export function getHighStakesGamesOpenTime(openTime: number, timeZone: string) {
-  let timeZoneString = "";
-  if (timeZone === "america") {
-    timeZoneString = "America/New_York";
-  } else if (timeZone === "asia") {
-    timeZoneString = "Asia/Tokyo";
-  } else if (timeZone === "europe") {
-    timeZoneString = "Europe/London";
-  }
-
-  // Current time in the region
-  const now = new Date();
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: timeZoneString,
+function regionalParts(now: Date, timeZone: string) {
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -689,31 +664,71 @@ export function getHighStakesGamesOpenTime(openTime: number, timeZone: string) {
     second: "2-digit",
     hour12: false,
   });
-
-  // Break apart the formatted string into parts
-  const parts = formatter.formatToParts(now);
-  const year = parseInt(parts.find(p => p.type === "year")!.value, 10);
-  const month = parseInt(parts.find(p => p.type === "month")!.value, 10);
-  const day = parseInt(parts.find(p => p.type === "day")!.value, 10);
-  const hour = parseInt(parts.find(p => p.type === "hour")!.value, 10);
-  const minute = parseInt(parts.find(p => p.type === "minute")!.value, 10);
-  const second = parseInt(parts.find(p => p.type === "second")!.value, 10);
-
-  // Current regional Date object
-  const regionalNow = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
-
-  // Target: today at openTime:00 in that region
-  let target = new Date(Date.UTC(year, month - 1, day, openTime, 0, 0));
-
-  // If already past today's openTime, move to tomorrow
-  if (regionalNow >= target) {
-    target.setUTCDate(target.getUTCDate() + 1);
-  }
-
-  const diffMs = target.getTime() - regionalNow.getTime();
-  return Math.floor(diffMs / 60000); // minutes until openTime
+  const parts = fmt.formatToParts(now);
+  const get = (t: Intl.DateTimeFormatPartTypes) => parseInt(parts.find(p => p.type === t)!.value, 10);
+  return {
+    year: get("year"),
+    month: get("month"),
+    day: get("day"),
+    hour: get("hour"),
+    minute: get("minute"),
+    second: get("second"),
+  };
 }
 
+function mapRegion(region: string) {
+  if (region === "america") return "America/New_York";
+  if (region === "asia") return "Asia/Tokyo";
+  if (region === "europe") return "Europe/London";
+  return "UTC";
+}
+
+function regionalHM(tz: string) {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+  const h = parseInt(parts.find(p => p.type === "hour")!.value, 10);
+  const m = parseInt(parts.find(p => p.type === "minute")!.value, 10);
+  return { h, m };
+}
+
+export function getHighStakesStatus(openTimeHour: number, timeZone: string) {
+  const tz = mapRegion(timeZone);
+  const { h, m } = regionalHM(tz);
+
+  const totalNow = h * 60 + m;                         // minutes since midnight [0..1439]
+  const startMin = openTimeHour * 60;                  // opening minute-of-day
+  const endMin = (startMin + WINDOW_HOURS * 60) % 1440;
+  const wraps = endMin <= startMin;                    // window crosses midnight?
+
+  const isOpen = wraps
+    ? (totalNow >= startMin || totalNow < endMin)
+    : (totalNow >= startMin && totalNow < endMin);
+
+  const minutesToClose = ((endMin - totalNow) + 1440) % 1440;
+  const hoursToOpen = Math.floor((((startMin - totalNow) + 1440) % 1440) / 60);
+  const minutesToOpen = ((startMin - totalNow) + 1440) % 60;
+  const totalToOpen = 60 * hoursToOpen + minutesToOpen;
+
+  // If open → time to close; if closed → time to next open
+  return {
+    isOpen,
+    minutesToBoundary: isOpen ? minutesToClose : totalToOpen,
+  };
+}
+
+// Keep your existing public API
+export function areHighStakesGamesOpen(openTime: number, timeZone: string) {
+  return getHighStakesStatus(openTime, timeZone).isOpen;
+}
+
+export function getHighStakesGamesOpenTime(openTime: number, timeZone: string) {
+  return getHighStakesStatus(openTime, timeZone).minutesToBoundary;
+}
 
 export function isPlayerStatus(
   result:

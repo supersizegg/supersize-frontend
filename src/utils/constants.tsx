@@ -94,7 +94,8 @@ export const VALIDATOR_MAP = {
   },
 };
 
-export const openTimeHighStakesGames = 1;
+export const openTimeHighStakesGames = 16;
+const WINDOW_HOURS = 3;
 
 export const activeGamesList: {
   [key: string]: { worldId: anchor.BN; worldPda: PublicKey; endpoint: string; permissionless?: boolean, openTime?: number, closeTime?: number }[];
@@ -137,12 +138,7 @@ export const activeGamesList: {
       worldId: new anchor.BN(34),
       worldPda: new PublicKey("9TVACTb1NDtGK3rtEHoBMa1Q8iKnHpLS55uuqudVm2xd"),
       endpoint: "https://supersize-mainnet.magicblock.app",
-    }, */
-    {
-      worldId: new anchor.BN(38),
-      worldPda: new PublicKey("DbXfeC37bs1MKXpKQqvL1f3NnCfTUGDoCcSXsYgJfvVw"),
-      endpoint: "https://supersize-mainnet-bos.magicblock.app",
-    }, 
+    }, */ 
     {
       worldId: new anchor.BN(43),
       worldPda: new PublicKey("9UVoDwoNmWTwMExQ7nRwAHrniSEfKS3k22NA2XxAi5CC"),
@@ -167,6 +163,11 @@ export const activeGamesList: {
       worldId: new anchor.BN(37),
       worldPda: new PublicKey("J9U6W6RM8RHx9aeUnq3uwCUtkv7nUMWnSqZGmqgKCwAY"),
       endpoint: "https://supersize-mainnet-sin.magicblock.app",
+    },
+    {
+      worldId: new anchor.BN(38),
+      worldPda: new PublicKey("DbXfeC37bs1MKXpKQqvL1f3NnCfTUGDoCcSXsYgJfvVw"),
+      endpoint: "https://supersize-mainnet-bos.magicblock.app",
     },
     /*
     {

@@ -25,6 +25,13 @@ import BalanceWarning from "@components/notification/BalanceWarning";
 import Footer from "../components/Footer/Footer";
 import { getHighStakesGamesOpenTime, isGamePaused, stringToUint8Array } from "../utils/helper";
 
+const fmtHM = (totalMinutes: number) => {
+  const m = Math.max(0, Math.floor(totalMinutes));
+  const h = Math.floor(m / 60);
+  const r = m % 60;
+  return `${h} hour${h !== 1 ? "s" : ""} and ${r} minute${r !== 1 ? "s" : ""}`;
+};
+
 type homeProps = {
   selectedGame: ActiveGame | null;
   setSelectedGame: (game: ActiveGame | null) => void;
@@ -66,13 +73,20 @@ const Home = ({
 
   useEffect(() => {
     const timeZone = getRegion(selectedEndpoint);
-    if (timeZone) {
+    if (!timeZone) return;
+  
+    const tick = () => {
       const open = areHighStakesGamesOpen(openTimeHighStakesGames, timeZone);
       setHighStakesGamesOpen(open);
-      const openTime = getHighStakesGamesOpenTime(openTimeHighStakesGames, timeZone);
-      setHighStakesGamesOpenTime(openTime);
-    }
+      const minutes = getHighStakesGamesOpenTime(openTimeHighStakesGames, timeZone);
+      setHighStakesGamesOpenTime(minutes);
+    };
+  
+    tick();
+    const id = setInterval(tick, 60_000);
+    return () => clearInterval(id);
   }, [selectedEndpoint]);
+  
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(event.target.value);
@@ -546,11 +560,17 @@ const Home = ({
         {/* <div className="mobile-only mobile-alert">For the best experience, use a desktop or laptop.</div> */}
         {!highStakesGamesOpen && (
           <div className="high-stakes-countdown">
-            High stakes games open: <span style={{ width: "20px", textAlign: "right", marginRight: "3px" }}>⌛ </span> {Math.floor(highStakesGamesOpenTime / 60)} hours and {highStakesGamesOpenTime % 60} minutes 
+            High stakes games open:{" "}
+            <span style={{ width: 20, display: "inline-block", textAlign: "right", marginRight: 3 }}>⌛</span>
+            {fmtHM(highStakesGamesOpenTime)}
           </div>
         )}
         {highStakesGamesOpen && (
-          <div className="high-stakes-countdown">High stakes games close: <span style={{ width: "20px", textAlign: "right", marginRight: "3px" }}>💰 </span> {highStakesGamesOpenTime % 60} minutes</div>
+          <div className="high-stakes-countdown">
+            High stakes games close:{" "}
+            <span style={{ width: 20, display: "inline-block", textAlign: "right", marginRight: 3 }}>💰</span>
+            {fmtHM(highStakesGamesOpenTime)}
+          </div>
         )}
         <div className="table-container">
           <div className="filters-header">
