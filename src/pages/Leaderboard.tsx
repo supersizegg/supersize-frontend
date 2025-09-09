@@ -35,7 +35,7 @@ type LeaderboardProps = {
 };
 
 const Leaderboard: React.FC<LeaderboardProps> = ({ engine }) => {
-  const [leaderboardType, setLeaderboardType] = useState<"casual" | "ranked">("casual");
+  const [leaderboardType, setLeaderboardType] = useState<"casual" | "ranked">("ranked");
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardPlayer[]>([]);
   const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null);
   const [connectedWalletAddr, setConnectedWalletAddr] = useState<string | null>(null);
@@ -91,23 +91,23 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ engine }) => {
         <header className="leaderboard-header">
           <div className="leaderboard-tabs">
             <button
-              className={`tab-button ${leaderboardType === "casual" ? "active" : ""}`}
-              onClick={() => setLeaderboardType("casual")}
-            >
-              Casual
-            </button>
-            <button
               className={`tab-button ${leaderboardType === "ranked" ? "active" : ""}`}
               onClick={() => setLeaderboardType("ranked")}
             >
               Ranked
+            </button>
+            <button
+              className={`tab-button ${leaderboardType === "casual" ? "active" : ""}`}
+              onClick={() => setLeaderboardType("casual")}
+            >
+              Casual
             </button>
           </div>
         </header>
 
         {playerStats && (
           <div className="your-rank-banner">
-            {playerStats.ranks.casual.rank > 0 && (
+            {leaderboardType === "casual" && playerStats.ranks.casual.rank >= 0 && (
               <div className="rank-stat">
                 <span className="stat-label">Casual Rank</span>
                 <span className="stat-value">
@@ -116,9 +116,9 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ engine }) => {
               </div>
             )}
 
-            {playerStats.ranks.ranked.rank > 0 && (
+            {leaderboardType === "ranked" && playerStats.ranks.ranked.rank > 0 && (
               <div className="rank-stat">
-                <span className="stat-label">Ranked Rank</span>
+                <span className="stat-label">Your Rank</span>
                 <span className="stat-value">
                   {playerStats.ranks.ranked.rank} / {playerStats.ranks.ranked.totalPlayers}
                 </span>
