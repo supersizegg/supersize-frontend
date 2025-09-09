@@ -94,8 +94,10 @@ export const VALIDATOR_MAP = {
   },
 };
 
+export const openTimeHighStakesGames = 1;
+
 export const activeGamesList: {
-  [key: string]: { worldId: anchor.BN; worldPda: PublicKey; endpoint: string; permissionless?: boolean }[];
+  [key: string]: { worldId: anchor.BN; worldPda: PublicKey; endpoint: string; permissionless?: boolean, openTime?: number, closeTime?: number }[];
 } = {
   devnet: [
     {

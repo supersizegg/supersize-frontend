@@ -642,6 +642,80 @@ export const decodeFood = (data: Uint8Array) => {
   return { x, y, food_value };
 };
 
+export const isGamePaused = async (engine: MagicBlockEngine, mapComponentPda: PublicKey, endpoint: string) => {
+  const network = getNetwork(endpoint);
+  const isDelegated = await engine.getChainAccountInfoProcessed(mapComponentPda, network);
+  if (isDelegated?.owner && isDelegated?.owner.toString() !== "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh") {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+export function areHighStakesGamesOpen(openTime: number, timeZone: string) {
+  const date = new Date(Date.now());
+  let timeZoneString = "";
+  if (timeZone === "america") {
+    timeZoneString = "America/New_York";
+  }
+  if (timeZone === "asia") {
+    timeZoneString = "Asia/Tokyo";
+  }
+  if (timeZone === "europe") {
+    timeZoneString = "Europe/London";
+  }
+  const hourRegion = parseInt(new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: timeZoneString }).format(date), 10);
+  return hourRegion === openTime;
+}
+
+export function getHighStakesGamesOpenTime(openTime: number, timeZone: string) {
+  let timeZoneString = "";
+  if (timeZone === "america") {
+    timeZoneString = "America/New_York";
+  } else if (timeZone === "asia") {
+    timeZoneString = "Asia/Tokyo";
+  } else if (timeZone === "europe") {
+    timeZoneString = "Europe/London";
+  }
+
+  // Current time in the region
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: timeZoneString,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+
+  // Break apart the formatted string into parts
+  const parts = formatter.formatToParts(now);
+  const year = parseInt(parts.find(p => p.type === "year")!.value, 10);
+  const month = parseInt(parts.find(p => p.type === "month")!.value, 10);
+  const day = parseInt(parts.find(p => p.type === "day")!.value, 10);
+  const hour = parseInt(parts.find(p => p.type === "hour")!.value, 10);
+  const minute = parseInt(parts.find(p => p.type === "minute")!.value, 10);
+  const second = parseInt(parts.find(p => p.type === "second")!.value, 10);
+
+  // Current regional Date object
+  const regionalNow = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+
+  // Target: today at openTime:00 in that region
+  let target = new Date(Date.UTC(year, month - 1, day, openTime, 0, 0));
+
+  // If already past today's openTime, move to tomorrow
+  if (regionalNow >= target) {
+    target.setUTCDate(target.getUTCDate() + 1);
+  }
+
+  const diffMs = target.getTime() - regionalNow.getTime();
+  return Math.floor(diffMs / 60000); // minutes until openTime
+}
+
+
 export function isPlayerStatus(
   result:
     | {
@@ -724,6 +798,8 @@ export const getGameData = async (
   */
   const mapParsedData = await mapFetchOnChain(engine, mapComponentPda);
 
+  //const isPaused = await isGamePaused(engine, mapComponentPda, thisEndpoint);
+
   if (!mapParsedData) {
     return { gameInfo };
   }
@@ -733,7 +809,7 @@ export const getGameData = async (
   gameInfo.size = 10000;
   gameInfo.buy_in = Number(mapParsedData.buyIn.toString());
   gameInfo.is_free = mapParsedData.name.startsWith("f-");
-  gameInfo.isLoaded = true;
+  gameInfo.isLoaded = true; //!isPaused;
   gameInfo.active_players = mapParsedData.activePlayers;
 
   if (mapParsedData.token) {

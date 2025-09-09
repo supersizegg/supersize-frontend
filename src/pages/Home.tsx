@@ -2,27 +2,28 @@ import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Home.scss";
 import { ActiveGame } from "@utils/types";
-import { NETWORK } from "@utils/constants";
+import { NETWORK, openTimeHighStakesGames } from "@utils/constants";
 import { formatBuyIn, fetchTokenBalance, pingSpecificEndpoint, getMaxPlayers, getNetwork } from "@utils/helper";
-import { FindComponentPda, FindWorldPda } from "@magicblock-labs/bolt-sdk";
+import { FindComponentPda, FindEntityPda, FindWorldPda } from "@magicblock-labs/bolt-sdk";
 import { PublicKey } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import { Tooltip } from "react-tooltip";
 import { MenuBar } from "@components/menu/MenuBar";
 import { Spinner } from "@components/util/Spinner";
 import { gameExecuteJoin } from "@states/gameExecuteJoin";
-import { COMPONENT_PLAYER_ID } from "../states/gamePrograms";
+import { COMPONENT_MAP_ID, COMPONENT_PLAYER_ID } from "../states/gamePrograms";
 import { FetchedGame, PlayerInfo } from "@utils/types";
 import { useMagicBlockEngine } from "../engine/MagicBlockEngineProvider";
 import { endpoints } from "@utils/constants";
 import { createUnloadedGame } from "@utils/game";
-import { getRegion, getGameData, updatePlayerInfo } from "@utils/helper";
+import { getRegion, getGameData, updatePlayerInfo, areHighStakesGamesOpen } from "@utils/helper";
 import { MagicBlockEngine } from "@engine/MagicBlockEngine";
 import { SupersizeVaultClient } from "../engine/SupersizeVaultClient";
 import NotificationContainer from "@components/notification/NotificationContainer";
 import NotificationService from "@components/notification/NotificationService";
 import BalanceWarning from "@components/notification/BalanceWarning";
 import Footer from "../components/Footer/Footer";
+import { getHighStakesGamesOpenTime, isGamePaused, stringToUint8Array } from "../utils/helper";
 
 type homeProps = {
   selectedGame: ActiveGame | null;
@@ -60,6 +61,18 @@ const Home = ({
   const [numberOfGamesInEndpoint, setNumberOfGamesInEndpoint] = useState<null | number>(null);
   const [tokenBalance, setTokenBalance] = useState(0);
   const [hasInsufficientTokenBalance, setHasInsufficientTokenBalance] = useState(false);
+  const [highStakesGamesOpen, setHighStakesGamesOpen] = useState(false);
+  const [highStakesGamesOpenTime, setHighStakesGamesOpenTime] = useState(0);
+
+  useEffect(() => {
+    const timeZone = getRegion(selectedEndpoint);
+    if (timeZone) {
+      const open = areHighStakesGamesOpen(openTimeHighStakesGames, timeZone);
+      setHighStakesGamesOpen(open);
+      const openTime = getHighStakesGamesOpenTime(openTimeHighStakesGames, timeZone);
+      setHighStakesGamesOpenTime(openTime);
+    }
+  }, [selectedEndpoint]);
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(event.target.value);
@@ -111,8 +124,23 @@ const Home = ({
               0,
               thisEndpoint,
             );
-            newGameInfo.activeGame.active_players = updatedPlayerInfo.activeplayers;
+
+            const mapEntityPda = FindEntityPda({
+              worldId: newGameInfo.activeGame.worldId,
+              entityId: new anchor.BN(0),
+              seed: stringToUint8Array("origin"),
+            });
+            const mapComponentPda = FindComponentPda({
+              componentId: COMPONENT_MAP_ID,
+              entity: mapEntityPda,
+            });
+            const isPaused = await isGamePaused(engine, mapComponentPda, thisEndpoint);
+            let final_active_players = -2;
+            if (!isPaused) {
+              final_active_players = updatedPlayerInfo.activeplayers;
+            }
             newGameInfo.activeGame.isLoaded = true;
+            newGameInfo.activeGame.active_players = final_active_players;
 
             activeGamesRef.current = [
               ...activeGamesRef.current,
@@ -175,11 +203,27 @@ const Home = ({
         activeGames[index].activeGame.active_players,
         activeGames[index].activeGame.endpoint,
       );
+
+      const mapEntityPda = FindEntityPda({
+        worldId: activeGames[index].activeGame.worldId,
+        entityId: new anchor.BN(0),
+        seed: stringToUint8Array("origin"),
+      });
+      const mapComponentPda = FindComponentPda({
+        componentId: COMPONENT_MAP_ID,
+        entity: mapEntityPda,
+      });
+      const isPaused = await isGamePaused(engine, mapComponentPda, activeGames[index].activeGame.endpoint);
+
+      let final_active_players = -2;
+      if (!isPaused) {
+        final_active_players = updatedPlayerInfo.activeplayers;
+      }
       const newgame: FetchedGame = {
         activeGame: {
           ...activeGames[index].activeGame,
           isLoaded: true,
-          active_players: updatedPlayerInfo.activeplayers,
+          active_players: final_active_players,
         } as ActiveGame,
         playerInfo: {
           playerStatus: updatedPlayerInfo.playerStatus,
@@ -206,6 +250,17 @@ const Home = ({
     let filteredGames = [...activeGames];
     for (let i = 0; i < filteredGames.length; i++) {
       //if not on server, set isloaded to false
+
+      const mapEntityPda = FindEntityPda({
+        worldId: filteredGames[i].activeGame.worldId,
+        entityId: new anchor.BN(0),
+        seed: stringToUint8Array("origin"),
+      });
+      const mapComponentPda = FindComponentPda({
+        componentId: COMPONENT_MAP_ID,
+        entity: mapEntityPda,
+      });
+
       const preNewGame: FetchedGame = {
         activeGame: {
           ...filteredGames[i].activeGame,
@@ -249,10 +304,17 @@ const Home = ({
           activeGameCopy.active_players,
           activeGameCopy.endpoint,
         );
+
+        const isPaused = await isGamePaused(engine, mapComponentPda, server);
+        let final_active_players = -2;
+        if (!isPaused) {
+          final_active_players = updatedPlayerInfo.activeplayers;
+        }
+
         const newgame: FetchedGame = {
           activeGame: {
             ...activeGameCopy,
-            active_players: updatedPlayerInfo.activeplayers,
+            active_players: final_active_players,
           } as ActiveGame,
           playerInfo: {
             playerStatus: updatedPlayerInfo.playerStatus,
@@ -478,10 +540,18 @@ const Home = ({
 
   return (
     <div className="home-page">
-      <MenuBar />
+      <MenuBar /> 
 
       <div className="home-container">
         {/* <div className="mobile-only mobile-alert">For the best experience, use a desktop or laptop.</div> */}
+        {!highStakesGamesOpen && (
+          <div className="high-stakes-countdown">
+            High stakes games open: <span style={{ width: "20px", textAlign: "right", marginRight: "3px" }}>⌛ </span> {Math.floor(highStakesGamesOpenTime / 60)} hours and {highStakesGamesOpenTime % 60} minutes 
+          </div>
+        )}
+        {highStakesGamesOpen && (
+          <div className="high-stakes-countdown">High stakes games close: <span style={{ width: "20px", textAlign: "right", marginRight: "3px" }}>💰 </span> {highStakesGamesOpenTime % 60} minutes</div>
+        )}
         <div className="table-container">
           <div className="filters-header">
             <input
@@ -585,8 +655,12 @@ const Home = ({
                     )}
                   </td>
                   <td data-label="Players">
-                    {row.activeGame.isLoaded && row.activeGame.active_players >= 0 ? (
+                    {!row.activeGame.is_free && !highStakesGamesOpen ? (
+                      "Paused"
+                    ) : row.activeGame.isLoaded && row.activeGame.active_players >= 0 ? (
                       row.activeGame.active_players + "/" + row.activeGame.max_players
+                    ) : row.activeGame.isLoaded && row.activeGame.active_players === -2 ? (
+                      "Paused"
                     ) : (
                       <Spinner />
                     )}
@@ -599,7 +673,8 @@ const Home = ({
                         !row.activeGame.isLoaded ||
                         row.activeGame.active_players < 0 ||
                         row.playerInfo.playerStatus == "error" ||
-                        row.playerInfo.playerStatus == "Game Full"
+                        row.playerInfo.playerStatus == "Game Full" ||
+                        (!row.activeGame.is_free && !highStakesGamesOpen)
                         // engine.getWalletConnected() == false
                       }
                       onClick={() => {

@@ -15,11 +15,12 @@ import { MagicBlockEngine } from "@engine/MagicBlockEngine";
 import { gameSystemInitSection } from "./gameSystemInitSection";
 import { SupersizeVaultClient } from "../engine/SupersizeVaultClient";
 import NotificationService from "@components/notification/NotificationService";
-import { getRegion, getValidatorKeyForEndpoint } from "../utils/helper";
+import { getNetwork, getRegion, getValidatorKeyForEndpoint } from "../utils/helper";
 import { SYSTEM_INIT_MAP_ID } from "./gamePrograms";
 import { gameSystemInitPlayer } from "./gameSystemInitPlayer";
+import { playerFetchOnSpecificEphem } from "./gameFetch";
 
-const undelegateMap = async (engine: MagicBlockEngine, mapComponentPda: PublicKey) => {
+export const undelegateMap = async (engine: MagicBlockEngine, mapComponentPda: PublicKey) => {
   const undelegateIx = createUndelegateInstruction({
     payer: engine.getSessionPayer(),
     delegatedAccount: mapComponentPda,
@@ -39,7 +40,7 @@ const undelegateMap = async (engine: MagicBlockEngine, mapComponentPda: PublicKe
   }
 }
 
-const delegateMap = async (engine: MagicBlockEngine, mapComponentPda: PublicKey, mapEntityPda: PublicKey) => {
+export const delegateMap = async (engine: MagicBlockEngine, mapComponentPda: PublicKey, mapEntityPda: PublicKey) => {
   const delegateIx = createDelegateInstruction({
     entity: mapEntityPda,
     account: mapComponentPda,
@@ -157,6 +158,13 @@ export const handleResetMapInfo= async (engine: MagicBlockEngine, gameInfo: Acti
         componentId: COMPONENT_MAP_ID,
         entity: mapEntityPda,
     });
+    /*
+    const network = getNetwork(gameInfo.endpoint);
+    const isDelegated = await engine.getChainAccountInfoProcessed(mapComponentPda, network);
+    if (isDelegated?.owner) {
+      console.log(mapComponentPda.toString(), "isDelegated", isDelegated?.owner.toString(), isDelegated?.owner.toString() === "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh");
+    }
+    */
     await undelegateMap(engine, mapComponentPda);
 
     let decimals = gameInfo.decimals;

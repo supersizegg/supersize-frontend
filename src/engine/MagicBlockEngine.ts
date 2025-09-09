@@ -193,6 +193,7 @@ export class MagicBlockEngine {
     const signature = await this.provider.connection.sendTransaction(transaction, [this.sessionKey], {
       skipPreflight: true,
     });
+    console.log("signature", signature);
     await this.waitSignatureConfirmation(name, signature, this.provider.connection, "confirmed");
     return signature;
   }

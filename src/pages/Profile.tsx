@@ -37,6 +37,8 @@ import {
   countMatchingTransactions,
   gameTransfer,
   handleReinitializePlayerClick,
+  undelegateMap,
+  delegateMap,
 } from "@states/adminFunctions";
 import DepositInput from "@components/util/DepositInput";
 import CollapsiblePanel from "@components/util/CollapsiblePanel";
@@ -48,7 +50,7 @@ import { endpoints, options, NETWORK } from "../utils/constants";
 import { SupersizeVaultClient } from "../engine/SupersizeVaultClient";
 import { getComponentMapOnChain, getComponentMapOnEphem } from "../states/gamePrograms";
 import { NavLink, useNavigate } from "react-router-dom";
-import { fetchWalletTokenBalance } from "../utils/helper";
+import { fetchWalletTokenBalance, getNetwork, isGamePaused } from "../utils/helper";
 
 type profileProps = {
   username: string;
@@ -249,6 +251,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
   const [currentFoodToAdd, setCurrentFoodToAdd] = useState<number>(0);
   const [initVaultInput, setInitVaultInput] = useState("");
   const [selectedMapComponentPda, setSelectedMapComponentPda] = useState<PublicKey | null>(null);
+  const [gamePaused, setGamePaused] = useState<boolean>(false);
   const [cashoutStats, setCashoutStats] = useState<{
     buyInSum: number | null;
     buyInCount: number | null;
@@ -374,6 +377,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
     setGameWallet("");
     setCashoutStats({ buyInSum: null, buyInCount: null });
     setSelectedMapComponentPda(null);
+    setGamePaused(false);
 
     const mapEntityPda = FindEntityPda({
       worldId: newGameInfo.worldId,
@@ -385,6 +389,14 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
       entity: mapEntityPda,
     });
     setSelectedMapComponentPda(mapComponentPda);
+
+    const network = getNetwork(newGameInfo.endpoint);
+    const isPaused = await isGamePaused(engine, mapComponentPda, newGameInfo.endpoint);
+    if (isPaused) {
+      setGamePaused(true);
+    } else {
+      setGamePaused(false);
+    }
 
     try {
       // p1: Process game and anteroom data
@@ -1210,6 +1222,56 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                   </>
                 )}
               </p>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  width: "50%",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  margin: "auto",
+                }}
+              >
+                { !gamePaused ? (
+                  <button
+                    className="btn-copy"
+                    style={{ flex: "1 1 10%", margin: "10px" }}
+                    onClick={() => {
+                      const mapEntityPda = FindEntityPda({
+                        worldId: row.worldId,
+                        entityId: new anchor.BN(0),
+                        seed: stringToUint8Array("origin"),
+                      });
+                      const mapComponentPda = FindComponentPda({
+                        componentId: COMPONENT_MAP_ID,
+                        entity: mapEntityPda,
+                      });
+                      undelegateMap(engine, mapComponentPda);
+                    }}
+                  >
+                    Pause Game
+                  </button>
+                ) : (
+                  <button
+                    className="btn-copy"
+                    style={{ flex: "1 1 10%", margin: "10px" }}
+                    onClick={() => {
+                      const mapEntityPda = FindEntityPda({
+                        worldId: row.worldId,
+                        entityId: new anchor.BN(0),
+                        seed: stringToUint8Array("origin"),
+                      });
+                      const mapComponentPda = FindComponentPda({
+                        componentId: COMPONENT_MAP_ID,
+                        entity: mapEntityPda,
+                      });
+                      delegateMap(engine, mapComponentPda, mapEntityPda);
+                    }}
+                  >
+                    Resume Game
+                  </button>
+                )}
+              </div>
               <div
                 style={{
                   display: "flex",
