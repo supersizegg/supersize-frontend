@@ -730,13 +730,13 @@ const Home = ({
             {!highStakesGamesOpen && (
               <div className="high-stakes-countdown">
                 <h4>Next high-stakes game opens:</h4>
-                <p>{fmtHM(highStakesGamesOpenTime)}</p>
+                <p className="countdown-text">{fmtHM(highStakesGamesOpenTime)}</p>
               </div>
             )}
             {highStakesGamesOpen && (
               <div className="high-stakes-countdown">
                 <h4>High stakes games close:</h4>
-                <p>{fmtHM(highStakesGamesOpenTime)}</p>
+                <p className="countdown-text">{fmtHM(highStakesGamesOpenTime)}</p>
               </div>
             )}
 
