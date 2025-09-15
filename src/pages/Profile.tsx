@@ -269,6 +269,7 @@ function AchievementsTab() {
   };
 
   const [achievements, setAchievements] = useState<ApiAchievement[] | null>(null);
+  const [summary, setSummary] = useState<{ total: number; completed: number } | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -296,8 +297,13 @@ function AchievementsTab() {
         const res = await axios.get(`${API_URL}api/v1/achievements`, {
           params: { parent_wallet: parentWallet },
         });
-        const data = res.data as { parent_wallet: string; achievements: ApiAchievement[] };
+        const data = res.data as {
+          parent_wallet: string;
+          achievements: ApiAchievement[];
+          summary?: { total: number; completed: number };
+        };
         setAchievements(data?.achievements ?? []);
+        setSummary(data?.summary ?? null);
       } catch (err) {
         console.error("Failed to fetch achievements", err);
         setError("Unable to load achievements right now.");
@@ -331,6 +337,24 @@ function AchievementsTab() {
 
   return (
     <div className="achievements-tab">
+      {summary && (
+        <div className="achievements-summary">
+          <div className="as-row">
+            <div className="as-label">Unlocked</div>
+            <div className="as-count">
+              {summary.completed} / {summary.total}
+            </div>
+          </div>
+          <div className="as-progress">
+            <div
+              className="as-progress-bar"
+              style={{
+                width: `${Math.min(100, Math.max(0, (summary.completed / Math.max(1, summary.total)) * 100))}%`,
+              }}
+            />
+          </div>
+        </div>
+      )}
       <div className="achievements-grid">
         {list.length === 0 && <div style={{ color: "#bbb" }}>No achievements yet.</div>}
         {list.map((a) => {

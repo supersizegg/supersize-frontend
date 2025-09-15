@@ -76,6 +76,52 @@
   flex-direction: column;
 }
 
+.achievements-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+}
+
+.achievements-summary .as-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.achievements-summary .as-label {
+  color: #ddd;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.achievements-summary .as-count {
+  color: #fff;
+  font-weight: 800;
+}
+
+.achievements-summary .as-progress {
+  position: relative;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.achievements-summary .as-progress-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 0%;
+  background: linear-gradient(90deg, #4fc124, #7be05a);
+  box-shadow: 0 0 12px rgba(79, 193, 36, 0.45);
+}
+
 .achievements-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
