@@ -761,27 +761,90 @@ const GameComponent: React.FC<GameComponentProps> = ({
   }
 
   const drawFood = (ctx: CanvasRenderingContext2D, food: Food) => {
+    const green_potion = loadImageOnce("/green_potion.png");
+    const heart_potion = loadImageOnce("/heart_potion.png");
+    const ice_potion = loadImageOnce("/ice_potion.png");
+    const energy_potion = loadImageOnce("/energy_potion.png");
+
     let diameter = 20;
-    let color;
-    if (food.food_value >= 10.0) {
-      color = "#FFD700";
-      ctx.shadowBlur = 30;
-      ctx.shadowColor = "rgba(255, 215, 0, 1.0)";
-      diameter = 3 * food.food_value;
-    } else {
+    let color = FOOD_COLORS[0];
+    let img;
+    if (food.food_value == 15.0) {
+      img = green_potion;
+      diameter = 40;
+    }
+    if (food.food_value == 14.0) {
+      img = heart_potion;
+      diameter = 40;
+    }
+    if (food.food_value == 13.0) {
+      img = ice_potion;
+      diameter = 40;
+    }
+    if (food.food_value == 12.0) {
+      img = energy_potion;
+      diameter = 40;
+    }
+    if (food.food_value == 11.0) {
+      img = green_potion;
+      diameter = 30;
+    }
+    if (food.food_value == 10.0) {
+      img = heart_potion;
+      diameter = 30;
+    }
+    if (food.food_value == 9.0) {
+      img = ice_potion;
+      diameter = 30;
+    }
+    if (food.food_value == 8.0) {
+      img = energy_potion;
+      diameter = 30;
+    }
+    if (food.food_value == 7.0) {
+      img = green_potion;
+      diameter = 20;
+    }
+    if (food.food_value == 6.0) {
+      img = heart_potion;
+      diameter = 20;
+    }
+    if (food.food_value == 5.0) {
+      img = ice_potion;
+      diameter = 20;
+    }
+    if (food.food_value == 4.0) {
+      img = energy_potion;
+      diameter = 20;
+    }
+    else{
       const index = Math.max(0, Math.min(FOOD_COLORS.length - 1, food.food_value - 1));
       color = FOOD_COLORS[index];
+      diameter = diameter + food.food_value * 5;
       ctx.shadowBlur = 0;
       ctx.shadowColor = "transparent";
     }
 
-    ctx.beginPath();
-    ctx.arc(food.x, food.y, diameter / 2, 0, 2 * Math.PI);
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.strokeStyle = "black";
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    if (img) {
+      const drawn = drawAvatarCircle(ctx, img, food.x, food.y, diameter / 2);
+      if (!drawn) {
+        ctx.beginPath();
+        ctx.arc(food.x, food.y, diameter / 2, 0, 2 * Math.PI);
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }else{
+      ctx.beginPath();
+      ctx.arc(food.x, food.y, diameter / 2, 0, 2 * Math.PI);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = "black";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
   };
 
   const drawBorder = (

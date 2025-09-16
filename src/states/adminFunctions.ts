@@ -226,8 +226,8 @@ export const handleResetMapInfo= async (engine: MagicBlockEngine, gameInfo: Acti
 
 export const handleDeleteGame = async (engine: MagicBlockEngine, gameInfo: ActiveGame) => {
     console.log("delete game", gameInfo.worldId.toString());
-    let maxplayer = 10;
-    let foodcomponents = 32;
+    let maxplayer = 100;
+    let foodcomponents = 100;
 
     const anteEntityPda = FindEntityPda({
       worldId: gameInfo.worldId,
@@ -268,17 +268,6 @@ export const handleDeleteGame = async (engine: MagicBlockEngine, gameInfo: Activ
       console.log("Error destroying:", error);
     });
     console.log("destroyMapComponentTx", destroyMapComponentTx);
-
-    if (gameInfo.size == 4000) {
-      maxplayer = 10;
-      foodcomponents = 16 * 2;
-    } else if (gameInfo.size == 6000) {
-      maxplayer = 20;
-      foodcomponents = 36 * 2;
-    } else if (gameInfo.size == 8000) {
-      maxplayer = 40;
-      foodcomponents = 64 * 2;
-    }
 
     for (let i = 1; i < foodcomponents + 1; i++) {
       const foodseed = "food" + i.toString();
