@@ -74,19 +74,18 @@ const Home = ({
   useEffect(() => {
     const timeZone = getRegion(selectedEndpoint);
     if (!timeZone) return;
-  
+
     const tick = () => {
       const open = areHighStakesGamesOpen(openTimeHighStakesGames, timeZone);
       setHighStakesGamesOpen(open);
       const minutes = getHighStakesGamesOpenTime(openTimeHighStakesGames, timeZone);
       setHighStakesGamesOpenTime(minutes);
     };
-  
+
     tick();
     const id = setInterval(tick, 60_000);
     return () => clearInterval(id);
   }, [selectedEndpoint]);
-  
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(event.target.value);
@@ -554,193 +553,211 @@ const Home = ({
 
   return (
     <div className="home-page">
-      <MenuBar /> 
+      <MenuBar />
 
       <div className="home-container">
-        {/* <div className="mobile-only mobile-alert">For the best experience, use a desktop or laptop.</div> */}
-        {!highStakesGamesOpen && (
-          <div className="high-stakes-countdown">
-            High stakes games open:{" "}
-            <span style={{ width: 20, display: "inline-block", textAlign: "right", marginRight: 3 }}>⌛</span>
-            {fmtHM(highStakesGamesOpenTime)}
-          </div>
-        )}
-        {highStakesGamesOpen && (
-          <div className="high-stakes-countdown">
-            High stakes games close:{" "}
-            <span style={{ width: 20, display: "inline-block", textAlign: "right", marginRight: 3 }}>💰</span>
-            {fmtHM(highStakesGamesOpenTime)}
-          </div>
-        )}
-        <div className="table-container">
-          <div className="filters-header">
-            <input
-              type="text"
-              className="search-game-input"
-              placeholder="Search Game by ID"
-              value={inputValue}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyPress}
-            ></input>
-            {/* <div className="search-spinner-container">
-              {isSearchingGame.current && <Spinner />}
-            </div> */}
-          </div>
-          <table className="lobby-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Creator</th>
-                <th>Token</th>
-                <th>Buy In</th>
-                <th>Players</th>
-                <th>Status</th>
-                <th>
-                  <button
-                    data-tooltip-id="refresh-all-games"
-                    data-tooltip-content="Refresh all games"
-                    className="desktop-only"
-                    onClick={async () => refreshAllGames()}
-                  >
-                    <img
-                      src="/icons/arrows-rotate.svg"
-                      width={18}
-                      className={`${isLoadingCurrentGames && loadingGameNum == -1 ? "refresh-icon" : ""}`}
-                    />
-                  </button>
-                  <Tooltip id="refresh-all-games" />
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {activeGamesLoaded.filter((row) => row.activeGame.isLoaded).length == 0 && (
-                <tr>
-                  <td colSpan={10} style={{ textAlign: "center", verticalAlign: "middle", lineHeight: "20px" }}>
-                    {selectedServer.current !== "" && isLoadingCurrentGames === true && (
-                      <>
-                        <Spinner /> Loading {selectedServer.current} games, please wait...
-                      </>
-                    )}
-                    {selectedServer.current === "" && (
-                      <>
-                        <Spinner /> Finding nearest server...
-                      </>
-                    )}
-                    {numberOfGamesInEndpoint === 0 && isLoadingCurrentGames === false && (
-                      <>
-                        No whitelisted games in {selectedServer.current} right now.
-                        <br />
-                        Try selecting a different region or search game by ID.
-                      </>
-                    )}
-                  </td>
-                </tr>
-              )}
-              {activeGamesLoaded.map((row, idx) => (
-                <tr key={idx} className={!row.activeGame.isLoaded ? "row-hidden" : ""}>
-                  <td data-label="Game ID">{row.activeGame.worldId.toString()}</td>
-                  <td data-label="Creator">
-                    {row.activeGame.permissionless === true ? (
-                      <span className="community-list">Community</span>
-                    ) : (
-                      <span className="strict-list">Slimecoin</span>
-                    )}
-                  </td>
-                  <td data-label="Token">
-                    <div className="token-cell-content">
-                      {row.activeGame.isLoaded ? (
-                        <>
-                          <img
-                            src={row.activeGame.image}
-                            alt={row.activeGame.name}
-                            className="token-image"
-                            style={{ marginRight: "5px", display: "inline" }}
-                          />
-                          <span>{row.activeGame.token}</span>
-                        </>
-                      ) : (
-                        <Spinner />
-                      )}
-                    </div>
-                  </td>
-                  <td data-label="Buy In">
-                    {row.activeGame.isLoaded ? (
-                      row.activeGame.is_free ? (
-                        "Free"
-                      ) : (
-                        formatBuyIn(row.activeGame.buy_in / 10 ** row.activeGame.decimals)
-                      )
-                    ) : (
-                      <Spinner />
-                    )}
-                  </td>
-                  <td data-label="Players">
-                    {!row.activeGame.is_free && !highStakesGamesOpen ? (
-                      "Paused"
-                    ) : row.activeGame.isLoaded && row.activeGame.active_players >= 0 ? (
-                      row.activeGame.active_players + "/" + row.activeGame.max_players
-                    ) : row.activeGame.isLoaded && row.activeGame.active_players === -2 ? (
-                      "Paused"
-                    ) : (
-                      <Spinner />
-                    )}
-                  </td>
+        <div className="home-content">
+          <div className="main-content">
+            <div className="table-container">
+              <div className="filters-header">
+                <input
+                  type="text"
+                  className="search-game-input"
+                  placeholder="Search Game by ID"
+                  value={inputValue}
+                  onChange={handleInputChange}
+                  onKeyDown={handleKeyPress}
+                ></input>
+              </div>
+              <table className="lobby-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    {/* <th>Creator</th> */}
+                    <th>Token</th>
+                    <th>Buy In</th>
+                    <th>Players</th>
+                    <th>Status</th>
+                    <th>
+                      <button
+                        data-tooltip-id="refresh-all-games"
+                        data-tooltip-content="Refresh all games"
+                        className="desktop-only"
+                        onClick={async () => refreshAllGames()}
+                      >
+                        <img
+                          src="/icons/arrows-rotate.svg"
+                          width={18}
+                          className={`${isLoadingCurrentGames && loadingGameNum == -1 ? "refresh-icon" : ""}`}
+                        />
+                      </button>
+                      <Tooltip id="refresh-all-games" />
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activeGamesLoaded.filter((row) => row.activeGame.isLoaded).length == 0 && (
+                    <tr>
+                      <td colSpan={10} style={{ textAlign: "center", verticalAlign: "middle", lineHeight: "20px" }}>
+                        {selectedServer.current !== "" && isLoadingCurrentGames === true && (
+                          <>
+                            <Spinner /> Loading {selectedServer.current} games, please wait...
+                          </>
+                        )}
+                        {selectedServer.current === "" && (
+                          <>
+                            <Spinner /> Finding nearest server...
+                          </>
+                        )}
+                        {numberOfGamesInEndpoint === 0 && isLoadingCurrentGames === false && (
+                          <>
+                            No whitelisted games in {selectedServer.current} right now.
+                            <br />
+                            Try selecting a different region or search game by ID.
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                  {activeGamesLoaded.map((row, idx) => (
+                    <tr key={idx} className={!row.activeGame.isLoaded ? "row-hidden" : ""}>
+                      <td data-label="Game ID">{row.activeGame.worldId.toString()}</td>
+                      {/* <td data-label="Creator">
+                        {row.activeGame.permissionless === true ? (
+                          <span className="community-list">Community</span>
+                        ) : (
+                          <span className="strict-list">Slimecoin</span>
+                        )}
+                      </td> */}
+                      <td data-label="Token">
+                        <div className="token-cell-content">
+                          {row.activeGame.isLoaded ? (
+                            <>
+                              <img
+                                src={row.activeGame.image}
+                                alt={row.activeGame.name}
+                                className="token-image"
+                                style={{ marginRight: "5px", display: "inline" }}
+                              />
+                              <span>{row.activeGame.token}</span>
+                            </>
+                          ) : (
+                            <Spinner />
+                          )}
+                        </div>
+                      </td>
+                      <td data-label="Buy In">
+                        {row.activeGame.isLoaded ? (
+                          row.activeGame.is_free ? (
+                            "Free"
+                          ) : (
+                            formatBuyIn(row.activeGame.buy_in / 10 ** row.activeGame.decimals)
+                          )
+                        ) : (
+                          <Spinner />
+                        )}
+                      </td>
+                      <td data-label="Players">
+                        {!row.activeGame.is_free && !highStakesGamesOpen ? (
+                          "Paused"
+                        ) : row.activeGame.isLoaded && row.activeGame.active_players >= 0 ? (
+                          row.activeGame.active_players + "/" + row.activeGame.max_players
+                        ) : row.activeGame.isLoaded && row.activeGame.active_players === -2 ? (
+                          "Paused"
+                        ) : (
+                          <Spinner />
+                        )}
+                      </td>
 
-                  <td className="">
-                    <button
-                      className="btn-play"
-                      disabled={
-                        !row.activeGame.isLoaded ||
-                        row.activeGame.active_players < 0 ||
-                        row.playerInfo.playerStatus == "error" ||
-                        row.playerInfo.playerStatus == "Game Full" ||
-                        (!row.activeGame.is_free && !highStakesGamesOpen)
-                        // engine.getWalletConnected() == false
-                      }
-                      onClick={() => {
-                        handlePlayButtonClick(row);
-                      }}
-                      data-tooltip-id={`connect-wallet-${idx}`}
-                      data-tooltip-content="Play as guest"
-                    >
-                      {{
-                        new_player: "Play",
-                        cashing_out: "Cash Out",
-                        in_game: "Resume",
-                      }[row.playerInfo.playerStatus] || row.playerInfo.playerStatus}
-                    </button>
-                    {engine.getWalletConnected() == false && <Tooltip id={`connect-wallet-${idx}`} />}
-                  </td>
-                  <td className="desktop-only">
-                    <button
-                      data-tooltip-id={`refresh-game-${idx}`}
-                      data-tooltip-content="Refresh game"
-                      onClick={async () => {
-                        try {
-                          setLoadingGameNum(idx);
-                          await handleRefresh(engine, activeGamesRef.current, idx);
-                          setLoadingGameNum(-1);
-                        } catch (error) {
-                          console.log("Error refreshing game:", error);
-                          setLoadingGameNum(-1);
-                        }
-                      }}
-                    >
-                      <img
-                        src="/icons/arrows-rotate.svg"
-                        width={18}
-                        className={`${loadingGameNum === idx ? "refresh-icon" : ""}`}
-                      />
-                    </button>
-                    <Tooltip id={`refresh-game-${idx}`} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="desktop-only mobile-status-bar">
-          Playing Blob Battle | Connected to {selectedServer.current || preferredRegion}
+                      <td className="">
+                        <button
+                          className="btn-play"
+                          disabled={
+                            !row.activeGame.isLoaded ||
+                            row.activeGame.active_players < 0 ||
+                            row.playerInfo.playerStatus == "error" ||
+                            row.playerInfo.playerStatus == "Game Full" ||
+                            (!row.activeGame.is_free && !highStakesGamesOpen)
+                            // engine.getWalletConnected() == false
+                          }
+                          onClick={() => {
+                            handlePlayButtonClick(row);
+                          }}
+                          data-tooltip-id={`connect-wallet-${idx}`}
+                          data-tooltip-content="Play as guest"
+                        >
+                          {{
+                            new_player: "Play",
+                            cashing_out: "Cash Out",
+                            in_game: "Resume",
+                          }[row.playerInfo.playerStatus] || row.playerInfo.playerStatus}
+                        </button>
+                        {engine.getWalletConnected() == false && <Tooltip id={`connect-wallet-${idx}`} />}
+                      </td>
+                      <td className="desktop-only">
+                        <button
+                          data-tooltip-id={`refresh-game-${idx}`}
+                          data-tooltip-content="Refresh game"
+                          onClick={async () => {
+                            try {
+                              setLoadingGameNum(idx);
+                              await handleRefresh(engine, activeGamesRef.current, idx);
+                              setLoadingGameNum(-1);
+                            } catch (error) {
+                              console.log("Error refreshing game:", error);
+                              setLoadingGameNum(-1);
+                            }
+                          }}
+                        >
+                          <img
+                            src="/icons/arrows-rotate.svg"
+                            width={18}
+                            className={`${loadingGameNum === idx ? "refresh-icon" : ""}`}
+                          />
+                        </button>
+                        <Tooltip id={`refresh-game-${idx}`} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="desktop-only mobile-status-bar">
+              Playing Blob Battle | Connected to {selectedServer.current || preferredRegion}
+            </div>
+          </div>
+          <aside className="right-sidebar">
+            {!highStakesGamesOpen && (
+              <div className="high-stakes-countdown">
+                <h4>Next high-stakes game opens:</h4>
+                <p className="countdown-text">{fmtHM(highStakesGamesOpenTime)}</p>
+              </div>
+            )}
+            {highStakesGamesOpen && (
+              <div className="high-stakes-countdown">
+                <h4>High stakes games close:</h4>
+                <p className="countdown-text">{fmtHM(highStakesGamesOpenTime)}</p>
+              </div>
+            )}
+
+            <div className="sidebar-card magicblock-banner">
+              <div className="banner-content">
+                <img src="/magicblock-logo.jpg" alt="Magic Block" className="banner-logo" />
+                <div className="banner-text">
+                  <div className="banner-title">Earn Magic Block points</div>
+                  <div className="banner-sub">playing Slimecoin games</div>
+                </div>
+              </div>
+              <a
+                className="btn-banner"
+                href="https://app.galxe.com/quest/ZR4NdFULbMVAy49k22Sqzk/GCkSct6rF3"
+                target="_blank"
+                rel="noreferrer noopener"
+              >
+                Sign up on Galxe
+              </a>
+            </div>
+          </aside>
         </div>
       </div>
       {selectedGame && hasInsufficientTokenBalance && (

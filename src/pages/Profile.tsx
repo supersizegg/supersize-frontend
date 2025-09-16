@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import axios from "axios";
 import { MenuBar } from "@components/menu/MenuBar";
 import { MenuSession } from "@components/menu/MenuSession";
 import { MenuWallet } from "@components/menu/MenuWallet";
@@ -47,6 +48,7 @@ import WithdrawalModal from "@components/util/WithdrawalModal";
 import RegionSelector from "@components/util/RegionSelector";
 import BackButton from "@components/util/BackButton";
 import { endpoints, options, NETWORK } from "../utils/constants";
+import { API_URL } from "@utils/constants";
 import { SupersizeVaultClient } from "../engine/SupersizeVaultClient";
 import { getComponentMapOnChain, getComponentMapOnEphem } from "../states/gamePrograms";
 import { NavLink, useNavigate } from "react-router-dom";
@@ -70,7 +72,7 @@ export default function Profile({
   setPreferredRegion,
 }: profileProps) {
   const { engine, setEndpointEphemRpc } = useMagicBlockEngine();
-  const [activeTab, setActiveTab] = useState<"wallet" | "profile" | "admin">("wallet");
+  const [activeTab, setActiveTab] = useState<"wallet" | "profile" | "achievements" | "admin">("wallet");
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
   const [isWithdrawalModalOpen, setIsWithdrawalModalOpen] = useState(false);
   const [sessionLamports, setSessionLamports] = useState<number | undefined>(0);
@@ -85,12 +87,15 @@ export default function Profile({
           <button className={activeTab === "profile" ? "active" : ""} onClick={() => setActiveTab("profile")}>
             Profile
           </button>
+          <button className={activeTab === "achievements" ? "active" : ""} onClick={() => setActiveTab("achievements")}>
+            Achievements
+          </button>
           <button
             disabled={!engine.getWalletConnected()}
             className={activeTab === "admin" ? "active desktop-only" : "desktop-only"}
             onClick={() => setActiveTab("admin")}
           >
-            Admin panel
+            Admin
           </button>
         </div>
 
@@ -106,21 +111,10 @@ export default function Profile({
               setPreferredRegion={setPreferredRegion}
             />
           )}
+          {activeTab === "achievements" && <AchievementsTab />}
           {activeTab === "admin" && <AdminTab engine={engine} setEndpointEphemRpc={setEndpointEphemRpc} />}
         </div>
       </div>
-      {/*
-      <DepositModal walletAddress={engine.getSessionPayer()} isOpen={isDepositModalOpen} onClose={() => setIsDepositModalOpen(false)} onDeposit={async (amount: number) => {await engine.fundSessionFromWallet(amount);}} />
-      <WithdrawalModal accountBalance={sessionLamports} isOpen={isWithdrawalModalOpen} 
-        onClose={() => setIsWithdrawalModalOpen(false)} 
-        onWithdraw={async (amount: number, recipient: PublicKey | undefined) => {
-          if (recipient !== undefined) {
-          await engine.defundSessionBackToWallet(amount, recipient);
-        }
-        else{
-          await engine.defundSessionBackToWallet(amount);
-        }
-        }} /> */}
       <NotificationContainer />
       <BackButton />
     </div>
@@ -256,6 +250,147 @@ function ProfileTab({
       </div>
       <div>
         <RegionSelector preferredRegion={preferredRegion} setPreferredRegion={setPreferredRegion} engine={engine} />
+      </div>
+    </div>
+  );
+}
+
+function AchievementsTab() {
+  const { engine } = useMagicBlockEngine();
+
+  type ApiAchievement = {
+    id: number;
+    code: string;
+    title: string;
+    description: string;
+    is_secret: boolean;
+    completed: boolean;
+    completed_at: string | null;
+  };
+
+  const [achievements, setAchievements] = useState<ApiAchievement[] | null>(null);
+  const [summary, setSummary] = useState<{ total: number; completed: number } | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const parentWallet = useMemo(() => {
+    try {
+      return engine.getWalletConnected() ? engine.getWalletPayer().toString() : engine.getSessionPayer().toString();
+    } catch (e) {
+      try {
+        return engine.getSessionPayer().toString();
+      } catch {
+        return null;
+      }
+    }
+  }, [engine, engine.getWalletConnected()]);
+
+  useEffect(() => {
+    const fetchAchievements = async () => {
+      if (!parentWallet) {
+        setAchievements([]);
+        return;
+      }
+      setIsLoading(true);
+      setError(null);
+      try {
+        const res = await axios.get(`${API_URL}api/v1/achievements`, {
+          params: { parent_wallet: parentWallet },
+        });
+        const data = res.data as {
+          parent_wallet: string;
+          achievements: ApiAchievement[];
+          summary?: { total: number; completed: number };
+        };
+        setAchievements(data?.achievements ?? []);
+        setSummary(data?.summary ?? null);
+      } catch (err) {
+        console.error("Failed to fetch achievements", err);
+        setError("Unable to load achievements right now.");
+        setAchievements([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchAchievements();
+  }, [parentWallet]);
+
+  const toImageSrc = (id: number) => `/badges/${id}.png`;
+
+  if (isLoading) {
+    return (
+      <div className="achievements-tab">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="achievements-tab">
+        <div style={{ color: "#ff8f8f" }}>{error}</div>
+      </div>
+    );
+  }
+
+  const list = achievements ?? [];
+
+  return (
+    <div className="achievements-tab">
+      {summary && (
+        <div className="achievements-summary">
+          <div className="as-row">
+            <div className="as-label">Unlocked</div>
+            <div className="as-count">
+              {summary.completed} / {summary.total}
+            </div>
+          </div>
+          <div className="as-progress">
+            <div
+              className="as-progress-bar"
+              style={{
+                width: `${Math.min(100, Math.max(0, (summary.completed / Math.max(1, summary.total)) * 100))}%`,
+              }}
+            />
+          </div>
+        </div>
+      )}
+      <div className="achievements-grid">
+        {list.length === 0 && <div style={{ color: "#bbb" }}>No achievements yet.</div>}
+        {list.map((a) => {
+          const unlocked = !!a.completed;
+          const title = a.is_secret && !unlocked ? "[Secret]" : a.title;
+          const description = a.description;
+          const image = toImageSrc(a.id);
+          return (
+            <div key={a.id} className={`achievement-card ${unlocked ? "" : "locked"}`}>
+              <div className="badge-wrap">
+                <img className="badge-img" src={image} alt={title} />
+                {!unlocked && (
+                  <div className="lock-overlay" aria-label="Locked">
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect x="3" y="11" width="18" height="10" rx="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+              <div className="badge-title" title={title}>
+                {title}
+              </div>
+              <div className="badge-tooltip">{description}</div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -1274,7 +1409,7 @@ function AdminTab({ engine, setEndpointEphemRpc }: AdminTabProps) {
                   margin: "auto",
                 }}
               >
-                { !gamePaused ? (
+                {!gamePaused ? (
                   <button
                     className="btn-copy"
                     style={{ flex: "1 1 10%", margin: "10px" }}

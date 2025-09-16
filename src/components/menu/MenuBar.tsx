@@ -61,16 +61,22 @@ export function MenuBar() {
 
       <div className="menu-bar-right menu-desktop-only">
         <nav className="nav-links">
-          <div className="coin-pill">
-            <div className="coin-icon">
-              <img src="/slime.png" alt="Game Token" />
+          <div className="asset-pill" title="Slime">
+            <div className="asset-icon">
+              <img src="/slimejar.png" alt="Slime" />
+            </div>
+            <span className="asset-value">{formatBuyIn(0)}</span>
+          </div>
+          <div className="asset-pill" title="Slimecoin">
+            <div className="asset-icon">
+              <img src="/slime.png" alt="Slimecoin" />
             </div>
             {isBalanceLoading ? (
-              <span className="coin-balance">
+              <span className="asset-value">
                 <div className="balance-spinner" />
               </span>
             ) : (
-              <span className="coin-balance">{formatBuyIn(displayBalance)}</span>
+              <span className="asset-value">{formatBuyIn(displayBalance)}</span>
             )}
           </div>
           <div className="utility-column">
