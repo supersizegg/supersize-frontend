@@ -387,7 +387,7 @@ function AchievementsTab() {
               <div className="badge-title" title={title}>
                 {title}
               </div>
-              <div className="badge-tooltip">{description}</div>
+              <div className="badge-tooltip desktop-only">{description}</div>
             </div>
           );
         })}
