@@ -6,6 +6,14 @@ import { PublicKey } from "@solana/web3.js";
 import { NETWORK, API_URL, cachedTokenMetadata } from "../../utils/constants";
 import axios from "axios";
 
+interface SlimeBalanceResponse {
+  wallet: string;
+  exists: boolean;
+  slime_balance: number;
+  last_claimed_at: string | null;
+  can_claim: boolean;
+}
+
 const TOKEN_MINT = Object.keys(cachedTokenMetadata).find((mint) => cachedTokenMetadata[mint].network === NETWORK);
 
 export function BalanceManager() {
@@ -34,12 +42,12 @@ export function BalanceManager() {
 
       if (sessionWallet) {
         try {
-          const { data } = await axios.get<{ balances: { f2p_earnings: number } }>(`${API_URL}/api/v1/players/stats`, {
+          const { data } = await axios.get<SlimeBalanceResponse>(`${API_URL}/api/v1/slime`, {
             params: { wallet: sessionWallet },
             signal: abortController.signal,
           });
           if (mountedRef.current) {
-            setF2PBalance(Number(data?.balances?.f2p_earnings ?? 0));
+            setF2PBalance(Number(data?.slime_balance ?? 0));
           }
         } catch {
           if (mountedRef.current) setF2PBalance(0);
