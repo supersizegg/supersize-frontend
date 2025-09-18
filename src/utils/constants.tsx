@@ -64,6 +64,8 @@ export const HELIUS_API_KEY = "07a045b7-c535-4d6f-852b-e7290408c937";
 
 export const API_URL = "https://supersize.miso.one/";
 
+export const SLIME_CLAIM_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
 export const endpoints = {
   devnet: [
     "https://supersize-fra.magicblock.app",
@@ -98,7 +100,14 @@ export const openTimeHighStakesGames = 16;
 const WINDOW_HOURS = 3;
 
 export const activeGamesList: {
-  [key: string]: { worldId: anchor.BN; worldPda: PublicKey; endpoint: string; permissionless?: boolean, openTime?: number, closeTime?: number }[];
+  [key: string]: {
+    worldId: anchor.BN;
+    worldPda: PublicKey;
+    endpoint: string;
+    permissionless?: boolean;
+    openTime?: number;
+    closeTime?: number;
+  }[];
 } = {
   devnet: [
     {
@@ -138,7 +147,7 @@ export const activeGamesList: {
       worldId: new anchor.BN(34),
       worldPda: new PublicKey("9TVACTb1NDtGK3rtEHoBMa1Q8iKnHpLS55uuqudVm2xd"),
       endpoint: "https://supersize-mainnet.magicblock.app",
-    }, */ 
+    }, */
     {
       worldId: new anchor.BN(43),
       worldPda: new PublicKey("9UVoDwoNmWTwMExQ7nRwAHrniSEfKS3k22NA2XxAi5CC"),
@@ -153,7 +162,7 @@ export const activeGamesList: {
       worldId: new anchor.BN(40),
       worldPda: new PublicKey("93uVwXBfQaE15j7VnHz4q2XWt5Vi6Dj4NjabKMipLs4n"),
       endpoint: "https://supersize-mainnet-sin.magicblock.app",
-    }, 
+    },
     {
       worldId: new anchor.BN(35),
       worldPda: new PublicKey("12MArv4fDwYMJNFXtPjQWuWJaVmKCqLyqz8fZmDQArpd"),
@@ -307,7 +316,7 @@ export const cachedTokenMetadata: Record<
     network: "mainnet",
     raydium: true,
   }, */
-  "B1aHFyLNzm1y24gkhASHiBU7LH6xXV2V785S4MrtY777": {
+  B1aHFyLNzm1y24gkhASHiBU7LH6xXV2V785S4MrtY777: {
     name: "Slimecoin",
     symbol: "SLIMECOIN",
     image: `https://www.slimecoin.io/slime.png`,

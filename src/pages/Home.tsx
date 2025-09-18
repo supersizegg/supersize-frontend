@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Home.scss";
 import { ActiveGame } from "@utils/types";
-import { NETWORK, openTimeHighStakesGames } from "@utils/constants";
+import { NETWORK, openTimeHighStakesGames, API_URL, SLIME_CLAIM_INTERVAL_MS } from "@utils/constants";
 import { formatBuyIn, fetchTokenBalance, pingSpecificEndpoint, getMaxPlayers, getNetwork } from "@utils/helper";
 import { FindComponentPda, FindEntityPda, FindWorldPda } from "@magicblock-labs/bolt-sdk";
 import { PublicKey } from "@solana/web3.js";
@@ -24,12 +24,54 @@ import NotificationService from "@components/notification/NotificationService";
 import BalanceWarning from "@components/notification/BalanceWarning";
 import Footer from "../components/Footer/Footer";
 import { getHighStakesGamesOpenTime, isGamePaused, stringToUint8Array } from "../utils/helper";
+import axios from "axios";
+import { useBalance } from "../context/BalanceContext";
 
 const fmtHM = (totalMinutes: number) => {
   const m = Math.max(0, Math.floor(totalMinutes));
   const h = Math.floor(m / 60);
   const r = m % 60;
   return `${h} hour${h !== 1 ? "s" : ""} and ${r} minute${r !== 1 ? "s" : ""}`;
+};
+
+const SLIME_REWARD_AMOUNT = 60;
+
+interface SlimeBalanceResponse {
+  wallet: string;
+  exists: boolean;
+  slime_balance: number;
+  last_claimed_at: string | null;
+  can_claim: boolean;
+}
+
+interface SlimeClaimResponse {
+  wallet: string;
+  can_claim: boolean;
+  slime_balance: number;
+  last_claimed_at: string | null;
+  next_claim_at: string | null;
+  claimed_amount?: number;
+  error?: string;
+}
+
+type SlimeRewardState = {
+  loading: boolean;
+  claiming: boolean;
+  canClaim: boolean;
+  lastClaimedAt: string | null;
+  nextClaimAt: string | null;
+  sessionWallet: string | null;
+  error: string | null;
+};
+
+const formatCountdownLabel = (msRemaining: number): string => {
+  const totalSeconds = Math.max(0, Math.floor(msRemaining / 1000));
+  const hours = Math.floor(totalSeconds / 3600).toString();
+  //.padStart(2, "0");
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+    .toString()
+    .padStart(2, "0");
+  return `${hours}h ${minutes}m`;
 };
 
 type homeProps = {
@@ -53,6 +95,7 @@ const Home = ({
 }: homeProps) => {
   const navigate = useNavigate();
   const { engine, preferredRegion, endpointReady, invalidateEndpointCache } = useMagicBlockEngine();
+  const { refreshBalance } = useBalance();
   const activeGamesRef = useRef<FetchedGame[]>(activeGamesLoaded);
   const [inputValue, setInputValue] = useState<string>("");
   const pingResultsRef = useRef<{ endpoint: string; pingTime: number; region: string }[]>(
@@ -70,6 +113,241 @@ const Home = ({
   const [hasInsufficientTokenBalance, setHasInsufficientTokenBalance] = useState(false);
   const [highStakesGamesOpen, setHighStakesGamesOpen] = useState(false);
   const [highStakesGamesOpenTime, setHighStakesGamesOpenTime] = useState(0);
+  const walletConnected = engine?.getWalletConnected() ?? false;
+  const sessionWalletAddress = engine?.getSessionPayer()?.toString() ?? null;
+  const [slimeReward, setSlimeReward] = useState<SlimeRewardState>({
+    loading: true,
+    claiming: false,
+    canClaim: false,
+    lastClaimedAt: null,
+    nextClaimAt: null,
+    sessionWallet: null,
+    error: null,
+  });
+  const [nextClaimCountdown, setNextClaimCountdown] = useState("00:00");
+  const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const fetchClaimStatusRef = useRef<(() => Promise<void>) | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  const scheduleCountdown = useCallback((nextClaimAt: string | null) => {
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+
+    if (!nextClaimAt) {
+      if (mountedRef.current) setNextClaimCountdown("00:00");
+      return;
+    }
+
+    const updateCountdown = () => {
+      if (!mountedRef.current) return;
+      const diff = new Date(nextClaimAt).getTime() - Date.now();
+      if (diff <= 0) {
+        setNextClaimCountdown("00:00");
+        if (countdownTimerRef.current) {
+          clearInterval(countdownTimerRef.current);
+          countdownTimerRef.current = null;
+        }
+        if (fetchClaimStatusRef.current) {
+          fetchClaimStatusRef.current();
+        }
+        return;
+      }
+      setNextClaimCountdown(formatCountdownLabel(diff));
+    };
+
+    updateCountdown();
+    countdownTimerRef.current = setInterval(updateCountdown, 60_000);
+  }, []);
+
+  const fetchClaimStatus = useCallback(async () => {
+    if (!engine) {
+      scheduleCountdown(null);
+      return;
+    }
+
+    const sessionWallet = engine.getSessionPayer()?.toString() ?? null;
+    if (!sessionWallet) {
+      if (mountedRef.current) {
+        setSlimeReward({
+          loading: false,
+          claiming: false,
+          canClaim: false,
+          lastClaimedAt: null,
+          nextClaimAt: null,
+          sessionWallet: null,
+          error: null,
+        });
+        setNextClaimCountdown("00:00");
+      }
+      scheduleCountdown(null);
+      return;
+    }
+
+    if (mountedRef.current) {
+      setSlimeReward((prev) => ({
+        ...prev,
+        loading: true,
+        sessionWallet,
+        error: null,
+      }));
+    }
+
+    try {
+      const { data } = await axios.get<SlimeBalanceResponse>(`${API_URL}/api/v1/slime`, {
+        params: { wallet: sessionWallet },
+      });
+
+      if (!mountedRef.current) return;
+
+      const nextClaimAt =
+        data.can_claim || !data.last_claimed_at
+          ? null
+          : new Date(new Date(data.last_claimed_at).getTime() + SLIME_CLAIM_INTERVAL_MS).toISOString();
+
+      setSlimeReward({
+        loading: false,
+        claiming: false,
+        canClaim: data.can_claim,
+        lastClaimedAt: data.last_claimed_at,
+        nextClaimAt,
+        sessionWallet,
+        error: null,
+      });
+      scheduleCountdown(nextClaimAt);
+    } catch (error) {
+      console.error("Failed to fetch slime reward status", error);
+      if (!mountedRef.current) return;
+
+      setSlimeReward({
+        loading: false,
+        claiming: false,
+        canClaim: false,
+        lastClaimedAt: null,
+        nextClaimAt: null,
+        sessionWallet,
+        error: "Unable to check reward right now.",
+      });
+      scheduleCountdown(null);
+    }
+  }, [engine, scheduleCountdown]);
+
+  useEffect(() => {
+    fetchClaimStatusRef.current = fetchClaimStatus;
+  }, [fetchClaimStatus]);
+
+  useEffect(() => {
+    fetchClaimStatus();
+  }, [fetchClaimStatus, walletConnected, sessionWalletAddress]);
+
+  const handleClaim = useCallback(async () => {
+    if (!engine) return;
+
+    const sessionWallet = engine.getSessionPayer()?.toString() ?? null;
+    if (!sessionWallet) {
+      NotificationService.addAlert({ type: "error", message: "Session wallet not found." });
+      return;
+    }
+
+    if (slimeReward.claiming) return;
+
+    if (mountedRef.current) {
+      setSlimeReward((prev) => ({
+        ...prev,
+        claiming: true,
+        error: null,
+        sessionWallet,
+      }));
+    }
+
+    try {
+      const { data } = await axios.post<SlimeClaimResponse>(`${API_URL}/api/v1/slime/claim`, {
+        wallet: sessionWallet,
+      });
+
+      if (!mountedRef.current) return;
+
+      const nextClaimAt =
+        data.next_claim_at ||
+        (data.last_claimed_at
+          ? new Date(new Date(data.last_claimed_at).getTime() + SLIME_CLAIM_INTERVAL_MS).toISOString()
+          : null);
+
+      setSlimeReward({
+        loading: false,
+        claiming: false,
+        canClaim: data.can_claim,
+        lastClaimedAt: data.last_claimed_at,
+        nextClaimAt,
+        sessionWallet,
+        error: null,
+      });
+      scheduleCountdown(nextClaimAt);
+      NotificationService.addAlert({ type: "success", message: `Claimed ${SLIME_REWARD_AMOUNT} slime!` });
+      await refreshBalance();
+      fetchClaimStatusRef.current?.();
+    } catch (error) {
+      console.error("Failed to claim slime reward", error);
+      if (!mountedRef.current) return;
+
+      if (axios.isAxiosError(error) && error.response) {
+        const { status, data } = error.response;
+        const response = data as SlimeClaimResponse;
+        const nextClaimAt =
+          response?.next_claim_at ||
+          (response?.last_claimed_at
+            ? new Date(new Date(response.last_claimed_at).getTime() + SLIME_CLAIM_INTERVAL_MS).toISOString()
+            : null);
+        setSlimeReward((prev) => ({
+          ...prev,
+          claiming: false,
+          canClaim: false,
+          lastClaimedAt: response?.last_claimed_at ?? prev.lastClaimedAt,
+          nextClaimAt,
+          error:
+            status === 429
+              ? "Reward already claimed. Come back soon!"
+              : response?.error || "Unable to claim reward right now.",
+        }));
+        scheduleCountdown(nextClaimAt);
+        if (status !== 429) {
+          NotificationService.addAlert({ type: "error", message: response?.error || "Unable to claim reward." });
+        }
+      } else {
+        setSlimeReward((prev) => ({
+          ...prev,
+          claiming: false,
+          error: "Unable to claim reward right now.",
+        }));
+        NotificationService.addAlert({ type: "error", message: "Unable to claim reward right now." });
+      }
+    }
+  }, [engine, refreshBalance, scheduleCountdown, slimeReward.claiming]);
+
+  const claimButtonDisabled =
+    !slimeReward.sessionWallet || !slimeReward.canClaim || slimeReward.claiming || slimeReward.loading;
+  const claimButtonLabel = slimeReward.claiming ? "Claiming..." : "Claim";
+
+  const rewardStatusMessage = (() => {
+    if (slimeReward.error) return slimeReward.error;
+    if (slimeReward.loading) return "Free slime reward"; // "Checking reward...";
+    if (!slimeReward.sessionWallet) return "Wallet not found";
+    if (slimeReward.canClaim) return "Free slime reward";
+    return `Next reward in ${nextClaimCountdown}`;
+  })();
+  const rewardStatusClassName = `reward-status${slimeReward.error ? " error" : ""}`;
 
   useEffect(() => {
     const timeZone = getRegion(selectedEndpoint);
@@ -727,7 +1005,7 @@ const Home = ({
             </div>
           </div>
           <aside className="right-sidebar">
-            {!highStakesGamesOpen && (
+            {/* {!highStakesGamesOpen && (
               <div className="high-stakes-countdown">
                 <h4>Next high-stakes game opens:</h4>
                 <p className="countdown-text">{fmtHM(highStakesGamesOpenTime)}</p>
@@ -738,7 +1016,22 @@ const Home = ({
                 <h4>High stakes games close:</h4>
                 <p className="countdown-text">{fmtHM(highStakesGamesOpenTime)}</p>
               </div>
-            )}
+            )} */}
+
+            <div className="sidebar-card slime-reward-card">
+              <div className="reward-left">
+                <div className="reward-icon-wrapper">
+                  <img src="/slimejar.png" alt="Slime reward" />
+                </div>
+                <span className="reward-amount">{SLIME_REWARD_AMOUNT}</span>
+              </div>
+              <div className="reward-right">
+                <div className={rewardStatusClassName}>{rewardStatusMessage}</div>
+                <button type="button" className="reward-claim-btn" disabled={claimButtonDisabled} onClick={handleClaim}>
+                  {claimButtonLabel}
+                </button>
+              </div>
+            </div>
 
             <div className="sidebar-card magicblock-banner">
               <div className="banner-content">
