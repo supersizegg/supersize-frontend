@@ -47,8 +47,6 @@ export function MenuBar() {
     return () => window.removeEventListener("user:updated", onStorage);
   }, [engine, engine.getWalletConnected()]);
 
-  const displayBalance = engine.getWalletConnected() && p2pBalance > 0 ? p2pBalance : f2pBalance;
-
   return (
     <header className="menu-bar">
       <div className="menu-bar-left">
@@ -65,7 +63,13 @@ export function MenuBar() {
             <div className="asset-icon">
               <img src="/slimejar.png" alt="Slime" />
             </div>
-            <span className="asset-value">{formatBuyIn(0)}</span>
+            {isBalanceLoading ? (
+              <span className="asset-value">
+                <div className="balance-spinner" />
+              </span>
+            ) : (
+              <span className="asset-value">{formatBuyIn(f2pBalance)}</span>
+            )}
           </div>
           <div className="asset-pill" title="Slimecoin">
             <div className="asset-icon">
@@ -76,7 +80,7 @@ export function MenuBar() {
                 <div className="balance-spinner" />
               </span>
             ) : (
-              <span className="asset-value">{formatBuyIn(displayBalance)}</span>
+              <span className="asset-value">{formatBuyIn(p2pBalance)}</span>
             )}
           </div>
           <div className="utility-column">

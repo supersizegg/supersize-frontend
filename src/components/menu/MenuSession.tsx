@@ -491,7 +491,7 @@ export function MenuSession() {
 
   return (
     <div className="menu-session">
-      {unclaimedBalance > 0 && (
+      {/* {unclaimedBalance > 0 && (
         <div className="unclaimed-balance-banner">
           <div className="banner-text">
             <span>Unclaimed F2P earnings</span>
@@ -501,7 +501,7 @@ export function MenuSession() {
             Coming soon
           </button>
         </div>
-      )}
+      )} */}
 
       <div className="session-content">
         {isInitializing ? <div className="loading-overlay">Loading...</div> : renderContent()}
