@@ -34,11 +34,8 @@ interface RouterResponse {
 export interface AccountSyncState {
   status: "uninitialized" | "needs_sync" | "ready_to_play";
   issues: string[];
-  gameWalletExists: boolean;
-  balancePdaExists: boolean;
-  isGwDelegated: boolean;
-  isBalanceDelegated: boolean;
-  delegationMismatch: boolean;
+  profileExists: boolean;
+  isProfileDelegated: boolean;
   sessionKeyMismatch: boolean;
 }
 
@@ -68,13 +65,9 @@ export class SupersizeVaultClient {
     this.routerUrl = NETWORK === "mainnet" ? "https://router.magicblock.app" : "https://devnet-router.magicblock.app";
   }
 
-  gameWalletPda(user = this.wallet) {
-    if (!user) throw new Error("Wallet not connected to get GameWallet PDA");
-    return PublicKey.findProgramAddressSync([Buffer.from("game-wallet"), user.toBuffer()], this.program.programId)[0];
-  }
-
-  userBalancePda(user: PublicKey, mint: PublicKey) {
-    return PublicKey.findProgramAddressSync([user.toBuffer(), mint.toBuffer()], this.program.programId)[0];
+  userProfilePda(user = this.wallet) {
+    if (!user) throw new Error("Wallet not connected to get User Profile PDA");
+    return PublicKey.findProgramAddressSync([Buffer.from("player-profile"), user.toBuffer()], this.program.programId)[0];
   }
 
   mapBalancePda(map: PublicKey, mint: PublicKey) {
@@ -93,23 +86,16 @@ export class SupersizeVaultClient {
   }
 
   async getGameWallet(): Promise<PublicKey | undefined> {
-    const walletPda = this.gameWalletPda();
-    const walletAcc = await this.program.account.gameWallet.fetchNullable(walletPda);
-    return walletAcc?.wallet;
+    const playerProfilePda = this.userProfilePda();
+    const profileAcc = await this.program.account.playerProfile.fetchNullable(playerProfilePda);
+    return profileAcc?.sessionAuthority;
   }
 
-  async isBalanceDelegated(mint: PublicKey): Promise<boolean> {
+  async isProfileDelegated(): Promise<boolean> {
     if (!this.wallet) return false;
-    const balancePda = this.userBalancePda(this.wallet, mint);
-    const accountInfo = await this.mainChainConnection.getAccountInfo(balancePda);
-    return accountInfo?.owner.equals(DELEGATION_PROGRAM_ID) ?? false;
-  }
-
-  async isWalletDelegated(): Promise<boolean> {
-    if (!this.wallet) return false;
-    const gwPda = this.gameWalletPda(this.wallet);
-    const gwInfo = await this.mainChainConnection.getAccountInfo(gwPda);
-    return gwInfo?.owner.equals(DELEGATION_PROGRAM_ID) ?? false;
+    const profilePda = this.userProfilePda();
+    const profileInfo = await this.mainChainConnection.getAccountInfo(profilePda);
+    return profileInfo?.owner.equals(DELEGATION_PROGRAM_ID) ?? false;
   }
 
   async initializeVault(mint: PublicKey) {
@@ -141,53 +127,26 @@ export class SupersizeVaultClient {
     const transaction = new Transaction();
     let requiresSessionSign = false;
 
-    if (!syncState.gameWalletExists || syncState.sessionKeyMismatch) {
+    if (!syncState.profileExists || syncState.sessionKeyMismatch) {
       console.log("Creating/resetting game wallet PDA");
-      if (syncState.isGwDelegated) {
+      if (syncState.isProfileDelegated) {
         console.log("Undelegating game wallet before reset...");
-        await this.undelegateWallet();
+        await this.undelegateProfile();
       }
 
       transaction.add(
         await this.program.methods
-          .newGameWallet()
-          .accounts({ user: this.wallet, gameKey: this.engine.getSessionPayer() })
+          .newUserBalance(new BN(60))
+          .accounts({ sessionAuthority: this.engine.getSessionPayer(), user: this.wallet, signer: this.wallet })
           .instruction(),
       );
       requiresSessionSign = true;
     }
 
-    if (!syncState.isGwDelegated || syncState.delegationMismatch || syncState.sessionKeyMismatch) {
+    if (!syncState.isProfileDelegated || syncState.sessionKeyMismatch) {
       console.log("Delegating Game Wallet");
       transaction.add(
-        await this.program.methods.delegateWallet(targetValidator).accounts({ payer: this.wallet }).instruction(),
-      );
-    }
-
-    if (!syncState.balancePdaExists) {
-      console.log("Creating and delegating new Balance PDA");
-      transaction.add(
-        await this.program.methods
-          .newUserBalance()
-          .accounts({ user: this.wallet, mintOfToken: primaryMint })
-          .instruction(),
-      );
-      transaction.add(
-        await this.program.methods
-          .delegateUser(targetValidator)
-          .accounts({ payer: this.wallet, mintOfToken: primaryMint })
-          .instruction(),
-      );
-    } else if (!syncState.isBalanceDelegated || syncState.delegationMismatch) {
-      console.log("Synchronizing balance PDA delegation");
-      if (syncState.isBalanceDelegated) {
-        await this.undelegateBalance(primaryMint);
-      }
-      transaction.add(
-        await this.program.methods
-          .delegateUser(targetValidator)
-          .accounts({ payer: this.wallet, mintOfToken: primaryMint })
-          .instruction(),
+        await this.program.methods.delegatePlayerProfile(targetValidator).accounts({ payer: this.wallet }).instruction(),
       );
     }
 
@@ -207,7 +166,7 @@ export class SupersizeVaultClient {
     await this.engine.processWalletTransaction("SynchronizeVault", transaction);
 
     try {
-      await this.syncEphemeralBalance(primaryMint);
+      await this.syncEphemeralBalance();
     } catch (err) {
       console.log("Ephemeral syncBalTx after resync failed:", err);
     }
@@ -216,27 +175,16 @@ export class SupersizeVaultClient {
   async getSyncState(): Promise<AccountSyncState> {
     if (!this.wallet) throw new Error("Wallet not connected.");
 
-    const gwPda = this.gameWalletPda();
-    const primaryMint = new PublicKey(
-      NETWORK === "mainnet" ? Object.keys(cachedTokenMetadata)[0] : Object.keys(cachedTokenMetadata)[1],
-    );
-    const balancePda = this.userBalancePda(this.wallet, primaryMint);
+    const profilePda = this.userProfilePda();
 
-    const [gwAccountInfo, balanceAccountInfo, gwDelegationRes, balanceDelegationRes, storedSessionKey] =
+    const [profileAccountInfo, profileDelegationRes, storedSessionKey] =
       await Promise.all([
-        this.mainChainConnection.getAccountInfo(gwPda),
-        this.mainChainConnection.getAccountInfo(balancePda),
+        this.mainChainConnection.getAccountInfo(profilePda),
         axios.post<RouterResponse>(this.routerUrl, {
           jsonrpc: "2.0",
           id: 1,
           method: "getDelegationStatus",
-          params: [gwPda.toBase58()],
-        }),
-        axios.post<RouterResponse>(this.routerUrl, {
-          jsonrpc: "2.0",
-          id: 1,
-          method: "getDelegationStatus",
-          params: [balancePda.toBase58()],
+          params: [profilePda.toBase58()],
         }),
         this.getGameWallet(),
       ]);
@@ -244,15 +192,12 @@ export class SupersizeVaultClient {
     const state: AccountSyncState = {
       status: "uninitialized",
       issues: [],
-      gameWalletExists: !!gwAccountInfo,
-      balancePdaExists: !!balanceAccountInfo,
-      isGwDelegated: false,
-      isBalanceDelegated: false,
-      delegationMismatch: false,
+      profileExists: !!profileAccountInfo,
+      isProfileDelegated: false,
       sessionKeyMismatch: false,
     };
 
-    if (!state.gameWalletExists) {
+    if (!state.profileExists) {
       state.issues.push("Vault has not been activated.");
       return state;
     }
@@ -263,25 +208,18 @@ export class SupersizeVaultClient {
       state.issues.push("Session key is out of sync.");
     }
 
-    const gwDelegation = gwDelegationRes.data.result;
-    const balanceDelegation = balanceDelegationRes.data.result;
-    state.isGwDelegated = gwDelegation.isDelegated;
-    state.isBalanceDelegated = balanceDelegation.isDelegated;
+    const profileDelegation = profileDelegationRes.data.result;
+    state.isProfileDelegated = profileDelegation.isDelegated;
 
-    if (state.isGwDelegated && state.isBalanceDelegated) {
-      if (gwDelegation.delegationRecord?.authority !== balanceDelegation.delegationRecord?.authority) {
-        state.delegationMismatch = true;
-        state.issues.push("Accounts are delegated to different servers.");
-      }
-    } else if (!state.isGwDelegated || !state.isBalanceDelegated) {
-      if (state.balancePdaExists) {
+    if (!state.isProfileDelegated) {
+      if (state.profileExists) {
         state.issues.push("One or more accounts are not delegated.");
       }
     }
 
     if (state.issues.length > 0) {
       state.status = "needs_sync";
-    } else if (!state.balancePdaExists) {
+    } else if (!state.profileExists) {
       // edge case for new mints: GW exists and is delegated, but user has never deposited
       state.status = "needs_sync";
       state.issues.push("Balance account needs to be created and delegated.");
@@ -298,24 +236,19 @@ export class SupersizeVaultClient {
     const state = await this.getSyncState();
 
     const needsFix =
-      !state.gameWalletExists ||
-      !state.balancePdaExists ||
+      !state.profileExists ||
       state.sessionKeyMismatch ||
-      !state.isGwDelegated ||
-      !state.isBalanceDelegated ||
-      state.delegationMismatch;
+      !state.isProfileDelegated;
 
     if (!needsFix) {
       return { ok: true, changed: false, reason: "Already consistent", details: state };
     }
 
-    const why = state.delegationMismatch
-      ? "Accounts delegated to different rollups. Fixing…"
-      : "Accounts not fully delegated or out of sync. Fixing…";
+    const why = "Accounts not fully delegated or out of sync. Fixing…";
 
     await this.resyncAndDelegateAll();
 
-    await this.syncEphemeralBalance(mint);
+    await this.syncEphemeralBalance();
 
     return { ok: true, changed: true, reason: why, details: state };
   }
@@ -450,15 +383,8 @@ export class SupersizeVaultClient {
   private async undelegateAll(mint: PublicKey) {
     if (!this.wallet) throw new Error("Wallet not connected.");
     const undelegateTx = new Transaction();
-    undelegateTx.add(
-      await this.program.methods
-        .undelegateUser(this.wallet)
-        .accounts({ wallet: this.engine.getSessionPayer(), mintOfToken: mint })
-        .instruction(),
-    );
-
-    if (await this.isWalletDelegated()) {
-      undelegateTx.add(await this.program.methods.undelegateWallet(this.wallet).accounts({}).instruction());
+    if (await this.isProfileDelegated()) {
+      undelegateTx.add(await this.program.methods.undelegatePlayerProfile(this.wallet).accounts({}).instruction());
     }
 
     const signers = [this.engine.getSessionKey()];
@@ -466,28 +392,14 @@ export class SupersizeVaultClient {
     await this.engine.getConnectionEphem().confirmTransaction(signature, "confirmed");
   }
 
-  private async undelegateWallet() {
+  private async undelegateProfile() {
     if (!this.wallet) throw new Error("Wallet not connected.");
     const undelegateTx = new Transaction();
 
-    if (await this.isWalletDelegated()) {
-      undelegateTx.add(await this.program.methods.undelegateWallet(this.wallet).accounts({}).instruction());
+    if (await this.isProfileDelegated()) {
+      undelegateTx.add(await this.program.methods.undelegatePlayerProfile(this.wallet).accounts({}).instruction());
     }
 
-    const signers = [this.engine.getSessionKey()];
-    const signature = await this.engine.getConnectionEphem().sendTransaction(undelegateTx, signers);
-    await this.engine.getConnectionEphem().confirmTransaction(signature, "confirmed");
-  }
-
-  private async undelegateBalance(mint: PublicKey) {
-    if (!this.wallet) throw new Error("Wallet not connected.");
-    const undelegateTx = new Transaction();
-    undelegateTx.add(
-      await this.program.methods
-        .undelegateUser(this.wallet)
-        .accounts({ wallet: this.engine.getSessionPayer(), mintOfToken: mint })
-        .instruction(),
-    );
     const signers = [this.engine.getSessionKey()];
     const signature = await this.engine.getConnectionEphem().sendTransaction(undelegateTx, signers);
     await this.engine.getConnectionEphem().confirmTransaction(signature, "confirmed");
@@ -499,17 +411,16 @@ export class SupersizeVaultClient {
     const { lamports } = await this.uiAmountToLamports(mint, uiAmount);
     const userAta = getAssociatedTokenAddressSync(mint, this.wallet, true, TOKEN_2022_PROGRAM_ID);
 
-    const isDelegated = await this.isBalanceDelegated(mint);
+    const isDelegated = await this.isProfileDelegated();
     if (isDelegated) {
       console.log("Deposit requires undelegation of Balance PDA. Preparing account...");
-      await this.undelegateBalance(mint);
+      await this.undelegateProfile();
     }
 
     const transaction = new Transaction().add(
       await this.program.methods
         .deposit(lamports)
         .accounts({
-          mintOfToken: mint,
           senderTokenAccount: userAta,
           payer: this.wallet,
           tokenProgram: TOKEN_2022_PROGRAM_ID,
@@ -521,15 +432,15 @@ export class SupersizeVaultClient {
     const validator = new PublicKey(ephemIdentity);
     transaction.add(
       await this.program.methods
-        .delegateUser(validator)
-        .accounts({ payer: this.wallet, mintOfToken: mint })
+        .delegatePlayerProfile(validator)
+        .accounts({ payer: this.wallet })
         .instruction(),
     );
 
     await this.engine.processWalletTransaction("Deposit", transaction);
 
     try {
-      await this.syncEphemeralBalance(mint);
+      await this.syncEphemeralBalance();
     } catch (err) {
       console.log("Ephemeral syncBalTx failed:", err);
     }
@@ -547,11 +458,11 @@ export class SupersizeVaultClient {
     const userAtaInfo = await this.mainChainConnection.getAccountInfo(userAta);
     const ataExists = userAtaInfo !== null;
 
-    const isDelegated = await this.isBalanceDelegated(mint);
+    const isDelegated = await this.isProfileDelegated();
 
     if (isDelegated) {
       console.log("Withdrawal requires undelegation of Balance PDA. Preparing account...");
-      await this.undelegateBalance(mint);
+      await this.undelegateProfile();
     }
 
     const { lamports } = await this.uiAmountToLamports(mint, uiAmount);
@@ -585,15 +496,15 @@ export class SupersizeVaultClient {
     const validator = new PublicKey(ephemIdentity);
     withdrawTx.add(
       await this.program.methods
-        .delegateUser(validator)
-        .accounts({ payer: this.wallet, mintOfToken: mint })
+        .delegatePlayerProfile(validator)
+        .accounts({ payer: this.wallet })
         .instruction(),
     );
 
     await this.engine.processWalletTransaction("Withdraw", withdrawTx);
 
     try {
-      await this.syncEphemeralBalance(mint);
+      await this.syncEphemeralBalance();
     } catch (err) {
       console.log("Ephemeral syncBalTx after withdraw failed:", err);
     }
@@ -659,9 +570,9 @@ export class SupersizeVaultClient {
     }
   }
 
-  private async syncEphemeralBalance(mint: PublicKey) {
+  private async syncEphemeralBalance() {
     if (!this.wallet) return;
-    const checkBalancePda = this.userBalancePda(this.wallet, mint);
+    const checkBalancePda = this.userProfilePda();
     const checkTx = new Transaction().add(
       SystemProgram.transfer({
         fromPubkey: this.engine.getSessionPayer(),
@@ -699,15 +610,25 @@ export class SupersizeVaultClient {
   public async getVaultBalance(mint: PublicKey): Promise<number> {
     if (!this.wallet) return 0;
 
-    const balPda = this.userBalancePda(this.wallet, mint);
-    let balanceAcc: { balance: BN } | null = null;
+    const profilePda = this.userProfilePda();
+    let profileAcc: { 
+      slimecoinBalance: BN; 
+      totalWagered: BN; 
+      totalEarnedP2p: BN; 
+      playtimeSecondsP2p: BN; 
+      p2pJoins: BN; 
+      p2pExits: BN; 
+      lastResetSlot: BN; 
+      seasonId: number; 
+      version: number; 
+    } | null = null;
 
     try {
       const response = await axios.post<RouterResponse>(this.routerUrl, {
         jsonrpc: "2.0",
         id: 1,
         method: "getDelegationStatus",
-        params: [balPda.toBase58()],
+        params: [profilePda.toBase58()],
       });
 
       const delegationStatus = response.data.result;
@@ -719,26 +640,26 @@ export class SupersizeVaultClient {
 
         if (correctEndpoint) {
           const ephemProgram = this.engine.getProgramOnSpecificEphem(supersizeVaultIdl as Idl, correctEndpoint);
-          balanceAcc = await ephemProgram.account.balance.fetchNullable(balPda);
+          profileAcc = await ephemProgram.account.PlayerProfile.fetchNullable(profilePda);
         } else {
           console.error(`Balance PDA is delegated to an unknown validator: ${validator}`);
           return 0;
         }
       } else {
         // Fetch on solana mainnet if not delegated
-        balanceAcc = await this.program.account.balance.fetchNullable(balPda);
+        profileAcc = await this.program.account.playerProfile.fetchNullable(profilePda);
       }
     } catch (error) {
       console.error("Router query for balance failed, falling back to mainnet check:", error);
-      balanceAcc = await this.program.account.balance.fetchNullable(balPda);
+      profileAcc = await this.program.account.playerProfile.fetchNullable(profilePda);
     }
 
-    if (!balanceAcc) {
+    if (!profileAcc) {
       return 0;
     }
 
     const { decimals } = await getMint(this.mainChainConnection, mint, "confirmed", TOKEN_2022_PROGRAM_ID);
-    return Number(balanceAcc.balance) / 10 ** decimals;
+    return Number(profileAcc.slimecoinBalance) / 10 ** decimals;
   }
 
   async findMyEphemEndpoint(
@@ -750,7 +671,7 @@ export class SupersizeVaultClient {
       return;
     }
 
-    const gwPda = this.gameWalletPda();
+    const gwPda = this.userProfilePda();
     console.log(`Querying router for delegation status of: ${gwPda.toBase58()}`);
 
     try {
@@ -789,7 +710,7 @@ export class SupersizeVaultClient {
       return null;
     }
 
-    const gwPda = this.gameWalletPda();
+    const gwPda = this.userProfilePda();
 
     try {
       const response = await axios.post<RouterResponse>(this.routerUrl, {

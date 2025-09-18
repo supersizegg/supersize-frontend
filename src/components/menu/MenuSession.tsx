@@ -153,18 +153,13 @@ export function MenuSession() {
     );
     if (supportedMints.length > 0) {
       const mint = new PublicKey(supportedMints[0]);
-      const balancePda = vaultClient.userBalancePda(engine.getWalletPayer(), mint);
-      debugString += `Balance PDA:\n`;
+      const balancePda = vaultClient.userProfilePda();
+      debugString += `Profile PDA:\n`;
       debugString += `  - Status: ${await getDelegationInfo(balancePda)}\n`;
       debugString += `  - PDA: ${balancePda}\n`;
     } else {
-      debugString += `Balance PDA:\n  - Status: No supported mints found for this network.\n`;
+      debugString += `Profile PDA:\n  - Status: No supported mints found for this network.\n`;
     }
-
-    const walletPda = vaultClient.gameWalletPda();
-    debugString += `\nWallet PDA:\n`;
-    debugString += `  - Status: ${await getDelegationInfo(walletPda)}\n`;
-    debugString += `  - PDA: ${walletPda}\n`;
 
     const sessionPayer = engine.getSessionPayer().toString();
     const storedKey = (await vaultClient.getGameWallet())?.toString();
@@ -273,14 +268,14 @@ export function MenuSession() {
       await vaultClient.resyncAndDelegateAll();
 
       try {
-        const gwPda = vaultClient.gameWalletPda();
-        const appeared = await pollForAccount(engine.getConnectionChain(), gwPda, 30000, 1000);
+        const profilePda = vaultClient.userProfilePda();
+        const appeared = await pollForAccount(engine.getConnectionChain(), profilePda, 30000, 1000);
         await savePlayerAddress();
         if (!appeared) {
-          console.warn("Polling timed out waiting for GameWallet PDA to appear.");
+          console.warn("Polling timed out waiting for Profile PDA to appear.");
         }
       } catch (pollErr) {
-        console.warn("Polling for GameWallet PDA failed:", pollErr);
+        console.warn("Polling for Profile PDA failed:", pollErr);
       }
 
       NotificationService.updateAlert(alertId, { message: "Vault is ready!", shouldExit: true, timeout: 3000 });

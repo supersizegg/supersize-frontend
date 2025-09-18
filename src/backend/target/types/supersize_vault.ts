@@ -14,6 +14,138 @@ export type SupersizeVault = {
   },
   "instructions": [
     {
+      "name": "burnFromGame",
+      "discriminator": [
+        148,
+        195,
+        140,
+        122,
+        69,
+        108,
+        88,
+        195
+      ],
+      "accounts": [
+        {
+          "name": "balance",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "map"
+              },
+              {
+                "kind": "account",
+                "path": "mintOfToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "tokenAccountOwnerPda",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110,
+                  95,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  95,
+                  111,
+                  119,
+                  110,
+                  101,
+                  114,
+                  95,
+                  112,
+                  100,
+                  97
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "vaultTokenAccount",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  117,
+                  112,
+                  101,
+                  114,
+                  95,
+                  116,
+                  111,
+                  107,
+                  101,
+                  110,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mintOfToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mintOfToken"
+        },
+        {
+          "name": "burnAccount",
+          "writable": true,
+          "address": "5NsVbMzfpXSyeGsuzMVDfz7kspFcCQSTFcKL7wBuogNS"
+        },
+        {
+          "name": "map"
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "tokenProgram",
+          "docs": [
+            "Accept **either** SPL Token or Token-2022 at runtime"
+          ]
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "buyIn",
       "discriminator": [
         126,
@@ -27,45 +159,32 @@ export type SupersizeVault = {
       ],
       "accounts": [
         {
-          "name": "gameWallet",
+          "name": "playerProfile",
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "const",
                 "value": [
-                  103,
+                  112,
+                  108,
                   97,
-                  109,
+                  121,
                   101,
+                  114,
                   45,
-                  119,
-                  97,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
                   108,
-                  108,
-                  101,
-                  116
+                  101
                 ]
               },
               {
                 "kind": "account",
                 "path": "parentKey"
-              }
-            ]
-          }
-        },
-        {
-          "name": "userBalance",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "parentKey"
-              },
-              {
-                "kind": "account",
-                "path": "mintOfToken"
               }
             ]
           }
@@ -120,45 +239,32 @@ export type SupersizeVault = {
       ],
       "accounts": [
         {
-          "name": "gameWallet",
+          "name": "playerProfile",
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "const",
                 "value": [
-                  103,
+                  112,
+                  108,
                   97,
-                  109,
+                  121,
                   101,
+                  114,
                   45,
-                  119,
-                  97,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
                   108,
-                  108,
-                  101,
-                  116
+                  101
                 ]
               },
               {
                 "kind": "account",
                 "path": "parentKey"
-              }
-            ]
-          }
-        },
-        {
-          "name": "userBalance",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "parentKey"
-              },
-              {
-                "kind": "account",
-                "path": "mintOfToken"
               }
             ]
           }
@@ -392,16 +498,16 @@ export type SupersizeVault = {
       ]
     },
     {
-      "name": "delegateUser",
+      "name": "delegatePlayerProfile",
       "discriminator": [
-        237,
-        220,
-        199,
-        24,
-        59,
-        41,
-        247,
-        24
+        62,
+        94,
+        178,
+        63,
+        186,
+        116,
+        36,
+        143
       ],
       "accounts": [
         {
@@ -410,10 +516,7 @@ export type SupersizeVault = {
           "signer": true
         },
         {
-          "name": "mintOfToken"
-        },
-        {
-          "name": "bufferBalance",
+          "name": "bufferPlayerProfile",
           "writable": true,
           "pda": {
             "seeds": [
@@ -430,7 +533,7 @@ export type SupersizeVault = {
               },
               {
                 "kind": "account",
-                "path": "balance"
+                "path": "playerProfile"
               }
             ],
             "program": {
@@ -473,7 +576,7 @@ export type SupersizeVault = {
           }
         },
         {
-          "name": "delegationRecordBalance",
+          "name": "delegationRecordPlayerProfile",
           "writable": true,
           "pda": {
             "seeds": [
@@ -494,7 +597,7 @@ export type SupersizeVault = {
               },
               {
                 "kind": "account",
-                "path": "balance"
+                "path": "playerProfile"
               }
             ],
             "program": {
@@ -504,7 +607,7 @@ export type SupersizeVault = {
           }
         },
         {
-          "name": "delegationMetadataBalance",
+          "name": "delegationMetadataPlayerProfile",
           "writable": true,
           "pda": {
             "seeds": [
@@ -534,7 +637,7 @@ export type SupersizeVault = {
               },
               {
                 "kind": "account",
-                "path": "balance"
+                "path": "playerProfile"
               }
             ],
             "program": {
@@ -544,17 +647,32 @@ export type SupersizeVault = {
           }
         },
         {
-          "name": "balance",
+          "name": "playerProfile",
           "writable": true,
           "pda": {
             "seeds": [
               {
-                "kind": "account",
-                "path": "payer"
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114,
+                  45,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
               },
               {
                 "kind": "account",
-                "path": "mintOfToken"
+                "path": "payer"
               }
             ]
           }
@@ -582,173 +700,81 @@ export type SupersizeVault = {
       ]
     },
     {
-      "name": "delegateWallet",
+      "name": "delegatePlayerProfileFree",
       "discriminator": [
-        225,
-        228,
-        159,
-        140,
-        179,
+        49,
+        26,
+        89,
+        47,
+        232,
         143,
-        153,
-        249
+        41,
+        101
       ],
       "accounts": [
+        {
+          "name": "tokenAccountOwnerPda",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110,
+                  95,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  95,
+                  111,
+                  119,
+                  110,
+                  101,
+                  114,
+                  95,
+                  112,
+                  100,
+                  97
+                ]
+              }
+            ]
+          }
+        },
         {
           "name": "payer",
           "writable": true,
           "signer": true
         },
         {
-          "name": "bufferWallet",
+          "name": "playerProfile",
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "const",
                 "value": [
-                  98,
-                  117,
-                  102,
-                  102,
-                  101,
-                  114
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "wallet"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                186,
-                185,
-                18,
-                110,
-                228,
-                200,
-                25,
-                18,
-                164,
-                223,
-                146,
-                238,
-                103,
-                215,
-                151,
-                110,
-                147,
-                146,
-                123,
-                57,
-                52,
-                79,
-                10,
-                125,
-                127,
-                134,
-                227,
-                121,
-                59,
-                109,
-                171,
-                232
-              ]
-            }
-          }
-        },
-        {
-          "name": "delegationRecordWallet",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  100,
-                  101,
+                  112,
                   108,
-                  101,
-                  103,
                   97,
-                  116,
-                  105,
-                  111,
-                  110
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "wallet"
-              }
-            ],
-            "program": {
-              "kind": "account",
-              "path": "delegationProgram"
-            }
-          }
-        },
-        {
-          "name": "delegationMetadataWallet",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  100,
+                  121,
                   101,
-                  108,
-                  101,
-                  103,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
+                  114,
                   45,
-                  109,
-                  101,
-                  116,
-                  97,
-                  100,
-                  97,
-                  116,
-                  97
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "wallet"
-              }
-            ],
-            "program": {
-              "kind": "account",
-              "path": "delegationProgram"
-            }
-          }
-        },
-        {
-          "name": "wallet",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  103,
-                  97,
-                  109,
-                  101,
-                  45,
-                  119,
-                  97,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
                   108,
-                  108,
-                  101,
-                  116
+                  101
                 ]
               },
               {
@@ -757,18 +783,6 @@ export type SupersizeVault = {
               }
             ]
           }
-        },
-        {
-          "name": "ownerProgram",
-          "address": "DZtWbzgheM9YEaQu24dR3bkvWHURhSZw5jFwZyoz95DH"
-        },
-        {
-          "name": "delegationProgram",
-          "address": "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh"
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
@@ -830,17 +844,32 @@ export type SupersizeVault = {
           }
         },
         {
-          "name": "balance",
+          "name": "playerProfile",
           "writable": true,
           "pda": {
             "seeds": [
               {
-                "kind": "account",
-                "path": "payer"
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114,
+                  45,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
               },
               {
                 "kind": "account",
-                "path": "mintOfToken"
+                "path": "payer"
               }
             ]
           }
@@ -880,7 +909,9 @@ export type SupersizeVault = {
           }
         },
         {
-          "name": "mintOfToken"
+          "name": "mintOfToken",
+          "writable": true,
+          "address": "B1aHFyLNzm1y24gkhASHiBU7LH6xXV2V785S4MrtY777"
         },
         {
           "name": "senderTokenAccount",
@@ -888,8 +919,7 @@ export type SupersizeVault = {
         },
         {
           "name": "payer",
-          "writable": true,
-          "signer": true
+          "writable": true
         },
         {
           "name": "systemProgram",
@@ -1209,63 +1239,6 @@ export type SupersizeVault = {
       "args": []
     },
     {
-      "name": "newGameWallet",
-      "discriminator": [
-        249,
-        14,
-        188,
-        252,
-        16,
-        43,
-        134,
-        135
-      ],
-      "accounts": [
-        {
-          "name": "gameWallet",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  103,
-                  97,
-                  109,
-                  101,
-                  45,
-                  119,
-                  97,
-                  108,
-                  108,
-                  101,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "user"
-              }
-            ]
-          }
-        },
-        {
-          "name": "gameKey",
-          "signer": true
-        },
-        {
-          "name": "user",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
-        }
-      ],
-      "args": []
-    },
-    {
       "name": "newUserBalance",
       "discriminator": [
         95,
@@ -1279,26 +1252,45 @@ export type SupersizeVault = {
       ],
       "accounts": [
         {
-          "name": "balance",
+          "name": "playerProfile",
           "writable": true,
           "pda": {
             "seeds": [
               {
-                "kind": "account",
-                "path": "user"
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114,
+                  45,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
               },
               {
                 "kind": "account",
-                "path": "mintOfToken"
+                "path": "user"
               }
             ]
           }
         },
         {
-          "name": "mintOfToken"
+          "name": "sessionAuthority"
         },
         {
           "name": "user",
+          "writable": true
+        },
+        {
+          "name": "signer",
           "writable": true,
           "signer": true
         },
@@ -1307,7 +1299,12 @@ export type SupersizeVault = {
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
     },
     {
       "name": "processUndelegation",
@@ -1397,6 +1394,72 @@ export type SupersizeVault = {
         }
       ],
       "args": []
+    },
+    {
+      "name": "undelegatePlayerProfile",
+      "discriminator": [
+        77,
+        211,
+        17,
+        167,
+        218,
+        208,
+        86,
+        149
+      ],
+      "accounts": [
+        {
+          "name": "wallet",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "playerProfile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114,
+                  45,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "parentKey"
+              }
+            ]
+          }
+        },
+        {
+          "name": "magicProgram",
+          "address": "Magic11111111111111111111111111111111111111"
+        },
+        {
+          "name": "magicContext",
+          "writable": true,
+          "address": "MagicContext1111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "parentKey",
+          "type": "pubkey"
+        }
+      ]
     },
     {
       "name": "undelegateUser",
@@ -1556,17 +1619,32 @@ export type SupersizeVault = {
       ],
       "accounts": [
         {
-          "name": "balance",
+          "name": "playerProfile",
           "writable": true,
           "pda": {
             "seeds": [
               {
-                "kind": "account",
-                "path": "payer"
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114,
+                  45,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
               },
               {
                 "kind": "account",
-                "path": "mintOfToken"
+                "path": "payer"
               }
             ]
           }
@@ -1642,7 +1720,9 @@ export type SupersizeVault = {
           }
         },
         {
-          "name": "mintOfToken"
+          "name": "mintOfToken",
+          "writable": true,
+          "address": "B1aHFyLNzm1y24gkhASHiBU7LH6xXV2V785S4MrtY777"
         },
         {
           "name": "senderTokenAccount",
@@ -1827,16 +1907,16 @@ export type SupersizeVault = {
       ]
     },
     {
-      "name": "gameWallet",
+      "name": "playerProfile",
       "discriminator": [
-        155,
-        179,
-        160,
-        42,
-        188,
-        125,
-        167,
-        26
+        82,
+        226,
+        99,
+        87,
+        164,
+        130,
+        181,
+        80
       ]
     }
   ],
@@ -1880,6 +1960,16 @@ export type SupersizeVault = {
       "code": 6007,
       "name": "unauthorizedCaller",
       "msg": "Unauthorized Caller"
+    },
+    {
+      "code": 6008,
+      "name": "airdropCooldown",
+      "msg": "Airdrop still in cooldown"
+    },
+    {
+      "code": 6009,
+      "name": "wrongToken",
+      "msg": "Wrong token provided"
     }
   ],
   "types": [
@@ -1896,13 +1986,78 @@ export type SupersizeVault = {
       }
     },
     {
-      "name": "gameWallet",
+      "name": "playerProfile",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "wallet",
+            "name": "authority",
             "type": "pubkey"
+          },
+          {
+            "name": "sessionAuthority",
+            "type": "pubkey"
+          },
+          {
+            "name": "slimecoinBalance",
+            "type": "u64"
+          },
+          {
+            "name": "totalWagered",
+            "type": "u64"
+          },
+          {
+            "name": "totalEarnedF2p",
+            "type": "u64"
+          },
+          {
+            "name": "totalEarnedP2p",
+            "type": "u64"
+          },
+          {
+            "name": "playtimeSecondsF2p",
+            "type": "u64"
+          },
+          {
+            "name": "playtimeSecondsP2p",
+            "type": "u64"
+          },
+          {
+            "name": "f2pJoins",
+            "type": "u64"
+          },
+          {
+            "name": "f2pExits",
+            "type": "u64"
+          },
+          {
+            "name": "p2pJoins",
+            "type": "u64"
+          },
+          {
+            "name": "p2pExits",
+            "type": "u64"
+          },
+          {
+            "name": "lastResetSlot",
+            "type": "u64"
+          },
+          {
+            "name": "seasonId",
+            "type": "u16"
+          },
+          {
+            "name": "version",
+            "type": "u8"
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
           }
         ]
       }
