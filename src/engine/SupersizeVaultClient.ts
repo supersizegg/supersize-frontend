@@ -136,7 +136,7 @@ export class SupersizeVaultClient {
 
       transaction.add(
         await this.program.methods
-          .newUserBalance(new BN(60))
+          .newUserBalance(new BN(0))
           .accounts({ sessionAuthority: this.engine.getSessionPayer(), user: this.wallet, signer: this.wallet })
           .instruction(),
       );
