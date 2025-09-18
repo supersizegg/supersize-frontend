@@ -359,7 +359,7 @@ const GameComponent: React.FC<GameComponentProps> = ({
       if (player_speed <= 6.3) {
         const ratio = size / 10;
         if (ratio > 0) {
-          const val = Math.log(ratio) * 0.38 - 0.11;
+          const val = Math.log(ratio) * 0.17 + 0.22;
           slow_down = Math.max(val, 0.1);
         }
       }
@@ -615,6 +615,33 @@ const GameComponent: React.FC<GameComponentProps> = ({
     });
   }, []);
 
+  function drawPotion(
+    ctx: CanvasRenderingContext2D,
+    img: HTMLImageElement,
+    cx: number,                 // center x
+    cy: number,                 // center y
+    longSide: number,           // destination long side in px
+    options?: { verticalIsLongSide?: boolean } // default true
+  ): boolean {
+    if (!img.complete || img.naturalWidth === 0) return false;
+  
+    const { verticalIsLongSide = true } = options ?? {};
+    const iw = img.naturalWidth;
+    const ih = img.naturalHeight;
+  
+    // Scale so the chosen long side matches longSide (contain; no crop)
+    const scale = verticalIsLongSide ? (longSide / ih) : (longSide / iw);
+    const dw = iw * scale;   // dest width
+    const dh = ih * scale;   // dest height
+  
+    // Top-left so it’s centered at (cx, cy)
+    const dx = cx - dw / 2;
+    const dy = cy - dh / 2;
+  
+    ctx.drawImage(img, 0, 0, iw, ih, dx, dy, dw, dh);
+    return true;
+  }
+
   function drawAvatarCircle(
     ctx: CanvasRenderingContext2D,
     img: HTMLImageElement,
@@ -771,62 +798,62 @@ const GameComponent: React.FC<GameComponentProps> = ({
     let img;
     if (food.food_value == 15.0) {
       img = green_potion;
-      diameter = 40;
+      diameter = 60;
     }
-    if (food.food_value == 14.0) {
+    else if (food.food_value == 14.0) {
       img = heart_potion;
-      diameter = 40;
+      diameter = 60;
     }
-    if (food.food_value == 13.0) {
-      img = ice_potion;
-      diameter = 40;
-    }
-    if (food.food_value == 12.0) {
+    else if (food.food_value == 13.0) {
       img = energy_potion;
-      diameter = 40;
+      diameter = 60;
     }
-    if (food.food_value == 11.0) {
+    else if (food.food_value == 12.0) {
+      img = ice_potion;
+      diameter = 60;
+    }
+    else if (food.food_value == 11.0) {
       img = green_potion;
-      diameter = 30;
+      diameter = 50;
     }
-    if (food.food_value == 10.0) {
+    else if (food.food_value == 10.0) {
       img = heart_potion;
-      diameter = 30;
+      diameter = 50;
     }
-    if (food.food_value == 9.0) {
-      img = ice_potion;
-      diameter = 30;
-    }
-    if (food.food_value == 8.0) {
+    else if (food.food_value == 9.0) {
       img = energy_potion;
-      diameter = 30;
+      diameter = 50;
     }
-    if (food.food_value == 7.0) {
+    else if (food.food_value == 8.0) {
+      img = ice_potion;
+      diameter = 50;
+    }
+    else if (food.food_value == 7.0) {
       img = green_potion;
-      diameter = 20;
+      diameter = 40;
     }
-    if (food.food_value == 6.0) {
+    else if (food.food_value == 6.0) {
       img = heart_potion;
-      diameter = 20;
+      diameter = 40;
     }
-    if (food.food_value == 5.0) {
-      img = ice_potion;
-      diameter = 20;
-    }
-    if (food.food_value == 4.0) {
+    else if (food.food_value == 5.0) {
       img = energy_potion;
-      diameter = 20;
+      diameter = 40;
+    }
+    else if (food.food_value == 4.0) {
+      img = ice_potion;
+      diameter = 40;
     }
     else{
       const index = Math.max(0, Math.min(FOOD_COLORS.length - 1, food.food_value - 1));
-      color = FOOD_COLORS[index];
+      color = FOOD_COLORS[0];
       diameter = diameter + food.food_value * 5;
       ctx.shadowBlur = 0;
       ctx.shadowColor = "transparent";
     }
 
     if (img) {
-      const drawn = drawAvatarCircle(ctx, img, food.x, food.y, diameter / 2);
+      const drawn = drawPotion(ctx, img, food.x, food.y, diameter);
       if (!drawn) {
         ctx.beginPath();
         ctx.arc(food.x, food.y, diameter / 2, 0, 2 * Math.PI);
