@@ -104,9 +104,8 @@ export const activeGamesList: {
     worldId: anchor.BN;
     worldPda: PublicKey;
     endpoint: string;
-    permissionless?: boolean;
-    openTime?: number;
-    closeTime?: number;
+    slime?: boolean;
+    slimeBuyIn?: number;
   }[];
 } = {
   devnet: [
@@ -148,21 +147,51 @@ export const activeGamesList: {
       worldPda: new PublicKey("9TVACTb1NDtGK3rtEHoBMa1Q8iKnHpLS55uuqudVm2xd"),
       endpoint: "https://supersize-mainnet.magicblock.app",
     }, */
+    /// NEW GAMES
+    /*
     {
       worldId: new anchor.BN(43),
       worldPda: new PublicKey("9UVoDwoNmWTwMExQ7nRwAHrniSEfKS3k22NA2XxAi5CC"),
       endpoint: "https://supersize-mainnet-bos.magicblock.app",
+      slime: true,
+      slimeBuyIn: 25,
     },
     {
       worldId: new anchor.BN(39),
       worldPda: new PublicKey("Bq8dd8YEBSsSDq6tg9pKpeeEZWp54zHtePbCSZ7SmjCj"),
       endpoint: "https://supersize-mainnet.magicblock.app",
+      slime: true,
+      slimeBuyIn: 25,
     },
     {
       worldId: new anchor.BN(40),
       worldPda: new PublicKey("93uVwXBfQaE15j7VnHz4q2XWt5Vi6Dj4NjabKMipLs4n"),
       endpoint: "https://supersize-mainnet-sin.magicblock.app",
+      slime: true,
+      slimeBuyIn: 25,
     },
+    {
+      worldId: new anchor.BN(43),
+      worldPda: new PublicKey("9UVoDwoNmWTwMExQ7nRwAHrniSEfKS3k22NA2XxAi5CC"),
+      endpoint: "https://supersize-mainnet-bos.magicblock.app",
+      slime: true,
+      slimeBuyIn: 2500,
+    },
+    {
+      worldId: new anchor.BN(39),
+      worldPda: new PublicKey("Bq8dd8YEBSsSDq6tg9pKpeeEZWp54zHtePbCSZ7SmjCj"),
+      endpoint: "https://supersize-mainnet.magicblock.app",
+      slime: true,
+      slimeBuyIn: 2500,
+    },
+    {
+      worldId: new anchor.BN(40),
+      worldPda: new PublicKey("93uVwXBfQaE15j7VnHz4q2XWt5Vi6Dj4NjabKMipLs4n"),
+      endpoint: "https://supersize-mainnet-sin.magicblock.app",
+      slime: true,
+      slimeBuyIn: 2500,
+    },
+    */
     {
       worldId: new anchor.BN(35),
       worldPda: new PublicKey("12MArv4fDwYMJNFXtPjQWuWJaVmKCqLyqz8fZmDQArpd"),

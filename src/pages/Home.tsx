@@ -425,13 +425,13 @@ const Home = ({
               componentId: COMPONENT_MAP_ID,
               entity: mapEntityPda,
             });
-            const isPaused = await isGamePaused(engine, mapComponentPda, thisEndpoint);
+            /* const isPaused = await isGamePaused(engine, mapComponentPda, thisEndpoint);
             let final_active_players = -2;
             if (!isPaused) {
               final_active_players = updatedPlayerInfo.activeplayers;
-            }
+            } */
             newGameInfo.activeGame.isLoaded = true;
-            newGameInfo.activeGame.active_players = final_active_players;
+            newGameInfo.activeGame.active_players = updatedPlayerInfo.activeplayers;
 
             activeGamesRef.current = [
               ...activeGamesRef.current,
@@ -504,17 +504,18 @@ const Home = ({
         componentId: COMPONENT_MAP_ID,
         entity: mapEntityPda,
       });
-      const isPaused = await isGamePaused(engine, mapComponentPda, activeGames[index].activeGame.endpoint);
+      
+      /* const isPaused = await isGamePaused(engine, mapComponentPda, activeGames[index].activeGame.endpoint);
 
       let final_active_players = -2;
       if (!isPaused) {
         final_active_players = updatedPlayerInfo.activeplayers;
-      }
+      } */
       const newgame: FetchedGame = {
         activeGame: {
           ...activeGames[index].activeGame,
           isLoaded: true,
-          active_players: final_active_players,
+          active_players: updatedPlayerInfo.activeplayers,
         } as ActiveGame,
         playerInfo: {
           playerStatus: updatedPlayerInfo.playerStatus,
@@ -596,16 +597,16 @@ const Home = ({
           activeGameCopy.endpoint,
         );
 
-        const isPaused = await isGamePaused(engine, mapComponentPda, server);
+        /* const isPaused = await isGamePaused(engine, mapComponentPda, server);
         let final_active_players = -2;
         if (!isPaused) {
           final_active_players = updatedPlayerInfo.activeplayers;
-        }
+        } */
 
         const newgame: FetchedGame = {
           activeGame: {
             ...activeGameCopy,
-            active_players: final_active_players,
+            active_players: updatedPlayerInfo.activeplayers,
           } as ActiveGame,
           playerInfo: {
             playerStatus: updatedPlayerInfo.playerStatus,
@@ -912,12 +913,12 @@ const Home = ({
                           {row.activeGame.isLoaded ? (
                             <>
                               <img
-                                src={row.activeGame.image}
-                                alt={row.activeGame.name}
+                                src={row.activeGame.is_free ? "/slimetoken.png" : row.activeGame.image}
+                                alt={row.activeGame.is_free ? "Slime" : row.activeGame.name}
                                 className="token-image"
                                 style={{ marginRight: "5px", display: "inline" }}
                               />
-                              <span>{row.activeGame.token}</span>
+                              <span>{row.activeGame.is_free ? "SLIME" : row.activeGame.token}</span>
                             </>
                           ) : (
                             <Spinner />
@@ -927,7 +928,7 @@ const Home = ({
                       <td data-label="Buy In">
                         {row.activeGame.isLoaded ? (
                           row.activeGame.is_free ? (
-                            "Free"
+                            formatBuyIn(row.activeGame.slime_buy_in)
                           ) : (
                             formatBuyIn(row.activeGame.buy_in / 10 ** row.activeGame.decimals)
                           )
@@ -936,12 +937,8 @@ const Home = ({
                         )}
                       </td>
                       <td data-label="Players">
-                        {!row.activeGame.is_free && !highStakesGamesOpen ? (
-                          "Paused"
-                        ) : row.activeGame.isLoaded && row.activeGame.active_players >= 0 ? (
+                        { row.activeGame.isLoaded && row.activeGame.active_players >= 0 ? (
                           row.activeGame.active_players + "/" + row.activeGame.max_players
-                        ) : row.activeGame.isLoaded && row.activeGame.active_players === -2 ? (
-                          "Paused"
                         ) : (
                           <Spinner />
                         )}
@@ -954,8 +951,7 @@ const Home = ({
                             !row.activeGame.isLoaded ||
                             row.activeGame.active_players < 0 ||
                             row.playerInfo.playerStatus == "error" ||
-                            row.playerInfo.playerStatus == "Game Full" ||
-                            (!row.activeGame.is_free && !highStakesGamesOpen)
+                            row.playerInfo.playerStatus == "Game Full" 
                             // engine.getWalletConnected() == false
                           }
                           onClick={() => {

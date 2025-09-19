@@ -43,6 +43,7 @@ export type ActiveGame = {
   tokenMint?: PublicKey;
   buy_in: number;
   is_free: boolean;
+  slime_buy_in: number;
   decimals: number;
   endpoint: string;
 };

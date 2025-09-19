@@ -24,7 +24,7 @@ const AppRoutes = () => {
   const [username, setUsername] = useState<string>("");
   const [activeGamesLoaded, setActiveGamesLoaded] = useState<FetchedGame[]>(
     [...activeGamesList[NETWORK]].map((world) =>
-      createUnloadedGame(world.worldId, world.worldPda, world.endpoint, world.permissionless),
+      createUnloadedGame(world.worldId, world.worldPda, world.endpoint, world.slime, world.slimeBuyIn),
     ),
   );
   const [myPlayerEntityPda, setMyPlayerEntityPda] = useState<PublicKey | null>(null);
