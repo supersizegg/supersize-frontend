@@ -191,7 +191,7 @@ export const activeGamesList: {
       slime: true,
       slimeBuyIn: 2500,
     },
-    */
+    
     {
       worldId: new anchor.BN(35),
       worldPda: new PublicKey("12MArv4fDwYMJNFXtPjQWuWJaVmKCqLyqz8fZmDQArpd"),
@@ -207,6 +207,8 @@ export const activeGamesList: {
       worldPda: new PublicKey("DbXfeC37bs1MKXpKQqvL1f3NnCfTUGDoCcSXsYgJfvVw"),
       endpoint: "https://supersize-mainnet-bos.magicblock.app",
     },
+    */
+   
     /*
     {
       worldId: new anchor.BN(25),
