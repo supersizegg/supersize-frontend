@@ -1,12 +1,17 @@
 import { PublicKey } from "@solana/web3.js";
 import { ApplySystem } from "@magicblock-labs/bolt-sdk";
 import { FindComponentPda } from "@magicblock-labs/bolt-sdk";
+import axios from "axios";
+import nacl from "tweetnacl";
 
 import { MagicBlockEngine } from "../engine/MagicBlockEngine";
 import { COMPONENT_PLAYER_ID, COMPONENT_MAP_ID, SYSTEM_BUY_IN_ID, SUPERSIZE_VAULT_PROGRAM_ID } from "./gamePrograms";
 import { ActiveGame } from "@utils/types";
 // import { SupersizeVaultClient } from "../engine/SupersizeVaultClient";
 import { getRegion } from "../utils/helper";
+import { API_URL } from "../utils/constants";
+
+const FREE_GAME_AUTHORITY = new PublicKey("4ZYVCAEVhZQKcdvzrKfsc4UyiuncNXefTif9VQdvhABe");
 
 export async function gameSystemJoin(
   preferredRegion: string,
@@ -16,7 +21,7 @@ export async function gameSystemJoin(
   mapEntityPda: PublicKey,
   playerName: string,
 ) {
-  const isGuest = (preferredRegion == undefined || preferredRegion == "" || !engine.getWalletConnected());
+  const isGuest = preferredRegion == undefined || preferredRegion == "" || !engine.getWalletConnected();
   let guestWallet = new PublicKey("G5USW6osjZviU6QEyWaZNtj4TUFeKAwCa4nRoCU2Yheo");
   if (getRegion(engine.getConnectionEphem().rpcEndpoint) == "america") {
     guestWallet = new PublicKey("G5USW6osjZviU6QEyWaZNtj4TUFeKAwCa4nRoCU2Yheo");
@@ -33,7 +38,10 @@ export async function gameSystemJoin(
   }
 
   const sessionWallet = engine.getSessionPayer();
+  const isFreeGame = Boolean(gameInfo.is_free);
+  const authority = isFreeGame ? FREE_GAME_AUTHORITY : sessionWallet;
   const mintOfToken = gameInfo.tokenMint!;
+  const endpoint = engine.getEndpointEphemRpc();
 
   // if (!isGuest) {
   //   const vault = new SupersizeVaultClient(engine);
@@ -69,6 +77,7 @@ export async function gameSystemJoin(
   console.log("gameWalletPda", gameWalletPda.toString());
   console.log("userBalancePda", userBalancePda.toString());
   console.log("gameBalancePda", gameBalancePda.toString());
+  console.log("sessionWallet", sessionWallet.toString());
 
   const applyJoinSystem = await ApplySystem({
     authority: sessionWallet,
@@ -129,15 +138,76 @@ export async function gameSystemJoin(
         isWritable: false,
       },
       {
-        pubkey: sessionWallet,
-        isSigner: true,
+        pubkey: FREE_GAME_AUTHORITY, // sessionWallet,
+        isSigner: true, // !isFreeGame,
         isWritable: true,
       },
     ],
   });
 
+  const transaction = applyJoinSystem.transaction;
+
+  if (!transaction.recentBlockhash) {
+    const { blockhash } = await engine.getConnectionEphem().getLatestBlockhash();
+    transaction.recentBlockhash = blockhash;
+  }
+
+  if (!transaction.feePayer) {
+    transaction.feePayer = FREE_GAME_AUTHORITY; // authority;
+  }
+
+  if (isFreeGame) {
+    try {
+      const payload = {
+        sessionWallet: sessionWallet.toBase58(),
+        parentWallet: parentKey.toBase58(),
+        authority: sessionWallet.toBase58(), // authority.toBase58(),
+        worldId: gameInfo.worldId.toString(),
+        endpoint,
+        playerName,
+        timestamp: new Date().toISOString(),
+        nonce: `${Date.now()}-${Math.random()}`,
+      };
+
+      const payloadJson = JSON.stringify(payload);
+      const payloadBytes = new TextEncoder().encode(payloadJson);
+      const payloadSignature = Buffer.from(nacl.sign.detached(payloadBytes, engine.getSessionKey().secretKey)).toString(
+        "base64",
+      );
+      // partial sign with session key
+      transaction.partialSign(engine.getSessionKey());
+
+      const serializedTransaction = transaction.serialize({ requireAllSignatures: false });
+      const transactionBase64 = Buffer.from(serializedTransaction).toString("base64");
+
+      const { data } = await axios.post(`${API_URL}api/v1/join-free-game`, {
+        transaction: transactionBase64,
+        payload: payloadJson,
+        payload_signature: payloadSignature,
+        endpoint,
+      });
+
+      const txSignature = data?.signature || data?.txSignature || null;
+      return {
+        success: true,
+        transactionSignature: txSignature,
+        response: data,
+      };
+    } catch (error) {
+      console.error("Error submitting free game join request:", error);
+      let message = "Unable to join free game right now.";
+      if (axios.isAxiosError(error)) {
+        const errorMessage = error.response?.data?.error ?? error.message;
+        if (typeof errorMessage === "string" && errorMessage.trim().length > 0) {
+          message = errorMessage;
+        }
+      }
+      return { success: false, error: message, message: "error" };
+    }
+  }
+
   try {
-    let joinSignature = await engine.processSessionEphemTransaction("join:" + playerName, applyJoinSystem.transaction);
+    const joinSignature = await engine.processSessionEphemTransaction("join:" + playerName, transaction);
     console.log(`join signature: ${joinSignature}`);
     return { success: true, transactionSignature: joinSignature };
   } catch (error) {
