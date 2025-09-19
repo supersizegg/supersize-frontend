@@ -6,6 +6,8 @@ export function createUnloadedGame(
   worldId: anchor.BN,
   worldPda: PublicKey,
   endpoint: string,
+  is_slime: boolean = false,
+  slime_buy_in: number = 0,
   permissionless: boolean = false,
 ): FetchedGame {
   return {
@@ -20,7 +22,8 @@ export function createUnloadedGame(
       image: `${process.env.PUBLIC_URL}/token.png`,
       token: "LOADING",
       buy_in: 0,
-      is_free: false,
+      is_free: is_slime,
+      slime_buy_in: slime_buy_in,
       decimals: 0,
       endpoint,
       permissionless,
