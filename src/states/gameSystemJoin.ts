@@ -20,6 +20,7 @@ export async function gameSystemJoin(
   newplayerEntityPda: PublicKey,
   mapEntityPda: PublicKey,
   playerName: string,
+  buyIn: number,
 ) {
   const isGuest = preferredRegion == undefined || preferredRegion == "" || !engine.getWalletConnected();
   let guestWallet = new PublicKey("G5USW6osjZviU6QEyWaZNtj4TUFeKAwCa4nRoCU2Yheo");
@@ -153,7 +154,7 @@ export async function gameSystemJoin(
   }
 
   if (!transaction.feePayer) {
-    transaction.feePayer = FREE_GAME_AUTHORITY; // authority;
+    transaction.feePayer = authority;
   }
 
   if (isFreeGame) {
@@ -163,6 +164,7 @@ export async function gameSystemJoin(
         parentWallet: parentKey.toBase58(),
         authority: sessionWallet.toBase58(), // authority.toBase58(),
         worldId: gameInfo.worldId.toString(),
+        buyIn,
         endpoint,
         playerName,
         timestamp: new Date().toISOString(),
