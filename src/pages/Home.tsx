@@ -890,9 +890,13 @@ const Home = ({
                         )}
                         {numberOfGamesInEndpoint === 0 && isLoadingCurrentGames === false && (
                           <>
+                          {/*
                             No whitelisted games in {selectedServer.current} right now.
                             <br />
                             Try selecting a different region or search game by ID.
+                          */}
+
+                          Games are currently under maintenance. New updates will be available tomorrow.
                           </>
                         )}
                       </td>
