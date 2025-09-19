@@ -504,7 +504,7 @@ const Home = ({
         componentId: COMPONENT_MAP_ID,
         entity: mapEntityPda,
       });
-      
+
       /* const isPaused = await isGamePaused(engine, mapComponentPda, activeGames[index].activeGame.endpoint);
 
       let final_active_players = -2;
@@ -717,7 +717,7 @@ const Home = ({
         preferredRegion,
         engine,
         game.activeGame,
-        game.activeGame.buy_in,
+        game.activeGame.is_free ? game.activeGame.slime_buy_in : game.activeGame.buy_in,
         username,
         game.playerInfo,
         networkType == "devnet" || sessionWalletInUse,
@@ -851,10 +851,11 @@ const Home = ({
               <table className="lobby-table">
                 <thead>
                   <tr>
-                    <th>ID</th>
+                    {/* <th>ID</th> */}
                     {/* <th>Creator</th> */}
-                    <th>Token</th>
+                    <th>Reward</th>
                     <th>Buy In</th>
+
                     <th>Players</th>
                     <th>Status</th>
                     <th>
@@ -904,7 +905,9 @@ const Home = ({
                   )}
                   {activeGamesLoaded.map((row, idx) => (
                     <tr key={idx} className={!row.activeGame.isLoaded ? "row-hidden" : ""}>
-                      <td data-label="Game ID">{row.activeGame.worldId.toString()}</td>
+                      {/* <td data-label="Game ID">
+                        {row.activeGame.worldId.toString()}
+                      </td> */}
                       {/* <td data-label="Creator">
                         {row.activeGame.permissionless === true ? (
                           <span className="community-list">Community</span>
@@ -912,36 +915,47 @@ const Home = ({
                           <span className="strict-list">Slimecoin</span>
                         )}
                       </td> */}
-                      <td data-label="Token">
+                      <td data-label="Reward">
+                        <img
+                          src={
+                            row.activeGame.is_free && row.activeGame.slime_buy_in != 2500
+                              ? "/slimetoken.png"
+                              : row.activeGame.image
+                          }
+                          alt={row.activeGame.is_free ? "Slime" : row.activeGame.name}
+                          className="token-image"
+                          style={{ marginRight: "5px", display: "inline" }}
+                        />
+                      </td>
+                      <td data-label="Buy In">
                         <div className="token-cell-content">
                           {row.activeGame.isLoaded ? (
                             <>
-                              <img
-                                src={row.activeGame.is_free ? "/slimetoken.png" : row.activeGame.image}
-                                alt={row.activeGame.is_free ? "Slime" : row.activeGame.name}
-                                className="token-image"
-                                style={{ marginRight: "5px", display: "inline" }}
-                              />
-                              <span>{row.activeGame.is_free ? "SLIME" : row.activeGame.token}</span>
+                              {row.activeGame.isLoaded && row.activeGame.is_free ? (
+                                <img src="/slimejar.png" width="18" alt="SLIME" />
+                              ) : (
+                                <img src="/slime.png" width="22" alt="SLIMECOIN" />
+                              )}
+                              <b>
+                                {row.activeGame.isLoaded ? (
+                                  row.activeGame.is_free ? (
+                                    row.activeGame.slime_buy_in // formatBuyIn(row.activeGame.slime_buy_in)
+                                  ) : (
+                                    parseInt(formatBuyIn(row.activeGame.buy_in / 10 ** row.activeGame.decimals), 10)
+                                  )
+                                ) : (
+                                  <Spinner />
+                                )}
+                              </b>
                             </>
                           ) : (
                             <Spinner />
                           )}
                         </div>
                       </td>
-                      <td data-label="Buy In">
-                        {row.activeGame.isLoaded ? (
-                          row.activeGame.is_free ? (
-                            formatBuyIn(row.activeGame.slime_buy_in)
-                          ) : (
-                            formatBuyIn(row.activeGame.buy_in / 10 ** row.activeGame.decimals)
-                          )
-                        ) : (
-                          <Spinner />
-                        )}
-                      </td>
+
                       <td data-label="Players">
-                        { row.activeGame.isLoaded && row.activeGame.active_players >= 0 ? (
+                        {row.activeGame.isLoaded && row.activeGame.active_players >= 0 ? (
                           row.activeGame.active_players + "/" + row.activeGame.max_players
                         ) : (
                           <Spinner />
@@ -955,7 +969,7 @@ const Home = ({
                             !row.activeGame.isLoaded ||
                             row.activeGame.active_players < 0 ||
                             row.playerInfo.playerStatus == "error" ||
-                            row.playerInfo.playerStatus == "Game Full" 
+                            row.playerInfo.playerStatus == "Game Full"
                             // engine.getWalletConnected() == false
                           }
                           onClick={() => {
