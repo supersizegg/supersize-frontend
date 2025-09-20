@@ -8,6 +8,138 @@
   },
   "instructions": [
     {
+      "name": "burn_from_game",
+      "discriminator": [
+        148,
+        195,
+        140,
+        122,
+        69,
+        108,
+        88,
+        195
+      ],
+      "accounts": [
+        {
+          "name": "balance",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "map"
+              },
+              {
+                "kind": "account",
+                "path": "mint_of_token"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_account_owner_pda",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110,
+                  95,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  95,
+                  111,
+                  119,
+                  110,
+                  101,
+                  114,
+                  95,
+                  112,
+                  100,
+                  97
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  117,
+                  112,
+                  101,
+                  114,
+                  95,
+                  116,
+                  111,
+                  107,
+                  101,
+                  110,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint_of_token"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint_of_token"
+        },
+        {
+          "name": "burn_account",
+          "writable": true,
+          "address": "5NsVbMzfpXSyeGsuzMVDfz7kspFcCQSTFcKL7wBuogNS"
+        },
+        {
+          "name": "map"
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "Accept **either** SPL Token or Token-2022 at runtime"
+          ]
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "buy_in",
       "discriminator": [
         126,
@@ -21,45 +153,32 @@
       ],
       "accounts": [
         {
-          "name": "game_wallet",
+          "name": "player_profile",
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "const",
                 "value": [
-                  103,
+                  112,
+                  108,
                   97,
-                  109,
+                  121,
                   101,
+                  114,
                   45,
-                  119,
-                  97,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
                   108,
-                  108,
-                  101,
-                  116
+                  101
                 ]
               },
               {
                 "kind": "account",
                 "path": "parent_key"
-              }
-            ]
-          }
-        },
-        {
-          "name": "user_balance",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "parent_key"
-              },
-              {
-                "kind": "account",
-                "path": "mint_of_token"
               }
             ]
           }
@@ -114,45 +233,32 @@
       ],
       "accounts": [
         {
-          "name": "game_wallet",
+          "name": "player_profile",
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "const",
                 "value": [
-                  103,
+                  112,
+                  108,
                   97,
-                  109,
+                  121,
                   101,
+                  114,
                   45,
-                  119,
-                  97,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
                   108,
-                  108,
-                  101,
-                  116
+                  101
                 ]
               },
               {
                 "kind": "account",
                 "path": "parent_key"
-              }
-            ]
-          }
-        },
-        {
-          "name": "user_balance",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "parent_key"
-              },
-              {
-                "kind": "account",
-                "path": "mint_of_token"
               }
             ]
           }
@@ -386,16 +492,16 @@
       ]
     },
     {
-      "name": "delegate_user",
+      "name": "delegate_player_profile",
       "discriminator": [
-        237,
-        220,
-        199,
-        24,
-        59,
-        41,
-        247,
-        24
+        62,
+        94,
+        178,
+        63,
+        186,
+        116,
+        36,
+        143
       ],
       "accounts": [
         {
@@ -404,10 +510,7 @@
           "signer": true
         },
         {
-          "name": "mint_of_token"
-        },
-        {
-          "name": "buffer_balance",
+          "name": "buffer_player_profile",
           "writable": true,
           "pda": {
             "seeds": [
@@ -424,7 +527,7 @@
               },
               {
                 "kind": "account",
-                "path": "balance"
+                "path": "player_profile"
               }
             ],
             "program": {
@@ -467,7 +570,7 @@
           }
         },
         {
-          "name": "delegation_record_balance",
+          "name": "delegation_record_player_profile",
           "writable": true,
           "pda": {
             "seeds": [
@@ -488,7 +591,7 @@
               },
               {
                 "kind": "account",
-                "path": "balance"
+                "path": "player_profile"
               }
             ],
             "program": {
@@ -498,7 +601,7 @@
           }
         },
         {
-          "name": "delegation_metadata_balance",
+          "name": "delegation_metadata_player_profile",
           "writable": true,
           "pda": {
             "seeds": [
@@ -528,7 +631,7 @@
               },
               {
                 "kind": "account",
-                "path": "balance"
+                "path": "player_profile"
               }
             ],
             "program": {
@@ -538,17 +641,32 @@
           }
         },
         {
-          "name": "balance",
+          "name": "player_profile",
           "writable": true,
           "pda": {
             "seeds": [
               {
-                "kind": "account",
-                "path": "payer"
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114,
+                  45,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
               },
               {
                 "kind": "account",
-                "path": "mint_of_token"
+                "path": "payer"
               }
             ]
           }
@@ -576,173 +694,81 @@
       ]
     },
     {
-      "name": "delegate_wallet",
+      "name": "delegate_player_profile_free",
       "discriminator": [
-        225,
-        228,
-        159,
-        140,
-        179,
+        49,
+        26,
+        89,
+        47,
+        232,
         143,
-        153,
-        249
+        41,
+        101
       ],
       "accounts": [
+        {
+          "name": "token_account_owner_pda",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110,
+                  95,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  95,
+                  111,
+                  119,
+                  110,
+                  101,
+                  114,
+                  95,
+                  112,
+                  100,
+                  97
+                ]
+              }
+            ]
+          }
+        },
         {
           "name": "payer",
           "writable": true,
           "signer": true
         },
         {
-          "name": "buffer_wallet",
+          "name": "player_profile",
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "const",
                 "value": [
-                  98,
-                  117,
-                  102,
-                  102,
-                  101,
-                  114
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "wallet"
-              }
-            ],
-            "program": {
-              "kind": "const",
-              "value": [
-                186,
-                185,
-                18,
-                110,
-                228,
-                200,
-                25,
-                18,
-                164,
-                223,
-                146,
-                238,
-                103,
-                215,
-                151,
-                110,
-                147,
-                146,
-                123,
-                57,
-                52,
-                79,
-                10,
-                125,
-                127,
-                134,
-                227,
-                121,
-                59,
-                109,
-                171,
-                232
-              ]
-            }
-          }
-        },
-        {
-          "name": "delegation_record_wallet",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  100,
-                  101,
+                  112,
                   108,
-                  101,
-                  103,
                   97,
-                  116,
-                  105,
-                  111,
-                  110
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "wallet"
-              }
-            ],
-            "program": {
-              "kind": "account",
-              "path": "delegation_program"
-            }
-          }
-        },
-        {
-          "name": "delegation_metadata_wallet",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  100,
+                  121,
                   101,
-                  108,
-                  101,
-                  103,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
+                  114,
                   45,
-                  109,
-                  101,
-                  116,
-                  97,
-                  100,
-                  97,
-                  116,
-                  97
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "wallet"
-              }
-            ],
-            "program": {
-              "kind": "account",
-              "path": "delegation_program"
-            }
-          }
-        },
-        {
-          "name": "wallet",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  103,
-                  97,
-                  109,
-                  101,
-                  45,
-                  119,
-                  97,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
                   108,
-                  108,
-                  101,
-                  116
+                  101
                 ]
               },
               {
@@ -751,18 +777,6 @@
               }
             ]
           }
-        },
-        {
-          "name": "owner_program",
-          "address": "DZtWbzgheM9YEaQu24dR3bkvWHURhSZw5jFwZyoz95DH"
-        },
-        {
-          "name": "delegation_program",
-          "address": "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh"
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
@@ -824,17 +838,32 @@
           }
         },
         {
-          "name": "balance",
+          "name": "player_profile",
           "writable": true,
           "pda": {
             "seeds": [
               {
-                "kind": "account",
-                "path": "payer"
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114,
+                  45,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
               },
               {
                 "kind": "account",
-                "path": "mint_of_token"
+                "path": "payer"
               }
             ]
           }
@@ -874,7 +903,9 @@
           }
         },
         {
-          "name": "mint_of_token"
+          "name": "mint_of_token",
+          "writable": true,
+          "address": "B1aHFyLNzm1y24gkhASHiBU7LH6xXV2V785S4MrtY777"
         },
         {
           "name": "sender_token_account",
@@ -882,8 +913,7 @@
         },
         {
           "name": "payer",
-          "writable": true,
-          "signer": true
+          "writable": true
         },
         {
           "name": "system_program",
@@ -1203,63 +1233,6 @@
       "args": []
     },
     {
-      "name": "new_game_wallet",
-      "discriminator": [
-        249,
-        14,
-        188,
-        252,
-        16,
-        43,
-        134,
-        135
-      ],
-      "accounts": [
-        {
-          "name": "game_wallet",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  103,
-                  97,
-                  109,
-                  101,
-                  45,
-                  119,
-                  97,
-                  108,
-                  108,
-                  101,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "user"
-              }
-            ]
-          }
-        },
-        {
-          "name": "game_key",
-          "signer": true
-        },
-        {
-          "name": "user",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        }
-      ],
-      "args": []
-    },
-    {
       "name": "new_user_balance",
       "discriminator": [
         95,
@@ -1273,26 +1246,45 @@
       ],
       "accounts": [
         {
-          "name": "balance",
+          "name": "player_profile",
           "writable": true,
           "pda": {
             "seeds": [
               {
-                "kind": "account",
-                "path": "user"
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114,
+                  45,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
               },
               {
                 "kind": "account",
-                "path": "mint_of_token"
+                "path": "user"
               }
             ]
           }
         },
         {
-          "name": "mint_of_token"
+          "name": "session_authority"
         },
         {
           "name": "user",
+          "writable": true
+        },
+        {
+          "name": "signer",
           "writable": true,
           "signer": true
         },
@@ -1301,7 +1293,12 @@
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
     },
     {
       "name": "process_undelegation",
@@ -1391,6 +1388,72 @@
         }
       ],
       "args": []
+    },
+    {
+      "name": "undelegate_player_profile",
+      "discriminator": [
+        77,
+        211,
+        17,
+        167,
+        218,
+        208,
+        86,
+        149
+      ],
+      "accounts": [
+        {
+          "name": "wallet",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "player_profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114,
+                  45,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "parent_key"
+              }
+            ]
+          }
+        },
+        {
+          "name": "magic_program",
+          "address": "Magic11111111111111111111111111111111111111"
+        },
+        {
+          "name": "magic_context",
+          "writable": true,
+          "address": "MagicContext1111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "parent_key",
+          "type": "pubkey"
+        }
+      ]
     },
     {
       "name": "undelegate_user",
@@ -1550,17 +1613,32 @@
       ],
       "accounts": [
         {
-          "name": "balance",
+          "name": "player_profile",
           "writable": true,
           "pda": {
             "seeds": [
               {
-                "kind": "account",
-                "path": "payer"
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114,
+                  45,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
               },
               {
                 "kind": "account",
-                "path": "mint_of_token"
+                "path": "payer"
               }
             ]
           }
@@ -1636,7 +1714,9 @@
           }
         },
         {
-          "name": "mint_of_token"
+          "name": "mint_of_token",
+          "writable": true,
+          "address": "B1aHFyLNzm1y24gkhASHiBU7LH6xXV2V785S4MrtY777"
         },
         {
           "name": "sender_token_account",
@@ -1821,16 +1901,16 @@
       ]
     },
     {
-      "name": "GameWallet",
+      "name": "PlayerProfile",
       "discriminator": [
-        155,
-        179,
-        160,
-        42,
-        188,
-        125,
-        167,
-        26
+        82,
+        226,
+        99,
+        87,
+        164,
+        130,
+        181,
+        80
       ]
     }
   ],
@@ -1874,6 +1954,16 @@
       "code": 6007,
       "name": "UnauthorizedCaller",
       "msg": "Unauthorized Caller"
+    },
+    {
+      "code": 6008,
+      "name": "AirdropCooldown",
+      "msg": "Airdrop still in cooldown"
+    },
+    {
+      "code": 6009,
+      "name": "WrongToken",
+      "msg": "Wrong token provided"
     }
   ],
   "types": [
@@ -1890,13 +1980,78 @@
       }
     },
     {
-      "name": "GameWallet",
+      "name": "PlayerProfile",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "wallet",
+            "name": "authority",
             "type": "pubkey"
+          },
+          {
+            "name": "session_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "slimecoin_balance",
+            "type": "u64"
+          },
+          {
+            "name": "total_wagered",
+            "type": "u64"
+          },
+          {
+            "name": "total_earned_f2p",
+            "type": "u64"
+          },
+          {
+            "name": "total_earned_p2p",
+            "type": "u64"
+          },
+          {
+            "name": "playtime_seconds_f2p",
+            "type": "u64"
+          },
+          {
+            "name": "playtime_seconds_p2p",
+            "type": "u64"
+          },
+          {
+            "name": "f2p_joins",
+            "type": "u64"
+          },
+          {
+            "name": "f2p_exits",
+            "type": "u64"
+          },
+          {
+            "name": "p2p_joins",
+            "type": "u64"
+          },
+          {
+            "name": "p2p_exits",
+            "type": "u64"
+          },
+          {
+            "name": "last_reset_slot",
+            "type": "u64"
+          },
+          {
+            "name": "season_id",
+            "type": "u16"
+          },
+          {
+            "name": "version",
+            "type": "u8"
+          },
+          {
+            "name": "reserved",
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
           }
         ]
       }
